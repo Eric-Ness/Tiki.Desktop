@@ -1,0 +1,20 @@
+{
+  "tddEnabled": true,
+  "testing": {
+    "createTests": "before",
+    "testFramework": "vitest",
+    "e2eFramework": "playwright"
+  },
+  "autoFix": {
+    "enabled": true,
+    "maxAttempts": 3,
+    "strategies": ["direct", "contextual-analysis", "approach-review"]
+  },
+  "workflow": {
+    "showNextStepMenu": true
+  },
+  "knowledge": {
+    "autoCapture": true,
+    "captureOnShip": true
+  }
+}

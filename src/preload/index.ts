@@ -32,20 +32,33 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
     }
   },
 
-  // Tiki state API (to be implemented in #4)
+  // Tiki state API
   tiki: {
+    watch: (path: string) => ipcRenderer.invoke('tiki:watch', { path }),
+    unwatch: () => ipcRenderer.invoke('tiki:unwatch'),
     onStateChange: (callback: (state: unknown) => void) => {
       const handler = (_: unknown, state: unknown) => callback(state)
       ipcRenderer.on('tiki:state-changed', handler)
       return () => ipcRenderer.removeListener('tiki:state-changed', handler)
     },
-    onPlanChange: (callback: (plan: unknown) => void) => {
-      const handler = (_: unknown, plan: unknown) => callback(plan)
+    onPlanChange: (callback: (data: { filename: string; plan: unknown }) => void) => {
+      const handler = (_: unknown, data: { filename: string; plan: unknown }) => callback(data)
       ipcRenderer.on('tiki:plan-changed', handler)
       return () => ipcRenderer.removeListener('tiki:plan-changed', handler)
     },
+    onQueueChange: (callback: (queue: unknown) => void) => {
+      const handler = (_: unknown, queue: unknown) => callback(queue)
+      ipcRenderer.on('tiki:queue-changed', handler)
+      return () => ipcRenderer.removeListener('tiki:queue-changed', handler)
+    },
+    onReleaseChange: (callback: (data: { filename: string; release: unknown }) => void) => {
+      const handler = (_: unknown, data: { filename: string; release: unknown }) => callback(data)
+      ipcRenderer.on('tiki:release-changed', handler)
+      return () => ipcRenderer.removeListener('tiki:release-changed', handler)
+    },
     getState: () => ipcRenderer.invoke('tiki:get-state'),
-    getPlan: (issueNumber: number) => ipcRenderer.invoke('tiki:get-plan', issueNumber)
+    getPlan: (issueNumber: number) => ipcRenderer.invoke('tiki:get-plan', issueNumber),
+    getQueue: () => ipcRenderer.invoke('tiki:get-queue')
   },
 
   // GitHub API (to be implemented in #8)
@@ -72,10 +85,15 @@ declare global {
         onExit: (callback: (id: string, code: number) => void) => () => void
       }
       tiki: {
+        watch: (path: string) => Promise<boolean>
+        unwatch: () => Promise<boolean>
         onStateChange: (callback: (state: unknown) => void) => () => void
-        onPlanChange: (callback: (plan: unknown) => void) => () => void
+        onPlanChange: (callback: (data: { filename: string; plan: unknown }) => void) => () => void
+        onQueueChange: (callback: (queue: unknown) => void) => () => void
+        onReleaseChange: (callback: (data: { filename: string; release: unknown }) => void) => () => void
         getState: () => Promise<unknown>
         getPlan: (issueNumber: number) => Promise<unknown>
+        getQueue: () => Promise<unknown>
       }
       github: {
         getIssues: (state?: string) => Promise<unknown[]>

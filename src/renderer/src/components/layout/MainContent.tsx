@@ -1,8 +1,13 @@
 import { useState } from 'react'
+import { TerminalTabs } from '../terminal/TerminalTabs'
 
 type Tab = 'terminal' | 'workflow' | 'config'
 
-export function MainContent() {
+interface MainContentProps {
+  cwd: string
+}
+
+export function MainContent({ cwd }: MainContentProps) {
   const [activeTab, setActiveTab] = useState<Tab>('terminal')
 
   return (
@@ -31,7 +36,7 @@ export function MainContent() {
 
       {/* Tab Content */}
       <div className="flex-1 overflow-hidden">
-        {activeTab === 'terminal' && <TerminalPlaceholder />}
+        {activeTab === 'terminal' && <TerminalTabs cwd={cwd} />}
         {activeTab === 'workflow' && <WorkflowPlaceholder />}
         {activeTab === 'config' && <ConfigPlaceholder />}
       </div>
@@ -59,21 +64,6 @@ function TabButton({ active, onClick, children }: TabButtonProps) {
     >
       {children}
     </button>
-  )
-}
-
-function TerminalPlaceholder() {
-  return (
-    <div className="h-full flex items-center justify-center text-slate-500">
-      <div className="text-center">
-        <svg className="w-16 h-16 mx-auto mb-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-          <polyline points="4 17 10 11 4 5" />
-          <line x1="12" y1="19" x2="20" y2="19" />
-        </svg>
-        <p className="text-lg mb-2">Terminal</p>
-        <p className="text-sm">Terminal integration coming in issue #2</p>
-      </div>
-    </div>
   )
 }
 

@@ -25,23 +25,24 @@ const ResizablePanel = React.forwardRef<
 ))
 ResizablePanel.displayName = 'ResizablePanel'
 
-const ResizableHandle = React.forwardRef<
-  React.ElementRef<typeof ResizablePrimitive.PanelResizeHandle>,
-  React.ComponentPropsWithoutRef<typeof ResizablePrimitive.PanelResizeHandle>
->(({ className, ...props }, ref) => (
-  <ResizablePrimitive.PanelResizeHandle
-    ref={ref}
-    className={`
-      relative w-1 bg-transparent
-      after:absolute after:inset-y-0 after:left-1/2 after:w-1 after:-translate-x-1/2
-      after:bg-border hover:after:bg-border-hover
-      after:transition-colors
-      focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500
-      ${className || ''}
-    `}
-    {...props}
-  />
-))
-ResizableHandle.displayName = 'ResizableHandle'
+interface ResizableHandleProps extends React.ComponentPropsWithoutRef<typeof ResizablePrimitive.PanelResizeHandle> {
+  className?: string
+}
+
+function ResizableHandle({ className, ...props }: ResizableHandleProps) {
+  return (
+    <ResizablePrimitive.PanelResizeHandle
+      className={`
+        relative w-1 bg-transparent
+        after:absolute after:inset-y-0 after:left-1/2 after:w-1 after:-translate-x-1/2
+        after:bg-border hover:after:bg-border-hover
+        after:transition-colors
+        focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500
+        ${className || ''}
+      `}
+      {...props}
+    />
+  )
+}
 
 export { ResizablePanelGroup, ResizablePanel, ResizableHandle }

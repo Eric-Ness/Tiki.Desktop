@@ -5,10 +5,14 @@ import { MainContent } from './components/layout/MainContent'
 import { DetailPanel } from './components/layout/DetailPanel'
 import { StatusBar } from './components/layout/StatusBar'
 import { TitleBar } from './components/layout/TitleBar'
+import { useTikiSync } from './hooks/useTikiSync'
 
 function App() {
   const [version, setVersion] = useState<string>('')
   const [cwd, setCwd] = useState<string>('')
+
+  // Sync file watcher with Zustand store
+  useTikiSync()
 
   useEffect(() => {
     // Get app info on mount
@@ -33,7 +37,7 @@ function App() {
 
           {/* Main Content */}
           <ResizablePanel defaultSize={55} minSize={30}>
-            <MainContent />
+            <MainContent cwd={cwd} />
           </ResizablePanel>
 
           <ResizableHandle />

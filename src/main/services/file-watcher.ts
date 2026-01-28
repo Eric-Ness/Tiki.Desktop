@@ -1,0 +1,181 @@
+import * as chokidar from 'chokidar'
+import { BrowserWindow } from 'electron'
+import { readFile } from 'fs/promises'
+import { join, basename } from 'path'
+import { existsSync } from 'fs'
+
+let watcher: chokidar.FSWatcher | null = null
+let mainWindow: BrowserWindow | null = null
+let projectPath: string | null = null
+
+// Debounce timers
+const debounceTimers: Map<string, NodeJS.Timeout> = new Map()
+const DEBOUNCE_MS = 100
+
+export function setFileWatcherWindow(window: BrowserWindow): void {
+  mainWindow = window
+}
+
+function debounce(key: string, fn: () => void): void {
+  const existing = debounceTimers.get(key)
+  if (existing) {
+    clearTimeout(existing)
+  }
+  debounceTimers.set(
+    key,
+    setTimeout(() => {
+      debounceTimers.delete(key)
+      fn()
+    }, DEBOUNCE_MS)
+  )
+}
+
+async function safeReadJson(filePath: string): Promise<unknown | null> {
+  try {
+    const content = await readFile(filePath, 'utf-8')
+    return JSON.parse(content)
+  } catch {
+    // File doesn't exist or invalid JSON
+    return null
+  }
+}
+
+function sendToRenderer(channel: string, data: unknown): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, data)
+  }
+}
+
+async function handleStateChange(filePath: string): Promise<void> {
+  debounce('state', async () => {
+    const data = await safeReadJson(filePath)
+    sendToRenderer('tiki:state-changed', data)
+  })
+}
+
+async function handlePlanChange(filePath: string): Promise<void> {
+  const filename = basename(filePath)
+  debounce(`plan-${filename}`, async () => {
+    const data = await safeReadJson(filePath)
+    if (data) {
+      sendToRenderer('tiki:plan-changed', {
+        filename,
+        plan: data
+      })
+    }
+  })
+}
+
+async function handleQueueChange(filePath: string): Promise<void> {
+  debounce('queue', async () => {
+    const data = await safeReadJson(filePath)
+    sendToRenderer('tiki:queue-changed', data)
+  })
+}
+
+async function handleReleaseChange(filePath: string): Promise<void> {
+  const filename = basename(filePath)
+  debounce(`release-${filename}`, async () => {
+    const data = await safeReadJson(filePath)
+    if (data) {
+      sendToRenderer('tiki:release-changed', {
+        filename,
+        release: data
+      })
+    }
+  })
+}
+
+function handleFileChange(filePath: string): void {
+  // Normalize path separators
+  const normalizedPath = filePath.replace(/\\/g, '/')
+
+  if (normalizedPath.includes('/state/current.json')) {
+    handleStateChange(filePath)
+  } else if (normalizedPath.includes('/plans/issue-')) {
+    handlePlanChange(filePath)
+  } else if (normalizedPath.includes('/queue/pending.json')) {
+    handleQueueChange(filePath)
+  } else if (normalizedPath.includes('/releases/') && normalizedPath.endsWith('.json')) {
+    handleReleaseChange(filePath)
+  }
+}
+
+export function startWatching(path: string): void {
+  if (watcher) {
+    stopWatching()
+  }
+
+  projectPath = path
+  const tikiPath = join(path, '.tiki')
+
+  if (!existsSync(tikiPath)) {
+    console.log('No .tiki directory found at', tikiPath)
+    return
+  }
+
+  watcher = chokidar.watch(
+    [
+      join(tikiPath, 'state', '*.json'),
+      join(tikiPath, 'plans', '*.json'),
+      join(tikiPath, 'queue', '*.json'),
+      join(tikiPath, 'releases', '*.json')
+    ],
+    {
+      persistent: true,
+      ignoreInitial: false,
+      awaitWriteFinish: {
+        stabilityThreshold: 50,
+        pollInterval: 10
+      }
+    }
+  )
+
+  watcher.on('add', handleFileChange)
+  watcher.on('change', handleFileChange)
+  watcher.on('unlink', (filePath) => {
+    const normalizedPath = filePath.replace(/\\/g, '/')
+    if (normalizedPath.includes('/state/current.json')) {
+      sendToRenderer('tiki:state-changed', null)
+    }
+  })
+
+  watcher.on('error', (error) => {
+    console.error('File watcher error:', error)
+  })
+
+  console.log('Started watching .tiki directory at', tikiPath)
+}
+
+export function stopWatching(): void {
+  if (watcher) {
+    watcher.close()
+    watcher = null
+  }
+
+  // Clear all debounce timers
+  for (const timer of debounceTimers.values()) {
+    clearTimeout(timer)
+  }
+  debounceTimers.clear()
+
+  projectPath = null
+}
+
+export async function getCurrentState(): Promise<unknown | null> {
+  if (!projectPath) return null
+  const statePath = join(projectPath, '.tiki', 'state', 'current.json')
+  return safeReadJson(statePath)
+}
+
+export async function getPlan(issueNumber: number): Promise<unknown | null> {
+  if (!projectPath) return null
+  const planPath = join(projectPath, '.tiki', 'plans', `issue-${issueNumber}.json`)
+  return safeReadJson(planPath)
+}
+
+export async function getQueue(): Promise<unknown | null> {
+  if (!projectPath) return null
+  const queuePath = join(projectPath, '.tiki', 'queue', 'pending.json')
+  return safeReadJson(queuePath)
+}

@@ -1,10 +1,40 @@
 import { useState } from 'react'
+import { useTikiStore } from '../../stores/tiki-store'
 
 interface SidebarProps {
   cwd: string
 }
 
 export function Sidebar({ cwd }: SidebarProps) {
+  const tikiState = useTikiStore((state) => state.tikiState)
+  const currentPlan = useTikiStore((state) => state.currentPlan)
+
+  const getStatusColor = (status: string | undefined | null) => {
+    switch (status) {
+      case 'executing':
+        return 'bg-status-running'
+      case 'paused':
+        return 'bg-amber-400'
+      case 'failed':
+        return 'bg-status-failed'
+      default:
+        return 'bg-slate-500'
+    }
+  }
+
+  const getStatusLabel = (status: string | undefined | null) => {
+    switch (status) {
+      case 'executing':
+        return 'Executing'
+      case 'paused':
+        return 'Paused'
+      case 'failed':
+        return 'Failed'
+      default:
+        return 'Idle'
+    }
+  }
+
   return (
     <div className="h-full bg-background-secondary border-r border-border flex flex-col">
       {/* Projects Section */}
@@ -24,15 +54,34 @@ export function Sidebar({ cwd }: SidebarProps) {
       </SidebarSection>
 
       {/* State Section */}
-      <SidebarSection title="State">
+      <SidebarSection title="State" defaultOpen>
         <div className="px-2 py-1 text-sm">
           <div className="flex items-center gap-2 text-slate-400">
-            <span className="w-2 h-2 rounded-full bg-slate-500" />
-            <span>Idle</span>
+            <span className={`w-2 h-2 rounded-full ${getStatusColor(tikiState?.status)}`} />
+            <span>{getStatusLabel(tikiState?.status)}</span>
           </div>
-          <div className="mt-2 text-xs text-slate-500">
-            No active execution
-          </div>
+          {tikiState?.activeIssue ? (
+            <div className="mt-2 space-y-1">
+              <div className="text-xs text-slate-500">
+                Issue: #{tikiState.activeIssue}
+                {currentPlan?.issue?.title && (
+                  <span className="block truncate text-slate-400">{currentPlan.issue.title}</span>
+                )}
+              </div>
+              {tikiState.currentPhase && (
+                <div className="text-xs text-slate-500">
+                  Phase: {tikiState.currentPhase}
+                  {currentPlan?.phases && (
+                    <span> / {currentPlan.phases.length}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="mt-2 text-xs text-slate-500">
+              No active execution
+            </div>
+          )}
         </div>
       </SidebarSection>
 

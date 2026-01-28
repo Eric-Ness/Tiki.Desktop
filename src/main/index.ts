@@ -1,6 +1,10 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { setMainWindow, cleanupAllTerminals } from './services/terminal-manager'
+import { setFileWatcherWindow, startWatching, stopWatching } from './services/file-watcher'
+import { registerTerminalHandlers } from './ipc/terminal'
+import { registerTikiHandlers } from './ipc/tiki'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -48,7 +52,20 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  // Register IPC handlers
+  registerTerminalHandlers()
+  registerTikiHandlers()
+
   createWindow()
+
+  // Set main window reference for terminal manager and file watcher
+  if (mainWindow) {
+    setMainWindow(mainWindow)
+    setFileWatcherWindow(mainWindow)
+
+    // Start watching the current working directory
+    startWatching(process.cwd())
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -61,6 +78,11 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('before-quit', () => {
+  cleanupAllTerminals()
+  stopWatching()
 })
 
 // IPC Handlers - will be expanded in future issues
