@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { ImperativePanelHandle } from 'react-resizable-panels'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './components/ui/ResizablePanels'
 import { Sidebar } from './components/layout/Sidebar'
 import { MainContent } from './components/layout/MainContent'
@@ -6,13 +7,31 @@ import { DetailPanel } from './components/layout/DetailPanel'
 import { StatusBar } from './components/layout/StatusBar'
 import { TitleBar } from './components/layout/TitleBar'
 import { useTikiSync } from './hooks/useTikiSync'
+import { useSidebarShortcuts } from './hooks/useSidebarShortcuts'
+import { useTikiStore } from './stores/tiki-store'
 
 function App() {
   const [version, setVersion] = useState<string>('')
   const [cwd, setCwd] = useState<string>('')
+  const sidebarPanelRef = useRef<ImperativePanelHandle>(null)
+  const sidebarCollapsed = useTikiStore((state) => state.sidebarCollapsed)
 
   // Sync file watcher with Zustand store
   useTikiSync()
+
+  // Register sidebar keyboard shortcuts
+  useSidebarShortcuts()
+
+  // Sync panel collapse state with store
+  useEffect(() => {
+    if (sidebarPanelRef.current) {
+      if (sidebarCollapsed) {
+        sidebarPanelRef.current.collapse()
+      } else {
+        sidebarPanelRef.current.expand()
+      }
+    }
+  }, [sidebarCollapsed])
 
   useEffect(() => {
     // Get app info on mount
@@ -29,7 +48,14 @@ function App() {
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal">
           {/* Sidebar */}
-          <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+          <ResizablePanel
+            ref={sidebarPanelRef}
+            defaultSize={20}
+            minSize={15}
+            maxSize={30}
+            collapsible={true}
+            collapsedSize={0}
+          >
             <Sidebar cwd={cwd} />
           </ResizablePanel>
 
@@ -50,7 +76,7 @@ function App() {
       </div>
 
       {/* Status Bar */}
-      <StatusBar version={version} />
+      <StatusBar version={version} cwd={cwd} />
     </div>
   )
 }

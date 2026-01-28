@@ -61,24 +61,58 @@ export function Sidebar({ cwd }: SidebarProps) {
             <span>{getStatusLabel(tikiState?.status)}</span>
           </div>
           {tikiState?.activeIssue ? (
-            <div className="mt-2 space-y-1">
+            <div className="mt-2 space-y-2">
               <div className="text-xs text-slate-500">
-                Issue: #{tikiState.activeIssue}
+                <span className="flex items-center gap-1">
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  Issue #{tikiState.activeIssue}
+                </span>
                 {currentPlan?.issue?.title && (
-                  <span className="block truncate text-slate-400">{currentPlan.issue.title}</span>
+                  <span className="block truncate text-slate-400 mt-0.5 pl-4">{currentPlan.issue.title}</span>
                 )}
               </div>
-              {tikiState.currentPhase && (
-                <div className="text-xs text-slate-500">
-                  Phase: {tikiState.currentPhase}
-                  {currentPlan?.phases && (
-                    <span> / {currentPlan.phases.length}</span>
-                  )}
+              {currentPlan?.phases && currentPlan.phases.length > 0 && (
+                <div className="text-xs">
+                  <div className="flex items-center justify-between text-slate-500 mb-1">
+                    <span>Progress</span>
+                    <span>
+                      {tikiState.completedPhases?.length || 0} / {currentPlan.phases.length}
+                    </span>
+                  </div>
+                  <div className="flex gap-1">
+                    {currentPlan.phases.map((phase) => {
+                      const isCompleted = tikiState.completedPhases?.includes(phase.number)
+                      const isCurrent = phase.number === tikiState.currentPhase
+                      const isFailed = phase.status === 'failed'
+                      return (
+                        <div
+                          key={phase.number}
+                          className={`h-1.5 flex-1 rounded-full transition-colors ${
+                            isCompleted
+                              ? 'bg-status-completed'
+                              : isCurrent
+                                ? 'bg-status-running animate-pulse'
+                                : isFailed
+                                  ? 'bg-status-failed'
+                                  : 'bg-slate-600'
+                          }`}
+                          title={`Phase ${phase.number}: ${phase.title} (${phase.status})`}
+                        />
+                      )
+                    })}
+                  </div>
                 </div>
               )}
             </div>
           ) : (
-            <div className="mt-2 text-xs text-slate-500">
+            <div className="mt-2 text-xs text-slate-500 flex items-center gap-1">
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+              </svg>
               No active execution
             </div>
           )}
@@ -111,7 +145,7 @@ export function Sidebar({ cwd }: SidebarProps) {
 
       {/* Footer */}
       <div className="p-2 border-t border-border">
-        <button className="w-full px-3 py-2 bg-amber-600 hover:bg-amber-500 rounded text-sm font-medium transition-colors">
+        <button className="w-full px-3 py-2 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 rounded text-sm font-medium transition-colors shadow-sm hover:shadow-md active:shadow-sm">
           Start Claude Code
         </button>
       </div>
@@ -132,11 +166,13 @@ function SidebarSection({ title, defaultOpen = false, children }: SidebarSection
     <div className="border-b border-border">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-3 py-2 flex items-center justify-between hover:bg-background-tertiary transition-colors"
+        className="w-full px-3 py-2 flex items-center justify-between hover:bg-background-tertiary active:bg-background-tertiary/70 transition-colors group"
       >
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{title}</span>
+        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider group-hover:text-slate-300 transition-colors">
+          {title}
+        </span>
         <svg
-          className={`w-4 h-4 text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-slate-500 group-hover:text-slate-400 transition-all duration-200 ease-out ${isOpen ? 'rotate-180' : ''}`}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -145,7 +181,19 @@ function SidebarSection({ title, defaultOpen = false, children }: SidebarSection
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
-      {isOpen && <div className="pb-2">{children}</div>}
+      {/* Grid-based smooth height animation */}
+      <div
+        className="grid transition-[grid-template-rows] duration-200 ease-out"
+        style={{ gridTemplateRows: isOpen ? '1fr' : '0fr' }}
+      >
+        <div className="overflow-hidden">
+          <div
+            className={`pb-2 transition-opacity duration-200 ease-out ${isOpen ? 'opacity-100' : 'opacity-0'}`}
+          >
+            {children}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
