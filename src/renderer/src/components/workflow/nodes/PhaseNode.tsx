@@ -110,6 +110,24 @@ export function PhaseNode({ data }: PhaseNodeProps) {
             {fileCount}
           </div>
         )}
+
+        {/* Error indicator for failed status */}
+        {status === 'failed' && (
+          <div
+            data-testid="error-indicator"
+            className="
+              absolute -top-2 -right-2
+              w-6 h-6 rounded-full
+              bg-red-500 text-white
+              flex items-center justify-center
+              shadow-lg
+            "
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+        )}
       </div>
 
       {/* Source handle at bottom */}

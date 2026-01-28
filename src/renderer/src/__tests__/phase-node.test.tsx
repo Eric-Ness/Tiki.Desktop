@@ -109,6 +109,20 @@ describe('PhaseNode', () => {
       expect(node).toHaveClass('bg-red-900/20')
       expect(node).toHaveClass('border-solid')
     })
+
+    it('shows error indicator badge for failed status', () => {
+      renderPhaseNode({ status: 'failed' })
+
+      const errorIndicator = screen.getByTestId('error-indicator')
+      expect(errorIndicator).toBeInTheDocument()
+      expect(errorIndicator).toHaveClass('bg-red-500')
+    })
+
+    it('does not show error indicator for non-failed status', () => {
+      renderPhaseNode({ status: 'completed' })
+
+      expect(screen.queryByTestId('error-indicator')).not.toBeInTheDocument()
+    })
   })
 
   describe('Status: skipped', () => {

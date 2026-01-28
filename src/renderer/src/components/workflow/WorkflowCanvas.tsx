@@ -39,8 +39,9 @@ interface WorkflowCanvasProps {
 }
 
 function WorkflowCanvasInner({ nodes: propNodes, edges: propEdges }: WorkflowCanvasProps) {
-  const { fitView } = useReactFlow()
+  const { fitView, setCenter, getNode } = useReactFlow()
   const currentPlan = useTikiStore((state) => state.currentPlan)
+  const tikiState = useTikiStore((state) => state.tikiState)
   const selectedNode = useTikiStore((state) => state.selectedNode)
   const setSelectedNode = useTikiStore((state) => state.setSelectedNode)
 
@@ -95,6 +96,28 @@ function WorkflowCanvasInner({ nodes: propNodes, edges: propEdges }: WorkflowCan
   useEffect(() => {
     handleFitView()
   }, [handleFitView])
+
+  // Auto-focus to currently executing phase when it changes
+  useEffect(() => {
+    if (tikiState?.currentPhase) {
+      const nodeId = `phase-${tikiState.currentPhase}`
+
+      // Auto-select the current phase
+      setSelectedNode(nodeId)
+
+      // Center view on the active node after a short delay for rendering
+      setTimeout(() => {
+        const node = getNode(nodeId)
+        if (node) {
+          setCenter(
+            node.position.x + 90, // Center on node (half of typical node width)
+            node.position.y + 40, // Center on node (half of typical node height)
+            { duration: 300, zoom: 1 }
+          )
+        }
+      }, 100)
+    }
+  }, [tikiState?.currentPhase, setSelectedNode, setCenter, getNode])
 
   const hasNodes = nodesWithSelection.length > 0
 
