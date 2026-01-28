@@ -1,6 +1,17 @@
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 
+// Mock ResizeObserver for cmdk and other components
+class MockResizeObserver {
+  observe = vi.fn()
+  unobserve = vi.fn()
+  disconnect = vi.fn()
+}
+global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver
+
+// Mock scrollIntoView for cmdk
+Element.prototype.scrollIntoView = vi.fn()
+
 // Mock window.tikiDesktop for terminal API
 Object.defineProperty(window, 'tikiDesktop', {
   value: {

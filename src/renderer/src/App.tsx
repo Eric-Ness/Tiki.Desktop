@@ -6,10 +6,14 @@ import { MainContent } from './components/layout/MainContent'
 import { DetailPanel } from './components/layout/DetailPanel'
 import { StatusBar } from './components/layout/StatusBar'
 import { TitleBar } from './components/layout/TitleBar'
+import { CommandPalette } from './components/command-palette'
 import { useTikiSync } from './hooks/useTikiSync'
 import { useGitHubSync } from './hooks/useGitHubSync'
 import { useSidebarShortcuts } from './hooks/useSidebarShortcuts'
 import { useDetailPanelShortcuts } from './hooks/useDetailPanelShortcuts'
+import { useCommandPaletteShortcut } from './hooks/useCommandPaletteShortcut'
+import { useTikiCommands } from './hooks/useTikiCommands'
+import { useCommandExecution } from './hooks/useCommandExecution'
 import { useTikiStore } from './stores/tiki-store'
 
 function App() {
@@ -29,6 +33,12 @@ function App() {
   // Register keyboard shortcuts
   useSidebarShortcuts()
   useDetailPanelShortcuts()
+
+  // Command palette state and commands
+  const { isOpen: commandPaletteOpen, close: closeCommandPalette } = useCommandPaletteShortcut()
+  const { commands } = useTikiCommands()
+  const { executeCommand } = useCommandExecution()
+  const recentCommands = useTikiStore((state) => state.recentCommands)
 
   // Sync sidebar panel collapse state with store
   useEffect(() => {
@@ -58,8 +68,23 @@ function App() {
     window.tikiDesktop.getCwd().then(setCwd)
   }, [])
 
+  // Handle command selection from palette
+  const handleCommandSelect = (command: { name: string; displayName: string; description: string; argumentHint?: string }) => {
+    closeCommandPalette()
+    executeCommand(command)
+  }
+
   return (
     <div className="h-screen flex flex-col bg-background text-slate-100">
+      {/* Command Palette */}
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={closeCommandPalette}
+        commands={commands}
+        recentCommands={recentCommands}
+        onSelect={handleCommandSelect}
+      />
+
       {/* Title Bar */}
       <TitleBar />
 

@@ -150,6 +150,11 @@ interface TikiDesktopState {
   // Queue
   queue: unknown[]
   setQueue: (queue: unknown[]) => void
+
+  // Recent Commands (for command palette)
+  recentCommands: string[]
+  addRecentCommand: (commandName: string) => void
+  clearRecentCommands: () => void
 }
 
 export const useTikiStore = create<TikiDesktopState>()(
@@ -319,7 +324,19 @@ export const useTikiStore = create<TikiDesktopState>()(
 
         // Queue
         queue: [],
-        setQueue: (queue) => set({ queue })
+        setQueue: (queue) => set({ queue }),
+
+        // Recent Commands (for command palette)
+        recentCommands: [],
+        addRecentCommand: (commandName) =>
+          set((state) => {
+            // Remove existing occurrence (for deduplication)
+            const filtered = state.recentCommands.filter((cmd) => cmd !== commandName)
+            // Add to front, limit to 10
+            const updated = [commandName, ...filtered].slice(0, 10)
+            return { recentCommands: updated }
+          }),
+        clearRecentCommands: () => set({ recentCommands: [] })
       }),
       {
         name: 'tiki-desktop-storage',
@@ -329,7 +346,8 @@ export const useTikiStore = create<TikiDesktopState>()(
           activeProject: state.activeProject,
           sidebarCollapsed: state.sidebarCollapsed,
           detailPanelCollapsed: state.detailPanelCollapsed,
-          activeTab: state.activeTab
+          activeTab: state.activeTab,
+          recentCommands: state.recentCommands
         })
       }
     ),

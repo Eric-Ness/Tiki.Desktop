@@ -67,7 +67,8 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
     getState: () => ipcRenderer.invoke('tiki:get-state'),
     getPlan: (issueNumber: number) => ipcRenderer.invoke('tiki:get-plan', issueNumber),
     getQueue: () => ipcRenderer.invoke('tiki:get-queue'),
-    getReleases: () => ipcRenderer.invoke('tiki:get-releases')
+    getReleases: () => ipcRenderer.invoke('tiki:get-releases'),
+    getCommands: (cwd?: string) => ipcRenderer.invoke('tiki:get-commands', { cwd })
   },
 
   // GitHub API
@@ -122,6 +123,12 @@ declare global {
         getPlan: (issueNumber: number) => Promise<unknown>
         getQueue: () => Promise<unknown>
         getReleases: () => Promise<unknown[]>
+        getCommands: (cwd?: string) => Promise<Array<{
+          name: string
+          displayName: string
+          description: string
+          argumentHint?: string
+        }>>
       }
       github: {
         checkCli: () => Promise<{ available: boolean; authenticated: boolean; error?: string }>

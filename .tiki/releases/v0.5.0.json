@@ -1,0 +1,45 @@
+{
+  "version": "v0.5.0",
+  "createdAt": "2026-01-28T18:00:00.000Z",
+  "status": "active",
+  "description": "Full Integration - Real-time workflow updates, project management, command palette",
+  "requirementsEnabled": true,
+  "githubMilestone": {
+    "number": 5,
+    "url": "https://github.com/Eric-Ness/Tiki.Desktop/milestone/5"
+  },
+  "issues": [
+    {
+      "number": 9,
+      "title": "Command palette for Tiki commands",
+      "status": "not_planned",
+      "requirements": ["UI-04"],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    },
+    {
+      "number": 13,
+      "title": "Real-time workflow updates during execution",
+      "status": "not_planned",
+      "requirements": ["CORE-07"],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    },
+    {
+      "number": 14,
+      "title": "Project management and switching",
+      "status": "not_planned",
+      "requirements": ["CORE-08"],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    }
+  ],
+  "requirements": {
+    "total": 3,
+    "implemented": 0,
+    "verified": 0
+  }
+}

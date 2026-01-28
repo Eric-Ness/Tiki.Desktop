@@ -7,6 +7,7 @@ import {
   getQueue,
   getReleases
 } from '../services/file-watcher'
+import { loadTikiCommands } from '../services/command-loader'
 
 export function registerTikiHandlers(): void {
   // Start watching a project directory
@@ -39,5 +40,10 @@ export function registerTikiHandlers(): void {
   // Get all releases
   ipcMain.handle('tiki:get-releases', async () => {
     return getReleases()
+  })
+
+  // Get Tiki commands from .claude/commands/tiki/*.md
+  ipcMain.handle('tiki:get-commands', async (_, { cwd }: { cwd?: string }) => {
+    return loadTikiCommands(cwd)
   })
 }
