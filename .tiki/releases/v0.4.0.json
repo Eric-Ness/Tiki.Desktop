@@ -1,0 +1,35 @@
+{
+  "version": "v0.4.0",
+  "createdAt": "2026-01-28T16:58:30.000Z",
+  "status": "active",
+  "requirementsEnabled": true,
+  "githubMilestone": {
+    "number": 4,
+    "url": "https://github.com/Eric-Ness/Tiki.Desktop/milestone/4"
+  },
+  "issues": [
+    {
+      "number": 8,
+      "title": "GitHub integration: Issue list and details",
+      "status": "not_planned",
+      "requirements": ["GITHUB-01", "GITHUB-02", "GITHUB-03"],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    },
+    {
+      "number": 10,
+      "title": "Release and milestone visualization",
+      "status": "not_planned",
+      "requirements": ["GITHUB-04"],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    }
+  ],
+  "requirements": {
+    "total": 4,
+    "implemented": 0,
+    "verified": 0
+  }
+}

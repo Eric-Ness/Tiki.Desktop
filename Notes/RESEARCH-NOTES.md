@@ -409,19 +409,84 @@ task-04  Git status integration
 
 ## Questions to Resolve
 
-1. **Framework choice**: Electron vs Tauri?
-2. **Primary workflow**: Which mode is most important?
-3. **Claude Code integration**: Embed or spawn?
-4. **Multi-project**: Tabs vs sidebar?
-5. **Collaboration**: Single user or team features?
+1. **Framework choice**: Electron vs Tauri? → **Resolved: Electron** (v0.1.0)
+   - Chose Electron for full Node.js access and mature xterm.js/node-pty support
+2. **Primary workflow**: Which mode is most important? → **Resolved: Execution Mode** (v0.2.0)
+   - Terminal + State Overview + Status Bar is the core workflow
+3. **Claude Code integration**: Embed or spawn? → **Resolved: Spawn** (v0.1.0)
+   - Spawn Claude Code in terminal, interact via stdin/stdout
+4. **Multi-project**: Tabs vs sidebar? → **Resolved: Sidebar** (v0.2.0)
+   - Project switcher in sidebar, single active project at a time
+5. **Collaboration**: Single user or team features? → **Deferred**
+   - Single user for now, team features may come later
+
+---
+
+## Implementation Progress
+
+### v0.1.0 - Foundation ✅ (Completed)
+
+- Electron + React + TypeScript scaffolding with electron-vite
+- Basic three-panel layout with react-resizable-panels
+- Single terminal integration with xterm.js and node-pty
+- File watching for `.tiki/` directory with chokidar
+- Zustand store for state management
+- Tailwind CSS styling with dark theme
+
+### v0.2.0 - Core UI ✅ (Completed)
+
+- **Issue #3**: Multi-terminal tab management
+  - Keyboard shortcuts (Ctrl+T new, Ctrl+W close, Ctrl+Tab/Shift+Tab switch)
+  - Inline tab renaming (double-click or edit icon)
+  - Terminal status indicator (idle/running with colored dot)
+
+- **Issue #5**: Sidebar with state overview
+  - Collapsible sidebar with Ctrl+B toggle
+  - StateOverview component showing active issue/phase
+  - Phase progress visualization with colored bars
+  - Smooth collapse animations
+
+- **Issue #12**: Dark theme and visual polish
+  - Consistent theme colors across all panels
+  - Empty state patterns with helpful messages
+  - Active state feedback on interactive elements
+  - 150ms micro-interaction timing
+
+- **Issue #15**: Status bar with execution info
+  - Project name from cwd
+  - Git branch display (via IPC to main process)
+  - Execution status with issue/phase info
+
+### v0.3.0 - Workflow Diagram ✅ (Completed)
+
+- **Issue #6**: React Flow workflow diagram
+  - WorkflowCanvas with React Flow, controls, minimap, dagre layout
+  - Custom PhaseNode with 5 status states (pending, in_progress, completed, failed, skipped)
+  - IssueNode (entry point) with GitHub icon, cyan styling
+  - ShipNode (completion) with rocket icon, green/gray styling
+  - DependencyEdge with animated dashed/solid styling
+  - Auto-layout using dagre algorithm (TB direction)
+  - Node selection updates selectedNode in store
+  - 37 tests added
+
+- **Issue #7**: Context-sensitive detail panel
+  - PhaseDetail showing status, files, verification checklist, summary/error
+  - IssueDetail showing title, body, labels, state badge
+  - ShipDetail showing completion status
+  - Collapsible with Ctrl+Shift+B keyboard shortcut
+  - Smooth 150ms transitions between views
+  - 62 tests added
 
 ---
 
 ## Next Steps
 
-1. Define MVP feature set
-2. Choose technology stack
-3. Design UI/UX mockups
-4. Set up project scaffolding
-5. Implement core components
+1. ~~Define MVP feature set~~ ✅
+2. ~~Choose technology stack~~ ✅
+3. ~~Design UI/UX mockups~~ ✅
+4. ~~Set up project scaffolding~~ ✅
+5. ~~Implement core components~~ ✅ (Phase 1-2)
+6. ~~Implement workflow diagram (React Flow)~~ ✅ (Phase 3)
+7. GitHub integration (issue list, details) - Phase 4
+8. Full Tiki command integration - Phase 5
 

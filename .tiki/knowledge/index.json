@@ -12,8 +12,44 @@
       "title": "File Watcher to Zustand State Sync",
       "category": "architecture",
       "tags": ["chokidar", "zustand", "ipc", "state-management"]
+    },
+    {
+      "id": "terminal-status-detection",
+      "title": "Terminal Activity Status Detection",
+      "category": "patterns",
+      "tags": ["terminal", "node-pty", "debounce", "status"]
+    },
+    {
+      "id": "resizable-panels-collapse",
+      "title": "Resizable Panels Collapse/Expand Pattern",
+      "category": "patterns",
+      "tags": ["react", "react-resizable-panels", "ui", "layout"]
+    },
+    {
+      "id": "keyboard-shortcut-hooks",
+      "title": "React Keyboard Shortcut Hooks Pattern",
+      "category": "patterns",
+      "tags": ["react", "hooks", "keyboard", "shortcuts"]
+    },
+    {
+      "id": "react-flow-custom-nodes",
+      "title": "React Flow Custom Node Components",
+      "category": "patterns",
+      "tags": ["react-flow", "xyflow", "custom-nodes", "workflow"]
+    },
+    {
+      "id": "dagre-auto-layout",
+      "title": "Dagre Auto-Layout for React Flow",
+      "category": "patterns",
+      "tags": ["dagre", "react-flow", "layout", "workflow"]
+    },
+    {
+      "id": "context-sensitive-panel",
+      "title": "Context-Sensitive Panel Rendering Pattern",
+      "category": "patterns",
+      "tags": ["react", "zustand", "ui", "panels", "state"]
     }
   ],
   "categories": ["architecture", "patterns", "troubleshooting"],
-  "lastUpdated": "2026-01-28T00:00:00.000Z"
+  "lastUpdated": "2026-01-28T19:45:00.000Z"
 }

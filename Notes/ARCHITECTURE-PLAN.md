@@ -577,20 +577,26 @@ tiki-desktop/
 - [x] File watcher for `.tiki/` directory
 - [x] Zustand state management
 
-### Phase 2: Core UI
-- [ ] Sidebar with collapsible sections
-- [ ] Terminal tabs and management
-- [ ] State display from `current.json`
-- [ ] Basic plan display from `plans/issue-N.json`
-- [ ] Command palette (cmdk)
+### Phase 2: Core UI ✅ (v0.2.0)
 
-### Phase 3: Workflow Diagram
-- [ ] React Flow integration
-- [ ] Phase nodes with status colors
-- [ ] Criteria nodes
-- [ ] Dependency edges
-- [ ] Auto-layout with Dagre
-- [ ] Node selection → detail panel
+- [x] Sidebar with collapsible sections (Ctrl+B toggle, collapse/expand)
+- [x] Terminal tabs and management (rename, close, status indicators)
+- [x] State display from `current.json` (StateOverview component)
+- [x] Status bar with execution info (project, branch, issue/phase)
+- [ ] Basic plan display from `plans/issue-N.json` (partial - sidebar shows phases)
+- [ ] Command palette (cmdk) - deferred to Phase 5
+
+### Phase 3: Workflow Diagram ✅ (v0.3.0)
+
+- [x] React Flow integration (@xyflow/react v12)
+- [x] Phase nodes with status colors (pending/in_progress/completed/failed/skipped)
+- [x] IssueNode (entry) and ShipNode (completion)
+- [x] Dependency edges with animated styling
+- [x] Auto-layout with Dagre
+- [x] Node selection → detail panel integration
+- [x] Context-sensitive detail panel (PhaseDetail, IssueDetail, ShipDetail)
+- [x] Collapsible detail panel (Ctrl+Shift+B)
+- [ ] CriteriaNode - deferred to Phase 4
 
 ### Phase 4: GitHub Integration
 - [ ] Issue list from `gh` CLI

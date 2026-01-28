@@ -1,0 +1,9 @@
+{
+  "id": "terminal-status-detection",
+  "title": "Terminal Activity Status Detection",
+  "category": "patterns",
+  "createdAt": "2026-01-28T12:00:00.000Z",
+  "tags": ["terminal", "node-pty", "debounce", "status"],
+  "content": "## Pattern: Detecting Terminal Idle/Running Status\n\n### Problem\nDetermine when a terminal is actively running a command vs idle at a prompt.\n\n### Solution\nUse debounced activity detection based on PTY data output.\n\n### Implementation\n```typescript\nconst IDLE_DEBOUNCE_MS = 300\n\nclass TerminalManager {\n  private statusTimers: Map<string, NodeJS.Timeout> = new Map()\n  private statuses: Map<string, TerminalStatus> = new Map()\n\n  private setStatus(id: string, status: TerminalStatus) {\n    if (this.statuses.get(id) !== status) {\n      this.statuses.set(id, status)\n      this.mainWindow?.webContents.send('terminal:status-change', { id, status })\n    }\n  }\n\n  private onData(id: string, data: string) {\n    // Mark as running on activity\n    this.setStatus(id, 'running')\n    \n    // Reset idle timer\n    const existing = this.statusTimers.get(id)\n    if (existing) clearTimeout(existing)\n    \n    const timer = setTimeout(() => {\n      this.setStatus(id, 'idle')\n    }, IDLE_DEBOUNCE_MS)\n    \n    this.statusTimers.set(id, timer)\n  }\n}\n```\n\n### Key Files\n- `src/main/services/terminal-manager.ts` - Status tracking\n- `src/renderer/src/components/terminal/TerminalTabs.tsx` - Visual indicator\n\n### Trade-offs\n- 300ms debounce balances responsiveness vs flickering\n- Simple but not 100% accurate (long-running commands with no output show as idle)\n- Could enhance with shell integration or prompt detection",
+  "relatedIssues": [3]
+}

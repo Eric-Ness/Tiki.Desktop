@@ -1,0 +1,215 @@
+{
+  "version": "1.0",
+  "createdAt": "2026-01-28T10:00:00.000Z",
+  "updatedAt": "2026-01-28T10:00:00.000Z",
+  "categories": [
+    {
+      "code": "CORE",
+      "name": "Core Functionality",
+      "description": "Essential application features and capabilities",
+      "requirements": [
+        {
+          "id": "CORE-01",
+          "text": "Application provides Electron-based desktop shell with React UI",
+          "status": "implemented",
+          "linkedIssues": [1],
+          "verification": {
+            "type": "manual",
+            "description": "Electron app launches with React renderer"
+          }
+        },
+        {
+          "id": "CORE-02",
+          "text": "Terminal emulation with xterm.js and node-pty integration",
+          "status": "implemented",
+          "linkedIssues": [2],
+          "verification": {
+            "type": "manual",
+            "description": "Terminal renders and accepts input via PTY"
+          }
+        },
+        {
+          "id": "CORE-03",
+          "text": "Real-time file watching of .tiki/ directory",
+          "status": "implemented",
+          "linkedIssues": [4],
+          "verification": {
+            "type": "manual",
+            "description": "Changes to .tiki/ files trigger UI updates"
+          }
+        },
+        {
+          "id": "CORE-04",
+          "text": "Zustand-based state management with IPC synchronization",
+          "status": "implemented",
+          "linkedIssues": [11],
+          "verification": {
+            "type": "manual",
+            "description": "State persists and syncs between main and renderer"
+          }
+        },
+        {
+          "id": "CORE-05",
+          "text": "Multi-terminal tab management with create/close/switch",
+          "status": "pending",
+          "linkedIssues": [3],
+          "verification": {
+            "type": "manual",
+            "description": "Can create, switch, and close multiple terminal tabs"
+          }
+        },
+        {
+          "id": "CORE-06",
+          "text": "React Flow workflow diagram showing execution phases",
+          "status": "implemented",
+          "linkedIssues": [6],
+          "verification": {
+            "type": "manual",
+            "description": "Phases render as connected nodes with status colors"
+          }
+        },
+        {
+          "id": "CORE-07",
+          "text": "Real-time workflow updates during phase execution",
+          "status": "pending",
+          "linkedIssues": [13],
+          "verification": {
+            "type": "manual",
+            "description": "Workflow diagram updates within 200ms of state change"
+          }
+        },
+        {
+          "id": "CORE-08",
+          "text": "Project management with multi-project switching",
+          "status": "pending",
+          "linkedIssues": [14],
+          "verification": {
+            "type": "manual",
+            "description": "Can add, switch, and remove projects"
+          }
+        }
+      ]
+    },
+    {
+      "code": "UI",
+      "name": "User Interface",
+      "description": "Visual components and user experience",
+      "requirements": [
+        {
+          "id": "UI-01",
+          "text": "Three-panel resizable layout (Sidebar, Main, Detail)",
+          "status": "implemented",
+          "linkedIssues": [1],
+          "verification": {
+            "type": "manual",
+            "description": "All three panels render and resize correctly"
+          }
+        },
+        {
+          "id": "UI-02",
+          "text": "Sidebar with collapsible sections and state overview",
+          "status": "pending",
+          "linkedIssues": [5],
+          "verification": {
+            "type": "manual",
+            "description": "Sidebar sections collapse/expand with state display"
+          }
+        },
+        {
+          "id": "UI-03",
+          "text": "Detail panel showing phase/issue context information",
+          "status": "implemented",
+          "linkedIssues": [7],
+          "verification": {
+            "type": "manual",
+            "description": "Clicking nodes shows relevant details in right panel"
+          }
+        },
+        {
+          "id": "UI-04",
+          "text": "Command palette for quick Tiki command access",
+          "status": "pending",
+          "linkedIssues": [9],
+          "verification": {
+            "type": "manual",
+            "description": "Cmd+K opens palette with searchable commands"
+          }
+        },
+        {
+          "id": "UI-05",
+          "text": "Dark theme with consistent visual polish",
+          "status": "pending",
+          "linkedIssues": [12],
+          "verification": {
+            "type": "manual",
+            "description": "App matches reference images with smooth animations"
+          }
+        },
+        {
+          "id": "UI-06",
+          "text": "Status bar with execution info and indicators",
+          "status": "pending",
+          "linkedIssues": [15],
+          "verification": {
+            "type": "manual",
+            "description": "Status bar shows current issue, phase, and git info"
+          }
+        }
+      ]
+    },
+    {
+      "code": "GITHUB",
+      "name": "GitHub Integration",
+      "description": "GitHub issue and release management features",
+      "requirements": [
+        {
+          "id": "GITHUB-01",
+          "text": "GitHub Bridge service using gh CLI",
+          "status": "pending",
+          "linkedIssues": [8],
+          "verification": {
+            "type": "manual",
+            "description": "gh CLI commands execute successfully from main process"
+          }
+        },
+        {
+          "id": "GITHUB-02",
+          "text": "Issue list display with planned/unplanned indicators",
+          "status": "pending",
+          "linkedIssues": [8],
+          "verification": {
+            "type": "manual",
+            "description": "Issues show in sidebar with plan status indicators"
+          }
+        },
+        {
+          "id": "GITHUB-03",
+          "text": "Issue detail view with body, labels, status",
+          "status": "pending",
+          "linkedIssues": [8],
+          "verification": {
+            "type": "manual",
+            "description": "Clicking issue shows full details in panel"
+          }
+        },
+        {
+          "id": "GITHUB-04",
+          "text": "Release and milestone visualization",
+          "status": "pending",
+          "linkedIssues": [10],
+          "verification": {
+            "type": "manual",
+            "description": "Releases display with progress and milestone links"
+          }
+        }
+      ]
+    }
+  ],
+  "versions": {
+    "v0.1.0": ["CORE-01", "CORE-02", "CORE-03", "CORE-04", "UI-01"],
+    "v0.2.0": ["CORE-05", "UI-02", "UI-05", "UI-06"],
+    "v0.3.0": ["CORE-06", "UI-03"],
+    "v0.4.0": ["GITHUB-01", "GITHUB-02", "GITHUB-03", "GITHUB-04"]
+  },
+  "outOfScope": []
+}

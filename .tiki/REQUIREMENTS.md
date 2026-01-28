@@ -5,8 +5,8 @@
 Tiki Desktop is an Electron-based desktop application that provides a visual interface for the Tiki workflow framework. Requirements are organized into three categories: Core Functionality, User Interface, and GitHub Integration.
 
 **Total Requirements:** 18
-- **Implemented:** 5 (28%)
-- **Pending:** 13 (72%)
+- **Implemented:** 11 (61%)
+- **Pending:** 7 (39%)
 
 ---
 
@@ -62,33 +62,19 @@ Tiki Desktop is an Electron-based desktop application that provides a visual int
 
 ---
 
-## v0.3.0 Requirements (Pending)
+## v0.3.0 Requirements (Completed)
 
 - **CORE-06**: React Flow workflow diagram showing execution phases
   - *Verify: manual* - Phases render as connected nodes with status colors
-  - *Status: Pending* - #6
+  - *Implemented by: #6* ✅
 
 - **UI-03**: Detail panel showing phase/issue context information
   - *Verify: manual* - Clicking nodes shows relevant details in right panel
-  - *Status: Pending* - #7
+  - *Implemented by: #7* ✅
 
 ---
 
-## Future Requirements
-
-- **CORE-07**: Real-time workflow updates during phase execution
-  - *Verify: manual* - Workflow diagram updates within 200ms of state change
-  - *Status: Pending* - #13
-
-- **CORE-08**: Project management with multi-project switching
-  - *Verify: manual* - Can add, switch, and remove projects
-  - *Status: Pending* - #14
-
-### User Interface
-
-- **UI-04**: Command palette for quick Tiki command access
-  - *Verify: manual* - Cmd+K opens palette with searchable commands
-  - *Status: Pending* - #9
+## v0.4.0 Requirements (Active)
 
 ### GitHub Integration
 
@@ -107,3 +93,23 @@ Tiki Desktop is an Electron-based desktop application that provides a visual int
 - **GITHUB-04**: Release and milestone visualization
   - *Verify: manual* - Releases display with progress and milestone links
   - *Status: Pending* - #10
+
+---
+
+## Future Requirements (v0.5.0+)
+
+### Core Functionality
+
+- **CORE-07**: Real-time workflow updates during phase execution
+  - *Verify: manual* - Workflow diagram updates within 200ms of state change
+  - *Status: Pending* - #13
+
+- **CORE-08**: Project management with multi-project switching
+  - *Verify: manual* - Can add, switch, and remove projects
+  - *Status: Pending* - #14
+
+### User Interface
+
+- **UI-04**: Command palette for quick Tiki command access
+  - *Verify: manual* - Cmd+K opens palette with searchable commands
+  - *Status: Pending* - #9
