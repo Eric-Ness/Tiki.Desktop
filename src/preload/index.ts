@@ -20,6 +20,8 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.send('terminal:resize', { id, cols, rows }),
     kill: (id: string) =>
       ipcRenderer.invoke('terminal:kill', { id }),
+    rename: (id: string, name: string) =>
+      ipcRenderer.invoke('terminal:rename', { id, name }),
     onData: (callback: (id: string, data: string) => void) => {
       const handler = (_: unknown, { id, data }: { id: string; data: string }) => callback(id, data)
       ipcRenderer.on('terminal:data', handler)
@@ -29,6 +31,11 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       const handler = (_: unknown, { id, code }: { id: string; code: number }) => callback(id, code)
       ipcRenderer.on('terminal:exit', handler)
       return () => ipcRenderer.removeListener('terminal:exit', handler)
+    },
+    onStatusChange: (callback: (id: string, status: 'idle' | 'running') => void) => {
+      const handler = (_: unknown, { id, status }: { id: string; status: 'idle' | 'running' }) => callback(id, status)
+      ipcRenderer.on('terminal:status-changed', handler)
+      return () => ipcRenderer.removeListener('terminal:status-changed', handler)
     }
   },
 
@@ -81,8 +88,10 @@ declare global {
         write: (id: string, data: string) => void
         resize: (id: string, cols: number, rows: number) => void
         kill: (id: string) => Promise<void>
+        rename: (id: string, name: string) => Promise<boolean>
         onData: (callback: (id: string, data: string) => void) => () => void
         onExit: (callback: (id: string, code: number) => void) => () => void
+        onStatusChange: (callback: (id: string, status: 'idle' | 'running') => void) => () => void
       }
       tiki: {
         watch: (path: string) => Promise<boolean>

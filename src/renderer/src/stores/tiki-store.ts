@@ -49,9 +49,12 @@ export interface Release {
   }>
 }
 
+export type TerminalTabStatus = 'active' | 'idle' | 'busy'
+
 export interface TerminalTab {
   id: string
   name: string
+  status: TerminalTabStatus
 }
 
 type ActiveTab = 'terminal' | 'workflow' | 'config'
@@ -97,6 +100,13 @@ interface TikiDesktopState {
   setActiveTerminal: (id: string | null) => void
   addTerminal: (terminal: TerminalTab) => void
   removeTerminal: (id: string) => void
+  // New terminal tab management actions
+  createTab: (name?: string) => string
+  closeTab: (id: string) => void
+  setActiveTerminalTab: (id: string) => void
+  renameTab: (id: string, name: string) => void
+  setTabStatus: (id: string, status: TerminalTabStatus) => void
+  getTabByIndex: (index: number) => TerminalTab | undefined
 
   // GitHub
   issues: GitHubIssue[]
@@ -114,7 +124,7 @@ interface TikiDesktopState {
 export const useTikiStore = create<TikiDesktopState>()(
   devtools(
     persist(
-      (set) => ({
+      (set, get) => ({
         // Projects
         projects: [],
         activeProject: null,
@@ -175,6 +185,74 @@ export const useTikiStore = create<TikiDesktopState>()(
             terminals: state.terminals.filter((t) => t.id !== id),
             activeTerminal: state.activeTerminal === id ? null : state.activeTerminal
           })),
+        // New terminal tab management actions
+        createTab: (name) => {
+          const id = `terminal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          const tabName = name || `Terminal ${get().terminals.length + 1}`
+          const newTab: TerminalTab = {
+            id,
+            name: tabName,
+            status: 'active'
+          }
+          set((state) => ({
+            terminals: [...state.terminals, newTab],
+            activeTerminal: id
+          }))
+          return id
+        },
+        closeTab: (id) => {
+          set((state) => {
+            const remainingTerminals = state.terminals.filter((t) => t.id !== id)
+
+            // If closing the last tab, auto-create a new one
+            if (remainingTerminals.length === 0) {
+              const newId = `terminal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+              const newTab: TerminalTab = {
+                id: newId,
+                name: 'Terminal 1',
+                status: 'active'
+              }
+              return {
+                terminals: [newTab],
+                activeTerminal: newId
+              }
+            }
+
+            // Switch to another tab if we closed the active one
+            const newActiveTerminal =
+              state.activeTerminal === id
+                ? remainingTerminals[remainingTerminals.length - 1].id
+                : state.activeTerminal
+
+            return {
+              terminals: remainingTerminals,
+              activeTerminal: newActiveTerminal
+            }
+          })
+        },
+        setActiveTerminalTab: (id) => {
+          set((state) => {
+            // Only set active if the tab exists
+            const tabExists = state.terminals.some((t) => t.id === id)
+            if (tabExists) {
+              return { activeTerminal: id }
+            }
+            return {}
+          })
+        },
+        renameTab: (id, name) => {
+          set((state) => ({
+            terminals: state.terminals.map((t) => (t.id === id ? { ...t, name } : t))
+          }))
+        },
+        setTabStatus: (id, status) => {
+          set((state) => ({
+            terminals: state.terminals.map((t) => (t.id === id ? { ...t, status } : t))
+          }))
+        },
+        getTabByIndex: (index) => {
+          return get().terminals[index]
+        },
 
         // GitHub
         issues: [],

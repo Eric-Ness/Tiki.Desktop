@@ -3,7 +3,8 @@ import {
   createTerminal,
   writeTerminal,
   resizeTerminal,
-  killTerminal
+  killTerminal,
+  renameTerminal
 } from '../services/terminal-manager'
 
 export function registerTerminalHandlers(): void {
@@ -25,5 +26,10 @@ export function registerTerminalHandlers(): void {
   // Kill terminal
   ipcMain.handle('terminal:kill', (_, { id }: { id: string }) => {
     killTerminal(id)
+  })
+
+  // Rename terminal
+  ipcMain.handle('terminal:rename', (_, { id, name }: { id: string; name: string }) => {
+    return renameTerminal(id, name)
   })
 }
