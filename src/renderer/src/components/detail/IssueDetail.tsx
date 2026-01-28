@@ -1,4 +1,5 @@
 import { GitHubIssue } from '../../stores/tiki-store'
+import { IssueActions } from '../issues'
 
 export interface IssueDetailProps {
   issue: GitHubIssue | {
@@ -99,7 +100,13 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Quick actions for working with the issue */}
+        {'url' in issue && (
+          <IssueActions issue={issue as GitHubIssue} />
+        )}
+
+        {/* Open in GitHub button */}
         <button
           onClick={handleOpenInBrowser}
           className="flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-700 hover:bg-slate-600 active:bg-slate-700 rounded transition-colors"

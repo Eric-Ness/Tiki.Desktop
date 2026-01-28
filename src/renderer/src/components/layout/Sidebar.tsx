@@ -3,6 +3,8 @@ import { useTikiStore, type Project } from '../../stores/tiki-store'
 import { IssueList } from '../sidebar/IssueList'
 import { ReleaseList } from '../sidebar/ReleaseList'
 import { ProjectList } from '../sidebar/ProjectList'
+import { KnowledgeList } from '../knowledge/KnowledgeList'
+import { KnowledgeEditor } from '../knowledge/KnowledgeEditor'
 
 interface SidebarProps {
   cwd: string
@@ -15,6 +17,9 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
   const setGithubLoading = useTikiStore((state) => state.setGithubLoading)
   const setGithubError = useTikiStore((state) => state.setGithubError)
   const setIssues = useTikiStore((state) => state.setIssues)
+
+  const [showKnowledgeEditor, setShowKnowledgeEditor] = useState(false)
+  const [knowledgeKey, setKnowledgeKey] = useState(0)
 
   const handleRefreshIssues = useCallback(async () => {
     if (!cwd) return
@@ -143,10 +148,19 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
 
       {/* Knowledge Section */}
       <SidebarSection title="Knowledge">
-        <div className="px-2 py-1 text-sm text-slate-500 italic">
-          No knowledge entries
-        </div>
+        <KnowledgeList
+          key={knowledgeKey}
+          onCreateEntry={() => setShowKnowledgeEditor(true)}
+        />
       </SidebarSection>
+
+      {/* Knowledge Editor Modal */}
+      {showKnowledgeEditor && (
+        <KnowledgeEditor
+          onClose={() => setShowKnowledgeEditor(false)}
+          onCreated={() => setKnowledgeKey((k) => k + 1)}
+        />
+      )}
 
       {/* Spacer */}
       <div className="flex-1" />

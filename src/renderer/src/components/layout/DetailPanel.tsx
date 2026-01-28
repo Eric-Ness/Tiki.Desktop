@@ -3,6 +3,7 @@ import { PhaseDetail, type PhaseData, type PhaseStatus } from '../detail/PhaseDe
 import { IssueDetail } from '../detail/IssueDetail'
 import { ShipDetail } from '../detail/ShipDetail'
 import { ReleaseDetail } from '../detail/ReleaseDetail'
+import { KnowledgeDetail } from '../knowledge/KnowledgeDetail'
 
 // Empty state component
 function EmptyState() {
@@ -38,14 +39,16 @@ function parsePhaseNumber(nodeId: string): number | null {
 }
 
 // Helper to determine selection type
-type SelectionType = 'empty' | 'phase' | 'issue' | 'ship' | 'github-issue' | 'release'
+type SelectionType = 'empty' | 'phase' | 'issue' | 'ship' | 'github-issue' | 'release' | 'knowledge'
 
 function getSelectionType(
   nodeId: string | null,
   selectedIssue: number | null,
-  selectedRelease: string | null
+  selectedRelease: string | null,
+  selectedKnowledge: string | null
 ): SelectionType {
   // Sidebar selections take priority
+  if (selectedKnowledge !== null) return 'knowledge'
   if (selectedRelease !== null) return 'release'
   if (selectedIssue !== null) return 'github-issue'
   if (!nodeId) return 'empty'
@@ -63,16 +66,22 @@ export function DetailPanel({ cwd }: DetailPanelProps) {
   const selectedNode = useTikiStore((state) => state.selectedNode)
   const selectedIssue = useTikiStore((state) => state.selectedIssue)
   const selectedRelease = useTikiStore((state) => state.selectedRelease)
+  const selectedKnowledge = useTikiStore((state) => state.selectedKnowledge)
   const currentPlan = useTikiStore((state) => state.currentPlan)
   const issues = useTikiStore((state) => state.issues)
   const releases = useTikiStore((state) => state.releases)
 
-  const selectionType = getSelectionType(selectedNode, selectedIssue, selectedRelease)
+  const selectionType = getSelectionType(selectedNode, selectedIssue, selectedRelease, selectedKnowledge)
 
   // Render content based on selection type
   const renderContent = () => {
     if (selectionType === 'empty') {
       return <EmptyState />
+    }
+
+    // Knowledge entry from sidebar selection
+    if (selectionType === 'knowledge') {
+      return <KnowledgeDetail />
     }
 
     // Release from sidebar selection

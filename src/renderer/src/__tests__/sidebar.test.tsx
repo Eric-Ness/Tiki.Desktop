@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { Sidebar } from '../components/layout/Sidebar'
 import { useTikiStore } from '../stores/tiki-store'
 
@@ -7,6 +7,17 @@ import { useTikiStore } from '../stores/tiki-store'
 vi.mock('../stores/tiki-store', () => ({
   useTikiStore: vi.fn()
 }))
+
+// Mock window.tikiDesktop.knowledge API
+const mockKnowledgeList = vi.fn().mockResolvedValue([])
+Object.defineProperty(window, 'tikiDesktop', {
+  value: {
+    knowledge: {
+      list: mockKnowledgeList
+    }
+  },
+  writable: true
+})
 
 const mockUseTikiStore = vi.mocked(useTikiStore)
 
@@ -34,6 +45,9 @@ const createDefaultMockState = (overrides = {}) => ({
   activeProject: null,
   addProject: vi.fn(),
   removeProject: vi.fn(),
+  // Knowledge-related state
+  selectedKnowledge: null,
+  setSelectedKnowledge: vi.fn(),
   ...overrides
 })
 
@@ -199,10 +213,13 @@ describe('Sidebar', () => {
       expect(screen.getByText('No releases')).toBeInTheDocument()
     })
 
-    it('should show "No knowledge entries" in Knowledge section', () => {
+    it('should show "No project selected" in Knowledge section when no project', async () => {
       render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
-      expect(screen.getByText('No knowledge entries')).toBeInTheDocument()
+      // KnowledgeList shows "No project selected" when there's no active project
+      await waitFor(() => {
+        expect(screen.getByText('No project selected')).toBeInTheDocument()
+      })
     })
   })
 
@@ -340,7 +357,7 @@ describe('SidebarSection', () => {
   })
 
   describe('Content rendering', () => {
-    it('should render correct content in each section', () => {
+    it('should render correct content in each section', async () => {
       mockUseTikiStore.mockImplementation((selector) => {
         const state = createDefaultMockState({
           tikiState: {
@@ -376,7 +393,14 @@ describe('SidebarSection', () => {
       // Empty sections content
       expect(screen.getByText('No open issues')).toBeInTheDocument()
       expect(screen.getByText('No releases')).toBeInTheDocument()
-      expect(screen.getByText('No knowledge entries')).toBeInTheDocument()
+
+      // Knowledge section is collapsed by default, expand it first
+      const knowledgeHeader = screen.getByRole('button', { name: /knowledge/i })
+      fireEvent.click(knowledgeHeader)
+
+      await waitFor(() => {
+        expect(screen.getByText('No knowledge entries yet')).toBeInTheDocument()
+      })
     })
   })
 })

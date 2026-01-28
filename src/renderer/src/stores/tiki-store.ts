@@ -160,6 +160,10 @@ interface TikiDesktopState {
   settingsModalOpen: boolean
   setSettingsModalOpen: (open: boolean) => void
   toggleSettingsModal: () => void
+
+  // Knowledge
+  selectedKnowledge: string | null
+  setSelectedKnowledge: (id: string | null) => void
 }
 
 export const useTikiStore = create<TikiDesktopState>()(
@@ -346,7 +350,11 @@ export const useTikiStore = create<TikiDesktopState>()(
         // Settings Modal
         settingsModalOpen: false,
         setSettingsModalOpen: (open) => set({ settingsModalOpen: open }),
-        toggleSettingsModal: () => set((state) => ({ settingsModalOpen: !state.settingsModalOpen }))
+        toggleSettingsModal: () => set((state) => ({ settingsModalOpen: !state.settingsModalOpen })),
+
+        // Knowledge
+        selectedKnowledge: null,
+        setSelectedKnowledge: (selectedKnowledge) => set({ selectedKnowledge })
       }),
       {
         name: 'tiki-desktop-storage',

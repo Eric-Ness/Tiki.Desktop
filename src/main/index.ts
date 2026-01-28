@@ -11,6 +11,7 @@ import { registerGitHubHandlers } from './ipc/github'
 import { registerProjectHandlers } from './ipc/projects'
 import { registerSettingsHandlers } from './ipc/settings'
 import { registerConfigHandlers } from './ipc/config'
+import { registerKnowledgeHandlers } from './ipc/knowledge'
 import { setMainWindow as setSettingsWindow } from './services/settings-store'
 import { setMainWindow as setNotificationWindow } from './services/notification-service'
 
@@ -66,6 +67,7 @@ app.whenReady().then(() => {
   registerGitHubHandlers()
   registerSettingsHandlers()
   registerConfigHandlers()
+  registerKnowledgeHandlers()
 
   createWindow()
 

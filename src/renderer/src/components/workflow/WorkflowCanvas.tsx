@@ -19,7 +19,9 @@ import { PhaseNode } from './nodes/PhaseNode'
 import { IssueNode } from './nodes/IssueNode'
 import { ShipNode } from './nodes/ShipNode'
 import { DependencyEdge } from './edges/DependencyEdge'
+import { PhaseControls } from './PhaseControls'
 import { useTikiStore } from '../../stores/tiki-store'
+import { usePhaseControls } from '../../hooks/usePhaseControls'
 
 // Register custom node types
 const nodeTypes: NodeTypes = {
@@ -44,6 +46,7 @@ function WorkflowCanvasInner({ nodes: propNodes, edges: propEdges }: WorkflowCan
   const tikiState = useTikiStore((state) => state.tikiState)
   const selectedNode = useTikiStore((state) => state.selectedNode)
   const setSelectedNode = useTikiStore((state) => state.setSelectedNode)
+  const { pause, resume, skipPhase, redoPhase } = usePhaseControls()
 
   // Convert plan to nodes/edges, or use props if provided
   const { nodes, edges } = useMemo(() => {
@@ -123,6 +126,14 @@ function WorkflowCanvasInner({ nodes: propNodes, edges: propEdges }: WorkflowCan
 
   return (
     <div className="w-full h-full relative">
+      {/* Phase Controls Toolbar */}
+      <PhaseControls
+        onPause={pause}
+        onResume={resume}
+        onSkip={skipPhase}
+        onRedo={redoPhase}
+      />
+
       <ReactFlow
         nodes={nodesWithSelection}
         edges={layoutedEdges}

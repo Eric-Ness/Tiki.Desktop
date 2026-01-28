@@ -3,10 +3,32 @@ import { BrowserWindow } from 'electron'
 import { readFile, readdir } from 'fs/promises'
 import { join, basename } from 'path'
 import { existsSync } from 'fs'
+import {
+  notifyPhaseCompleted,
+  notifyPhaseFailed,
+  notifyIssuePlanned,
+  notifyIssueShipped
+} from './notification-service'
 
 let watcher: chokidar.FSWatcher | null = null
 let mainWindow: BrowserWindow | null = null
 let projectPath: string | null = null
+
+// State tracking for notifications
+interface PlanState {
+  status: string
+  phases: Array<{
+    number: number
+    title: string
+    status: string
+  }>
+  issue?: {
+    number: number
+    title: string
+  }
+}
+
+const previousPlanStates: Map<string, PlanState> = new Map()
 
 // Debounce timers
 const debounceTimers: Map<string, NodeJS.Timeout> = new Map()
@@ -56,8 +78,47 @@ async function handleStateChange(filePath: string): Promise<void> {
 async function handlePlanChange(filePath: string): Promise<void> {
   const filename = basename(filePath)
   debounce(`plan-${filename}`, async () => {
-    const data = await safeReadJson(filePath)
+    const data = await safeReadJson(filePath) as PlanState | null
     if (data) {
+      // Check for state changes to trigger notifications
+      const previousState = previousPlanStates.get(filename)
+
+      if (previousState && data.issue) {
+        // Check for phase completions/failures
+        for (const phase of data.phases || []) {
+          const prevPhase = previousState.phases?.find((p) => p.number === phase.number)
+
+          if (prevPhase && prevPhase.status !== phase.status) {
+            if (phase.status === 'completed' && prevPhase.status !== 'completed') {
+              notifyPhaseCompleted(phase.number, phase.title, data.issue.number)
+            } else if (phase.status === 'failed' && prevPhase.status !== 'failed') {
+              notifyPhaseFailed(phase.number, phase.title, data.issue.number)
+            }
+          }
+        }
+
+        // Check for plan status changes
+        if (previousState.status !== data.status) {
+          if (data.status === 'shipped') {
+            notifyIssueShipped(data.issue.number, data.issue.title)
+          }
+        }
+      } else if (!previousState && data.issue) {
+        // New plan created
+        notifyIssuePlanned(data.issue.number, data.issue.title)
+      }
+
+      // Store current state for comparison
+      previousPlanStates.set(filename, {
+        status: data.status || '',
+        phases: (data.phases || []).map((p) => ({
+          number: p.number,
+          title: p.title,
+          status: p.status
+        })),
+        issue: data.issue
+      })
+
       sendToRenderer('tiki:plan-changed', {
         filename,
         plan: data

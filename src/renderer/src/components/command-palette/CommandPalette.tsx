@@ -1,6 +1,7 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Command } from 'cmdk'
 import type { TikiCommand } from '../../lib/command-registry'
+import { ArgumentInput } from './ArgumentInput'
 
 interface CommandPaletteProps {
   isOpen: boolean
@@ -8,6 +9,7 @@ interface CommandPaletteProps {
   commands: TikiCommand[]
   recentCommands: string[]
   onSelect: (command: TikiCommand) => void
+  onSelectWithArgs?: (command: TikiCommand, args: string) => void
 }
 
 export function CommandPalette({
@@ -15,16 +17,57 @@ export function CommandPalette({
   onClose,
   commands,
   recentCommands,
-  onSelect
+  onSelect,
+  onSelectWithArgs
 }: CommandPaletteProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const [pendingCommand, setPendingCommand] = useState<TikiCommand | null>(null)
 
   // Focus input when palette opens
   useEffect(() => {
-    if (isOpen && inputRef.current) {
+    if (isOpen && inputRef.current && !pendingCommand) {
       inputRef.current.focus()
     }
+  }, [isOpen, pendingCommand])
+
+  // Reset pending command when palette closes
+  useEffect(() => {
+    if (!isOpen) {
+      setPendingCommand(null)
+    }
   }, [isOpen])
+
+  // Handle command selection - show argument input for commands with args
+  const handleCommandSelect = useCallback(
+    (command: TikiCommand) => {
+      if (command.argumentHint && onSelectWithArgs) {
+        // Command requires arguments - show argument input
+        setPendingCommand(command)
+      } else {
+        // Command doesn't require arguments - execute directly
+        onSelect(command)
+      }
+    },
+    [onSelect, onSelectWithArgs]
+  )
+
+  // Handle argument submission
+  const handleArgumentSubmit = useCallback(
+    (args: string) => {
+      if (pendingCommand && onSelectWithArgs) {
+        onSelectWithArgs(pendingCommand, args)
+        setPendingCommand(null)
+      }
+    },
+    [pendingCommand, onSelectWithArgs]
+  )
+
+  // Handle argument cancel - go back to command list
+  const handleArgumentCancel = useCallback(() => {
+    setPendingCommand(null)
+    // Re-focus the search input
+    setTimeout(() => inputRef.current?.focus(), 0)
+  }, [])
 
   // Handle Escape key to close
   const handleKeyDown = useCallback(
@@ -88,29 +131,42 @@ export function CommandPalette({
               No commands found.
             </Command.Empty>
 
-            {/* Recent Commands Section */}
-            {recentCommandObjects.length > 0 && (
-              <Command.Group heading="Recent" className="mb-2">
-                {recentCommandObjects.map((command) => (
-                  <CommandItem
-                    key={`recent-${command.name}`}
-                    command={command}
-                    onSelect={() => onSelect(command)}
-                  />
-                ))}
-              </Command.Group>
-            )}
-
-            {/* All Commands Section */}
-            <Command.Group heading="Commands">
-              {commands.map((command) => (
-                <CommandItem
-                  key={command.name}
-                  command={command}
-                  onSelect={() => onSelect(command)}
+            {/* Argument Input (when a command with args is selected) */}
+            {pendingCommand ? (
+              <div className="p-2">
+                <ArgumentInput
+                  command={pendingCommand}
+                  onSubmit={handleArgumentSubmit}
+                  onCancel={handleArgumentCancel}
                 />
-              ))}
-            </Command.Group>
+              </div>
+            ) : (
+              <>
+                {/* Recent Commands Section */}
+                {recentCommandObjects.length > 0 && (
+                  <Command.Group heading="Recent" className="mb-2">
+                    {recentCommandObjects.map((command) => (
+                      <CommandItem
+                        key={`recent-${command.name}`}
+                        command={command}
+                        onSelect={() => handleCommandSelect(command)}
+                      />
+                    ))}
+                  </Command.Group>
+                )}
+
+                {/* All Commands Section */}
+                <Command.Group heading="Commands">
+                  {commands.map((command) => (
+                    <CommandItem
+                      key={command.name}
+                      command={command}
+                      onSelect={() => handleCommandSelect(command)}
+                    />
+                  ))}
+                </Command.Group>
+              </>
+            )}
           </Command.List>
         </Command>
       </div>

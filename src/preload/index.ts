@@ -131,7 +131,21 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
     getPlan: (issueNumber: number) => ipcRenderer.invoke('tiki:get-plan', issueNumber),
     getQueue: () => ipcRenderer.invoke('tiki:get-queue'),
     getReleases: () => ipcRenderer.invoke('tiki:get-releases'),
-    getCommands: (cwd?: string) => ipcRenderer.invoke('tiki:get-commands', { cwd })
+    getCommands: (cwd?: string) => ipcRenderer.invoke('tiki:get-commands', { cwd }),
+    // Notification click handler
+    onNotificationClick: (
+      callback: (data: {
+        event: string
+        context?: { issueNumber?: number; phaseNumber?: number }
+      }) => void
+    ) => {
+      const handler = (
+        _: unknown,
+        data: { event: string; context?: { issueNumber?: number; phaseNumber?: number } }
+      ) => callback(data)
+      ipcRenderer.on('notification:clicked', handler)
+      return () => ipcRenderer.removeListener('notification:clicked', handler)
+    }
   },
 
   // Projects API
@@ -191,6 +205,46 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.invoke('config:write', { projectPath, config }),
     validate: (config: unknown) => ipcRenderer.invoke('config:validate', { config }),
     reset: (projectPath: string) => ipcRenderer.invoke('config:reset', { projectPath })
+  },
+
+  // Knowledge API (for .tiki/knowledge/)
+  knowledge: {
+    list: (
+      projectPath: string,
+      options?: { category?: string; search?: string }
+    ) =>
+      ipcRenderer.invoke('knowledge:list', {
+        projectPath,
+        category: options?.category,
+        search: options?.search
+      }),
+    get: (projectPath: string, id: string) =>
+      ipcRenderer.invoke('knowledge:get', { projectPath, id }),
+    create: (
+      projectPath: string,
+      data: {
+        title: string
+        category: string
+        content: string
+        tags?: string[]
+        sourceIssue?: number
+      }
+    ) => ipcRenderer.invoke('knowledge:create', { projectPath, ...data }),
+    update: (
+      projectPath: string,
+      id: string,
+      data: Partial<{
+        title: string
+        category: string
+        content: string
+        tags: string[]
+        sourceIssue: number | null
+      }>
+    ) => ipcRenderer.invoke('knowledge:update', { projectPath, id, data }),
+    delete: (projectPath: string, id: string) =>
+      ipcRenderer.invoke('knowledge:delete', { projectPath, id }),
+    tags: (projectPath: string) =>
+      ipcRenderer.invoke('knowledge:tags', { projectPath })
   }
 })
 
@@ -229,6 +283,12 @@ declare global {
           description: string
           argumentHint?: string
         }>>
+        onNotificationClick: (
+          callback: (data: {
+            event: string
+            context?: { issueNumber?: number; phaseNumber?: number }
+          }) => void
+        ) => () => void
       }
       projects: {
         pickFolder: () => Promise<{ id: string; name: string; path: string } | null>
@@ -277,8 +337,50 @@ declare global {
           error?: string
         }>
       }
+      knowledge: {
+        list: (
+          projectPath: string,
+          options?: { category?: string; search?: string }
+        ) => Promise<KnowledgeEntry[]>
+        get: (projectPath: string, id: string) => Promise<KnowledgeEntry | null>
+        create: (
+          projectPath: string,
+          data: {
+            title: string
+            category: string
+            content: string
+            tags?: string[]
+            sourceIssue?: number
+          }
+        ) => Promise<KnowledgeEntry>
+        update: (
+          projectPath: string,
+          id: string,
+          data: Partial<{
+            title: string
+            category: string
+            content: string
+            tags: string[]
+            sourceIssue: number | null
+          }>
+        ) => Promise<KnowledgeEntry | null>
+        delete: (projectPath: string, id: string) => Promise<boolean>
+        tags: (projectPath: string) => Promise<string[]>
+      }
     }
   }
+}
+
+// Knowledge entry type (mirrors main process)
+interface KnowledgeEntry {
+  id: string
+  title: string
+  category: 'pattern' | 'gotcha' | 'decision' | 'learning'
+  content: string
+  tags: string[]
+  sourceIssue?: number
+  createdAt: string
+  updatedAt: string
 }
 
 // Tiki config type (mirrors main process)

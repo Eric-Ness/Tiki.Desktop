@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import { useCommandExecution } from '../useCommandExecution'
 import { useTikiStore } from '../../stores/tiki-store'
 import type { TikiCommand } from '../../lib/command-registry'
 
-// Mock window.tikiDesktop.terminal.write
+// Mock window.tikiDesktop.terminal
 const mockWrite = vi.fn()
+const mockCreate = vi.fn()
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -13,7 +14,10 @@ beforeEach(() => {
   // Reset store state
   useTikiStore.setState({
     activeTerminal: 'terminal-1',
-    recentCommands: []
+    activeProject: { name: 'Test Project', path: '/test/path' },
+    recentCommands: [],
+    activeTab: 'workflow',
+    tabs: []
   })
 
   // Setup mock
@@ -22,7 +26,8 @@ beforeEach(() => {
       ...window.tikiDesktop,
       terminal: {
         ...window.tikiDesktop?.terminal,
-        write: mockWrite
+        write: mockWrite,
+        create: mockCreate
       }
     },
     writable: true,
@@ -45,97 +50,122 @@ describe('useCommandExecution', () => {
   }
 
   describe('executeCommand', () => {
-    it('should write command to active terminal', () => {
+    it('should write command to active terminal', async () => {
       const { result } = renderHook(() => useCommandExecution())
 
-      act(() => {
-        result.current.executeCommand(mockCommandNoArgs)
+      await act(async () => {
+        await result.current.executeCommand(mockCommandNoArgs)
       })
 
       expect(mockWrite).toHaveBeenCalledWith('terminal-1', '/tiki:state\n')
     })
 
-    it('should add command to recent commands', () => {
+    it('should add command to recent commands', async () => {
       const { result } = renderHook(() => useCommandExecution())
 
-      act(() => {
-        result.current.executeCommand(mockCommandNoArgs)
+      await act(async () => {
+        await result.current.executeCommand(mockCommandNoArgs)
       })
 
       const state = useTikiStore.getState()
       expect(state.recentCommands).toContain('tiki:state')
     })
 
-    it('should not include newline for commands with argument hints', () => {
+    it('should execute command with argument hint the same as without', async () => {
       const { result } = renderHook(() => useCommandExecution())
 
-      act(() => {
-        result.current.executeCommand(mockCommand)
+      await act(async () => {
+        await result.current.executeCommand(mockCommand)
       })
 
-      // Should end with space, not newline, to allow argument input
-      expect(mockWrite).toHaveBeenCalledWith('terminal-1', '/tiki:yolo ')
+      // All commands now execute with newline since arguments are handled separately
+      expect(mockWrite).toHaveBeenCalledWith('terminal-1', '/tiki:yolo\n')
     })
 
-    it('should not execute if no active terminal', () => {
-      useTikiStore.setState({ activeTerminal: null })
-
-      const { result } = renderHook(() => useCommandExecution())
-
-      act(() => {
-        result.current.executeCommand(mockCommandNoArgs)
-      })
-
-      expect(mockWrite).not.toHaveBeenCalled()
-    })
-
-    it('should return error state when no active terminal', () => {
-      useTikiStore.setState({ activeTerminal: null })
+    it('should return error state when no active terminal and no project', async () => {
+      useTikiStore.setState({ activeTerminal: null, activeProject: null })
 
       const { result } = renderHook(() => useCommandExecution())
 
       let execResult: { success: boolean; error?: string } | undefined
 
-      act(() => {
-        execResult = result.current.executeCommand(mockCommandNoArgs)
+      await act(async () => {
+        execResult = await result.current.executeCommand(mockCommandNoArgs)
       })
 
       expect(execResult?.success).toBe(false)
-      expect(execResult?.error).toBe('No active terminal')
+      expect(execResult?.error).toBe('No active terminal and could not create one')
     })
 
-    it('should return success when command executed', () => {
+    it('should create terminal if none exists and project is set', async () => {
+      useTikiStore.setState({ activeTerminal: null })
+      mockCreate.mockResolvedValue('new-terminal-1')
+
+      const { result } = renderHook(() => useCommandExecution())
+
+      await act(async () => {
+        await result.current.executeCommand(mockCommandNoArgs)
+      })
+
+      expect(mockCreate).toHaveBeenCalledWith('/test/path')
+      expect(mockWrite).toHaveBeenCalledWith('new-terminal-1', '/tiki:state\n')
+    })
+
+    it('should return success when command executed', async () => {
       const { result } = renderHook(() => useCommandExecution())
 
       let execResult: { success: boolean; error?: string } | undefined
 
-      act(() => {
-        execResult = result.current.executeCommand(mockCommandNoArgs)
+      await act(async () => {
+        execResult = await result.current.executeCommand(mockCommandNoArgs)
       })
 
       expect(execResult?.success).toBe(true)
     })
+
+    it('should switch to terminal tab after execution', async () => {
+      const { result } = renderHook(() => useCommandExecution())
+
+      await act(async () => {
+        await result.current.executeCommand(mockCommandNoArgs)
+      })
+
+      const state = useTikiStore.getState()
+      expect(state.activeTab).toBe('terminal')
+    })
   })
 
   describe('executeCommandWithArgs', () => {
-    it('should execute command with provided arguments', () => {
+    it('should execute command with provided arguments', async () => {
       const { result } = renderHook(() => useCommandExecution())
 
-      act(() => {
-        result.current.executeCommandWithArgs(mockCommand, '42')
+      await act(async () => {
+        await result.current.executeCommandWithArgs(mockCommand, '42')
       })
 
       expect(mockWrite).toHaveBeenCalledWith('terminal-1', '/tiki:yolo 42\n')
     })
 
-    it('should trim argument whitespace', () => {
+    it('should trim argument whitespace', async () => {
       const { result } = renderHook(() => useCommandExecution())
 
-      act(() => {
-        result.current.executeCommandWithArgs(mockCommand, '  42  ')
+      await act(async () => {
+        await result.current.executeCommandWithArgs(mockCommand, '  42  ')
       })
 
       expect(mockWrite).toHaveBeenCalledWith('terminal-1', '/tiki:yolo 42\n')
+    })
+
+    it('should return success with arguments', async () => {
+      const { result } = renderHook(() => useCommandExecution())
+
+      let execResult: { success: boolean; error?: string } | undefined
+
+      await act(async () => {
+        execResult = await result.current.executeCommandWithArgs(mockCommand, '42')
+      })
+
+      expect(execResult?.success).toBe(true)
     })
   })
 })
