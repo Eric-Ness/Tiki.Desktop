@@ -37,9 +37,11 @@ function parsePhaseNumber(nodeId: string): number | null {
 }
 
 // Helper to determine selection type
-type SelectionType = 'empty' | 'phase' | 'issue' | 'ship'
+type SelectionType = 'empty' | 'phase' | 'issue' | 'ship' | 'github-issue'
 
-function getSelectionType(nodeId: string | null): SelectionType {
+function getSelectionType(nodeId: string | null, selectedIssue: number | null): SelectionType {
+  // Sidebar issue selection takes priority
+  if (selectedIssue !== null) return 'github-issue'
   if (!nodeId) return 'empty'
   if (nodeId === 'issue-node') return 'issue'
   if (nodeId === 'ship-node') return 'ship'
@@ -47,15 +49,30 @@ function getSelectionType(nodeId: string | null): SelectionType {
   return 'empty'
 }
 
-export function DetailPanel() {
-  const selectedNode = useTikiStore((state) => state.selectedNode)
-  const currentPlan = useTikiStore((state) => state.currentPlan)
+interface DetailPanelProps {
+  cwd?: string
+}
 
-  const selectionType = getSelectionType(selectedNode)
+export function DetailPanel({ cwd }: DetailPanelProps) {
+  const selectedNode = useTikiStore((state) => state.selectedNode)
+  const selectedIssue = useTikiStore((state) => state.selectedIssue)
+  const currentPlan = useTikiStore((state) => state.currentPlan)
+  const issues = useTikiStore((state) => state.issues)
+
+  const selectionType = getSelectionType(selectedNode, selectedIssue)
 
   // Render content based on selection type
   const renderContent = () => {
     if (selectionType === 'empty') {
+      return <EmptyState />
+    }
+
+    // GitHub issue from sidebar selection
+    if (selectionType === 'github-issue' && selectedIssue !== null) {
+      const issue = issues.find((i) => i.number === selectedIssue)
+      if (issue) {
+        return <IssueDetail issue={issue} cwd={cwd} />
+      }
       return <EmptyState />
     }
 

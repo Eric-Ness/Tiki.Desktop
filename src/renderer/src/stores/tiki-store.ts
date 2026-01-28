@@ -38,7 +38,11 @@ export interface GitHubIssue {
   title: string
   state: string
   body?: string
-  labels?: string[]
+  labels: Array<{ name: string; color: string }>
+  url: string
+  createdAt: string
+  updatedAt: string
+  hasPlan?: boolean
 }
 
 export interface Release {
@@ -113,6 +117,12 @@ interface TikiDesktopState {
   // GitHub
   issues: GitHubIssue[]
   setIssues: (issues: GitHubIssue[]) => void
+  githubLoading: boolean
+  setGithubLoading: (loading: boolean) => void
+  githubError: string | null
+  setGithubError: (error: string | null) => void
+  selectedIssue: number | null
+  setSelectedIssue: (issueNumber: number | null) => void
 
   releases: Release[]
   setReleases: (releases: Release[]) => void
@@ -259,6 +269,12 @@ export const useTikiStore = create<TikiDesktopState>()(
         // GitHub
         issues: [],
         setIssues: (issues) => set({ issues }),
+        githubLoading: false,
+        setGithubLoading: (githubLoading) => set({ githubLoading }),
+        githubError: null,
+        setGithubError: (githubError) => set({ githubError }),
+        selectedIssue: null,
+        setSelectedIssue: (selectedIssue) => set({ selectedIssue }),
 
         releases: [],
         setReleases: (releases) => set({ releases }),

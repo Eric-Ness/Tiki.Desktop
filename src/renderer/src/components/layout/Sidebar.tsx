@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useTikiStore } from '../../stores/tiki-store'
+import { IssueList } from '../sidebar/IssueList'
 
 interface SidebarProps {
   cwd: string
@@ -8,6 +9,25 @@ interface SidebarProps {
 export function Sidebar({ cwd }: SidebarProps) {
   const tikiState = useTikiStore((state) => state.tikiState)
   const currentPlan = useTikiStore((state) => state.currentPlan)
+  const setGithubLoading = useTikiStore((state) => state.setGithubLoading)
+  const setGithubError = useTikiStore((state) => state.setGithubError)
+  const setIssues = useTikiStore((state) => state.setIssues)
+
+  const handleRefreshIssues = useCallback(async () => {
+    if (!cwd) return
+    setGithubLoading(true)
+    setGithubError(null)
+    try {
+      await window.tikiDesktop.github.refresh(cwd)
+      const issues = await window.tikiDesktop.github.getIssues('open', cwd)
+      setIssues(issues as never[])
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to refresh'
+      setGithubError(message)
+    } finally {
+      setGithubLoading(false)
+    }
+  }, [cwd, setGithubLoading, setGithubError, setIssues])
 
   const getStatusColor = (status: string | undefined | null) => {
     switch (status) {
@@ -120,10 +140,8 @@ export function Sidebar({ cwd }: SidebarProps) {
       </SidebarSection>
 
       {/* Issues Section */}
-      <SidebarSection title="Issues">
-        <div className="px-2 py-1 text-sm text-slate-500 italic">
-          Connect GitHub to view issues
-        </div>
+      <SidebarSection title="Issues" defaultOpen>
+        <IssueList onRefresh={handleRefreshIssues} />
       </SidebarSection>
 
       {/* Releases Section */}

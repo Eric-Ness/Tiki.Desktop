@@ -4,8 +4,10 @@ import { execSync } from 'child_process'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { setMainWindow, cleanupAllTerminals } from './services/terminal-manager'
 import { setFileWatcherWindow, startWatching, stopWatching } from './services/file-watcher'
+import { setGitHubWindow } from './services/github-bridge'
 import { registerTerminalHandlers } from './ipc/terminal'
 import { registerTikiHandlers } from './ipc/tiki'
+import { registerGitHubHandlers } from './ipc/github'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -56,13 +58,15 @@ app.whenReady().then(() => {
   // Register IPC handlers
   registerTerminalHandlers()
   registerTikiHandlers()
+  registerGitHubHandlers()
 
   createWindow()
 
-  // Set main window reference for terminal manager and file watcher
+  // Set main window reference for terminal manager, file watcher, and github
   if (mainWindow) {
     setMainWindow(mainWindow)
     setFileWatcherWindow(mainWindow)
+    setGitHubWindow(mainWindow)
 
     // Start watching the current working directory
     startWatching(process.cwd())

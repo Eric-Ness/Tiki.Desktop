@@ -7,6 +7,7 @@ import { DetailPanel } from './components/layout/DetailPanel'
 import { StatusBar } from './components/layout/StatusBar'
 import { TitleBar } from './components/layout/TitleBar'
 import { useTikiSync } from './hooks/useTikiSync'
+import { useGitHubSync } from './hooks/useGitHubSync'
 import { useSidebarShortcuts } from './hooks/useSidebarShortcuts'
 import { useDetailPanelShortcuts } from './hooks/useDetailPanelShortcuts'
 import { useTikiStore } from './stores/tiki-store'
@@ -21,6 +22,9 @@ function App() {
 
   // Sync file watcher with Zustand store
   useTikiSync()
+
+  // Sync GitHub issues
+  useGitHubSync(cwd)
 
   // Register keyboard shortcuts
   useSidebarShortcuts()
@@ -92,7 +96,7 @@ function App() {
             collapsible={true}
             collapsedSize={0}
           >
-            <DetailPanel />
+            <DetailPanel cwd={cwd} />
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>

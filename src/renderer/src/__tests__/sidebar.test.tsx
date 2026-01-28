@@ -17,7 +17,16 @@ describe('Sidebar', () => {
     mockUseTikiStore.mockImplementation((selector) => {
       const state = {
         tikiState: null,
-        currentPlan: null
+        currentPlan: null,
+        issues: [],
+        githubLoading: false,
+        githubError: null,
+        selectedIssue: null,
+        setSelectedIssue: vi.fn(),
+        setSelectedNode: vi.fn(),
+        setGithubLoading: vi.fn(),
+        setGithubError: vi.fn(),
+        setIssues: vi.fn()
       }
       return selector ? selector(state as never) : state
     })
@@ -73,7 +82,16 @@ describe('Sidebar', () => {
               { number: 1, title: 'Phase 1', status: 'in_progress', files: [], verification: [] },
               { number: 2, title: 'Phase 2', status: 'pending', files: [], verification: [] }
             ]
-          }
+          },
+          issues: [],
+          githubLoading: false,
+          githubError: null,
+          selectedIssue: null,
+          setSelectedIssue: vi.fn(),
+          setSelectedNode: vi.fn(),
+          setGithubLoading: vi.fn(),
+          setGithubError: vi.fn(),
+          setIssues: vi.fn()
         }
         return selector ? selector(state as never) : state
       })
@@ -95,7 +113,16 @@ describe('Sidebar', () => {
             completedPhases: [],
             lastActivity: null
           },
-          currentPlan: null
+          currentPlan: null,
+          issues: [],
+          githubLoading: false,
+          githubError: null,
+          selectedIssue: null,
+          setSelectedIssue: vi.fn(),
+          setSelectedNode: vi.fn(),
+          setGithubLoading: vi.fn(),
+          setGithubError: vi.fn(),
+          setIssues: vi.fn()
         }
         return selector ? selector(state as never) : state
       })
@@ -115,7 +142,16 @@ describe('Sidebar', () => {
             completedPhases: [],
             lastActivity: null
           },
-          currentPlan: null
+          currentPlan: null,
+          issues: [],
+          githubLoading: false,
+          githubError: null,
+          selectedIssue: null,
+          setSelectedIssue: vi.fn(),
+          setSelectedNode: vi.fn(),
+          setGithubLoading: vi.fn(),
+          setGithubError: vi.fn(),
+          setIssues: vi.fn()
         }
         return selector ? selector(state as never) : state
       })
@@ -143,7 +179,16 @@ describe('Sidebar', () => {
               { number: 2, title: 'Phase 2', status: 'in_progress', files: [], verification: [] },
               { number: 3, title: 'Phase 3', status: 'pending', files: [], verification: [] }
             ]
-          }
+          },
+          issues: [],
+          githubLoading: false,
+          githubError: null,
+          selectedIssue: null,
+          setSelectedIssue: vi.fn(),
+          setSelectedNode: vi.fn(),
+          setGithubLoading: vi.fn(),
+          setGithubError: vi.fn(),
+          setIssues: vi.fn()
         }
         return selector ? selector(state as never) : state
       })
@@ -157,10 +202,10 @@ describe('Sidebar', () => {
   })
 
   describe('Empty States', () => {
-    it('should show "Connect GitHub to view issues" in Issues section', () => {
+    it('should show "No open issues" in Issues section when no issues', () => {
       render(<Sidebar cwd="/test" />)
 
-      expect(screen.getByText('Connect GitHub to view issues')).toBeInTheDocument()
+      expect(screen.getByText('No open issues')).toBeInTheDocument()
     })
 
     it('should show "No releases" in Releases section', () => {
@@ -191,7 +236,16 @@ describe('SidebarSection', () => {
     mockUseTikiStore.mockImplementation((selector) => {
       const state = {
         tikiState: null,
-        currentPlan: null
+        currentPlan: null,
+        issues: [],
+        githubLoading: false,
+        githubError: null,
+        selectedIssue: null,
+        setSelectedIssue: vi.fn(),
+        setSelectedNode: vi.fn(),
+        setGithubLoading: vi.fn(),
+        setGithubError: vi.fn(),
+        setIssues: vi.fn()
       }
       return selector ? selector(state as never) : state
     })
@@ -227,19 +281,19 @@ describe('SidebarSection', () => {
     it('should expand section when collapsed header is clicked', () => {
       render(<Sidebar cwd="/test" />)
 
-      // Find Issues section header (defaultOpen=false)
-      const issuesHeader = screen.getByRole('button', { name: /issues/i })
+      // Find Releases section header (defaultOpen=false)
+      const releasesHeader = screen.getByRole('button', { name: /releases/i })
 
       // Initially should be collapsed
-      const issuesSection = issuesHeader.parentElement
-      let gridContainer = issuesSection?.querySelector('.grid')
+      const releasesSection = releasesHeader.parentElement
+      let gridContainer = releasesSection?.querySelector('.grid')
       expect(gridContainer).toHaveStyle({ gridTemplateRows: '0fr' })
 
       // Click to expand
-      fireEvent.click(issuesHeader)
+      fireEvent.click(releasesHeader)
 
       // Should now be expanded
-      gridContainer = issuesSection?.querySelector('.grid')
+      gridContainer = releasesSection?.querySelector('.grid')
       expect(gridContainer).toHaveStyle({ gridTemplateRows: '1fr' })
     })
 
@@ -313,7 +367,16 @@ describe('SidebarSection', () => {
             phases: [
               { number: 1, title: 'Setup', status: 'in_progress', files: [], verification: [] }
             ]
-          }
+          },
+          issues: [],
+          githubLoading: false,
+          githubError: null,
+          selectedIssue: null,
+          setSelectedIssue: vi.fn(),
+          setSelectedNode: vi.fn(),
+          setGithubLoading: vi.fn(),
+          setGithubError: vi.fn(),
+          setIssues: vi.fn()
         }
         return selector ? selector(state as never) : state
       })
@@ -329,7 +392,7 @@ describe('SidebarSection', () => {
       expect(screen.getByText('Feature request')).toBeInTheDocument()
 
       // Empty sections content
-      expect(screen.getByText('Connect GitHub to view issues')).toBeInTheDocument()
+      expect(screen.getByText('No open issues')).toBeInTheDocument()
       expect(screen.getByText('No releases')).toBeInTheDocument()
       expect(screen.getByText('No knowledge entries')).toBeInTheDocument()
     })

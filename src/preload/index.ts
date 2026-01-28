@@ -69,11 +69,26 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
     getQueue: () => ipcRenderer.invoke('tiki:get-queue')
   },
 
-  // GitHub API (to be implemented in #8)
+  // GitHub API
   github: {
-    getIssues: (state?: string) => ipcRenderer.invoke('github:get-issues', state),
-    getIssue: (number: number) => ipcRenderer.invoke('github:get-issue', number),
-    getReleases: () => ipcRenderer.invoke('github:get-releases')
+    checkCli: () => ipcRenderer.invoke('github:check-cli'),
+    getIssues: (state?: 'open' | 'closed' | 'all', cwd?: string) =>
+      ipcRenderer.invoke('github:get-issues', { state, cwd }),
+    getIssue: (number: number, cwd?: string) =>
+      ipcRenderer.invoke('github:get-issue', { number, cwd }),
+    refresh: (cwd?: string) => ipcRenderer.invoke('github:refresh', { cwd }),
+    openInBrowser: (number: number, cwd?: string) =>
+      ipcRenderer.invoke('github:open-in-browser', { number, cwd }),
+    onIssuesUpdated: (callback: (issues: unknown[]) => void) => {
+      const handler = (_: unknown, issues: unknown[]) => callback(issues)
+      ipcRenderer.on('github:issues-updated', handler)
+      return () => ipcRenderer.removeListener('github:issues-updated', handler)
+    },
+    onError: (callback: (error: { error: string }) => void) => {
+      const handler = (_: unknown, error: { error: string }) => callback(error)
+      ipcRenderer.on('github:error', handler)
+      return () => ipcRenderer.removeListener('github:error', handler)
+    }
   }
 })
 
@@ -107,9 +122,13 @@ declare global {
         getQueue: () => Promise<unknown>
       }
       github: {
-        getIssues: (state?: string) => Promise<unknown[]>
-        getIssue: (number: number) => Promise<unknown>
-        getReleases: () => Promise<unknown[]>
+        checkCli: () => Promise<{ available: boolean; authenticated: boolean; error?: string }>
+        getIssues: (state?: 'open' | 'closed' | 'all', cwd?: string) => Promise<unknown[]>
+        getIssue: (number: number, cwd?: string) => Promise<unknown>
+        refresh: (cwd?: string) => Promise<void>
+        openInBrowser: (number: number, cwd?: string) => Promise<void>
+        onIssuesUpdated: (callback: (issues: unknown[]) => void) => () => void
+        onError: (callback: (error: { error: string }) => void) => () => void
       }
     }
   }
