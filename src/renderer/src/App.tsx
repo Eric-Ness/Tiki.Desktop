@@ -8,21 +8,25 @@ import { StatusBar } from './components/layout/StatusBar'
 import { TitleBar } from './components/layout/TitleBar'
 import { useTikiSync } from './hooks/useTikiSync'
 import { useSidebarShortcuts } from './hooks/useSidebarShortcuts'
+import { useDetailPanelShortcuts } from './hooks/useDetailPanelShortcuts'
 import { useTikiStore } from './stores/tiki-store'
 
 function App() {
   const [version, setVersion] = useState<string>('')
   const [cwd, setCwd] = useState<string>('')
   const sidebarPanelRef = useRef<ImperativePanelHandle>(null)
+  const detailPanelRef = useRef<ImperativePanelHandle>(null)
   const sidebarCollapsed = useTikiStore((state) => state.sidebarCollapsed)
+  const detailPanelCollapsed = useTikiStore((state) => state.detailPanelCollapsed)
 
   // Sync file watcher with Zustand store
   useTikiSync()
 
-  // Register sidebar keyboard shortcuts
+  // Register keyboard shortcuts
   useSidebarShortcuts()
+  useDetailPanelShortcuts()
 
-  // Sync panel collapse state with store
+  // Sync sidebar panel collapse state with store
   useEffect(() => {
     if (sidebarPanelRef.current) {
       if (sidebarCollapsed) {
@@ -32,6 +36,17 @@ function App() {
       }
     }
   }, [sidebarCollapsed])
+
+  // Sync detail panel collapse state with store
+  useEffect(() => {
+    if (detailPanelRef.current) {
+      if (detailPanelCollapsed) {
+        detailPanelRef.current.collapse()
+      } else {
+        detailPanelRef.current.expand()
+      }
+    }
+  }, [detailPanelCollapsed])
 
   useEffect(() => {
     // Get app info on mount
@@ -69,7 +84,14 @@ function App() {
           <ResizableHandle />
 
           {/* Detail Panel */}
-          <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
+          <ResizablePanel
+            ref={detailPanelRef}
+            defaultSize={25}
+            minSize={20}
+            maxSize={40}
+            collapsible={true}
+            collapsedSize={0}
+          >
             <DetailPanel />
           </ResizablePanel>
         </ResizablePanelGroup>

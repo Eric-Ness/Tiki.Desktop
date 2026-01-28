@@ -28,6 +28,8 @@ export interface ExecutionPlan {
     status: string
     files: string[]
     verification: string[]
+    summary?: string
+    error?: string
   }>
 }
 
