@@ -55,10 +55,10 @@ function TabButton({ active, onClick, children }: TabButtonProps) {
     <button
       onClick={onClick}
       className={`
-        px-3 py-1 text-sm rounded transition-colors
+        px-3 py-1 text-sm rounded transition-all duration-150
         ${active
-          ? 'bg-background text-white'
-          : 'text-slate-400 hover:text-white hover:bg-background-tertiary'
+          ? 'bg-background text-white shadow-sm'
+          : 'text-slate-400 hover:text-white hover:bg-background-tertiary active:bg-background-tertiary/70'
         }
       `}
     >

@@ -1,0 +1,53 @@
+{
+  "version": "v0.2.0",
+  "createdAt": "2026-01-28T10:00:00.000Z",
+  "status": "active",
+  "requirementsEnabled": true,
+  "githubMilestone": {
+    "number": 2,
+    "url": "https://github.com/Eric-Ness/Tiki.Desktop/milestone/2"
+  },
+  "issues": [
+    {
+      "number": 3,
+      "title": "Multi-terminal tab management",
+      "status": "shipped",
+      "requirements": ["CORE-05"],
+      "currentPhase": 3,
+      "totalPhases": 3,
+      "completedAt": "2026-01-28T11:10:00.000Z"
+    },
+    {
+      "number": 5,
+      "title": "Sidebar with state overview and navigation",
+      "status": "completed",
+      "requirements": ["UI-02"],
+      "currentPhase": 2,
+      "totalPhases": 2,
+      "completedAt": "2026-01-28T10:55:00.000Z"
+    },
+    {
+      "number": 12,
+      "title": "Dark theme and visual polish",
+      "status": "completed",
+      "requirements": ["UI-05"],
+      "currentPhase": 1,
+      "totalPhases": 1,
+      "completedAt": "2026-01-28T10:58:00.000Z"
+    },
+    {
+      "number": 15,
+      "title": "Status bar with execution info",
+      "status": "completed",
+      "requirements": ["UI-06"],
+      "currentPhase": 1,
+      "totalPhases": 1,
+      "completedAt": "2026-01-28T11:00:00.000Z"
+    }
+  ],
+  "requirements": {
+    "total": 4,
+    "implemented": 4,
+    "verified": 4
+  }
+}
