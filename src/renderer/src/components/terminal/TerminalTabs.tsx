@@ -256,15 +256,20 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
 
         {terminals.length === 0 && (
           <div className="h-full flex items-center justify-center text-slate-500">
-            <div className="text-center">
-              <svg className="w-12 h-12 mx-auto mb-3 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-                <polyline points="4 17 10 11 4 5" />
-                <line x1="12" y1="19" x2="20" y2="19" />
-              </svg>
-              <p className="text-sm mb-3">No terminals open</p>
+            <div className="text-center px-6 max-w-[280px]">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-background-tertiary/50 flex items-center justify-center">
+                <svg className="w-8 h-8 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <polyline points="4 17 10 11 4 5" />
+                  <line x1="12" y1="19" x2="20" y2="19" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-slate-400 mb-1">No Terminals Open</p>
+              <p className="text-xs text-slate-500 leading-relaxed mb-4">
+                Create a new terminal to get started
+              </p>
               <button
                 onClick={createTerminal}
-                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 rounded text-sm font-medium transition-colors"
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 rounded text-sm font-medium transition-colors duration-150"
               >
                 New Terminal (Ctrl+Shift+T)
               </button>

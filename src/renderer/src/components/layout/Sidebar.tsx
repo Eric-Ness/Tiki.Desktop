@@ -36,7 +36,7 @@ export function Sidebar({ cwd }: SidebarProps) {
   }
 
   return (
-    <div className="h-full bg-background-secondary border-r border-border flex flex-col">
+    <div className="h-full bg-background-secondary border-r border-border flex flex-col shadow-sm">
       {/* Projects Section */}
       <SidebarSection title="Projects" defaultOpen>
         <div className="text-sm text-slate-400 px-2 py-1">

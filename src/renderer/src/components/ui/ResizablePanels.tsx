@@ -36,7 +36,7 @@ function ResizableHandle({ className, ...props }: ResizableHandleProps) {
         relative w-1 bg-transparent
         after:absolute after:inset-y-0 after:left-1/2 after:w-1 after:-translate-x-1/2
         after:bg-border hover:after:bg-border-hover
-        after:transition-colors
+        after:transition-colors after:duration-150
         focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500
         ${className || ''}
       `}

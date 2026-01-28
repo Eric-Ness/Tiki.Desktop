@@ -70,16 +70,20 @@ function TabButton({ active, onClick, children }: TabButtonProps) {
 function WorkflowPlaceholder() {
   return (
     <div className="h-full flex items-center justify-center text-slate-500">
-      <div className="text-center">
-        <svg className="w-16 h-16 mx-auto mb-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-          <rect x="3" y="3" width="6" height="6" rx="1" />
-          <rect x="15" y="3" width="6" height="6" rx="1" />
-          <rect x="9" y="15" width="6" height="6" rx="1" />
-          <path d="M6 9v3a1 1 0 0 0 1 1h4" />
-          <path d="M18 9v3a1 1 0 0 1-1 1h-4" />
-        </svg>
-        <p className="text-lg mb-2">Workflow Diagram</p>
-        <p className="text-sm">React Flow integration coming in issue #6</p>
+      <div className="text-center px-6 max-w-[280px]">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-background-tertiary/50 flex items-center justify-center">
+          <svg className="w-8 h-8 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <rect x="3" y="3" width="6" height="6" rx="1" />
+            <rect x="15" y="3" width="6" height="6" rx="1" />
+            <rect x="9" y="15" width="6" height="6" rx="1" />
+            <path d="M6 9v3a1 1 0 0 0 1 1h4" />
+            <path d="M18 9v3a1 1 0 0 1-1 1h-4" />
+          </svg>
+        </div>
+        <p className="text-sm font-medium text-slate-400 mb-1">Workflow Diagram</p>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          React Flow integration coming in issue #6
+        </p>
       </div>
     </div>
   )
@@ -88,13 +92,17 @@ function WorkflowPlaceholder() {
 function ConfigPlaceholder() {
   return (
     <div className="h-full flex items-center justify-center text-slate-500">
-      <div className="text-center">
-        <svg className="w-16 h-16 mx-auto mb-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-          <circle cx="12" cy="12" r="3" />
-        </svg>
-        <p className="text-lg mb-2">Configuration</p>
-        <p className="text-sm">.tiki/config.json editor</p>
+      <div className="text-center px-6 max-w-[280px]">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-background-tertiary/50 flex items-center justify-center">
+          <svg className="w-8 h-8 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </div>
+        <p className="text-sm font-medium text-slate-400 mb-1">Configuration</p>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          .tiki/config.json editor
+        </p>
       </div>
     </div>
   )
