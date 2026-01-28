@@ -26,7 +26,10 @@ describe('Sidebar', () => {
         setSelectedNode: vi.fn(),
         setGithubLoading: vi.fn(),
         setGithubError: vi.fn(),
-        setIssues: vi.fn()
+        setIssues: vi.fn(),
+        releases: [],
+        selectedRelease: null,
+        setSelectedRelease: vi.fn()
       }
       return selector ? selector(state as never) : state
     })
@@ -91,7 +94,10 @@ describe('Sidebar', () => {
           setSelectedNode: vi.fn(),
           setGithubLoading: vi.fn(),
           setGithubError: vi.fn(),
-          setIssues: vi.fn()
+          setIssues: vi.fn(),
+          releases: [],
+          selectedRelease: null,
+          setSelectedRelease: vi.fn()
         }
         return selector ? selector(state as never) : state
       })
@@ -122,7 +128,10 @@ describe('Sidebar', () => {
           setSelectedNode: vi.fn(),
           setGithubLoading: vi.fn(),
           setGithubError: vi.fn(),
-          setIssues: vi.fn()
+          setIssues: vi.fn(),
+          releases: [],
+          selectedRelease: null,
+          setSelectedRelease: vi.fn()
         }
         return selector ? selector(state as never) : state
       })
@@ -151,7 +160,10 @@ describe('Sidebar', () => {
           setSelectedNode: vi.fn(),
           setGithubLoading: vi.fn(),
           setGithubError: vi.fn(),
-          setIssues: vi.fn()
+          setIssues: vi.fn(),
+          releases: [],
+          selectedRelease: null,
+          setSelectedRelease: vi.fn()
         }
         return selector ? selector(state as never) : state
       })
@@ -188,7 +200,10 @@ describe('Sidebar', () => {
           setSelectedNode: vi.fn(),
           setGithubLoading: vi.fn(),
           setGithubError: vi.fn(),
-          setIssues: vi.fn()
+          setIssues: vi.fn(),
+          releases: [],
+          selectedRelease: null,
+          setSelectedRelease: vi.fn()
         }
         return selector ? selector(state as never) : state
       })
@@ -245,7 +260,10 @@ describe('SidebarSection', () => {
         setSelectedNode: vi.fn(),
         setGithubLoading: vi.fn(),
         setGithubError: vi.fn(),
-        setIssues: vi.fn()
+        setIssues: vi.fn(),
+        releases: [],
+        selectedRelease: null,
+        setSelectedRelease: vi.fn()
       }
       return selector ? selector(state as never) : state
     })
@@ -281,19 +299,19 @@ describe('SidebarSection', () => {
     it('should expand section when collapsed header is clicked', () => {
       render(<Sidebar cwd="/test" />)
 
-      // Find Releases section header (defaultOpen=false)
-      const releasesHeader = screen.getByRole('button', { name: /releases/i })
+      // Find Knowledge section header (defaultOpen=false)
+      const knowledgeHeader = screen.getByRole('button', { name: /knowledge/i })
 
       // Initially should be collapsed
-      const releasesSection = releasesHeader.parentElement
-      let gridContainer = releasesSection?.querySelector('.grid')
+      const knowledgeSection = knowledgeHeader.parentElement
+      let gridContainer = knowledgeSection?.querySelector('.grid')
       expect(gridContainer).toHaveStyle({ gridTemplateRows: '0fr' })
 
       // Click to expand
-      fireEvent.click(releasesHeader)
+      fireEvent.click(knowledgeHeader)
 
       // Should now be expanded
-      gridContainer = releasesSection?.querySelector('.grid')
+      gridContainer = knowledgeSection?.querySelector('.grid')
       expect(gridContainer).toHaveStyle({ gridTemplateRows: '1fr' })
     })
 
@@ -376,7 +394,10 @@ describe('SidebarSection', () => {
           setSelectedNode: vi.fn(),
           setGithubLoading: vi.fn(),
           setGithubError: vi.fn(),
-          setIssues: vi.fn()
+          setIssues: vi.fn(),
+          releases: [],
+          selectedRelease: null,
+          setSelectedRelease: vi.fn()
         }
         return selector ? selector(state as never) : state
       })

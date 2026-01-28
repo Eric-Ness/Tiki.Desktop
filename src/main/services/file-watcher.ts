@@ -1,6 +1,6 @@
 import * as chokidar from 'chokidar'
 import { BrowserWindow } from 'electron'
-import { readFile } from 'fs/promises'
+import { readFile, readdir } from 'fs/promises'
 import { join, basename } from 'path'
 import { existsSync } from 'fs'
 
@@ -178,4 +178,40 @@ export async function getQueue(): Promise<unknown | null> {
   if (!projectPath) return null
   const queuePath = join(projectPath, '.tiki', 'queue', 'pending.json')
   return safeReadJson(queuePath)
+}
+
+export async function getReleases(): Promise<unknown[]> {
+  if (!projectPath) return []
+  const releasesPath = join(projectPath, '.tiki', 'releases')
+
+  if (!existsSync(releasesPath)) return []
+
+  try {
+    const files = await readdir(releasesPath)
+    const releases: unknown[] = []
+
+    for (const file of files) {
+      if (file.endsWith('.json') && !file.startsWith('.')) {
+        const filePath = join(releasesPath, file)
+        const release = await safeReadJson(filePath)
+        if (release) {
+          releases.push(release)
+        }
+      }
+    }
+
+    // Sort: active first, then by version descending
+    releases.sort((a: unknown, b: unknown) => {
+      const releaseA = a as { status: string; version: string }
+      const releaseB = b as { status: string; version: string }
+      if (releaseA.status === 'active' && releaseB.status !== 'active') return -1
+      if (releaseB.status === 'active' && releaseA.status !== 'active') return 1
+      return releaseB.version.localeCompare(releaseA.version)
+    })
+
+    return releases
+  } catch (error) {
+    console.error('Error reading releases:', error)
+    return []
+  }
 }

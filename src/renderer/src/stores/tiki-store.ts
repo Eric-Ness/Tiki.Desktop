@@ -45,14 +45,31 @@ export interface GitHubIssue {
   hasPlan?: boolean
 }
 
+export interface ReleaseIssue {
+  number: number
+  title: string
+  status: string
+  requirements?: string[]
+  currentPhase: number | null
+  totalPhases: number | null
+  completedAt: string | null
+}
+
 export interface Release {
   version: string
-  status: string
-  issues: Array<{
+  createdAt?: string
+  status: 'active' | 'shipped' | 'completed' | 'not_planned' | string
+  requirementsEnabled?: boolean
+  githubMilestone?: {
     number: number
-    title: string
-    status: string
-  }>
+    url: string
+  }
+  issues: ReleaseIssue[]
+  requirements?: {
+    total: number
+    implemented: number
+    verified: number
+  }
 }
 
 export type TerminalTabStatus = 'active' | 'idle' | 'busy'
@@ -127,6 +144,8 @@ interface TikiDesktopState {
   releases: Release[]
   setReleases: (releases: Release[]) => void
   updateRelease: (version: string, release: Release) => void
+  selectedRelease: string | null
+  setSelectedRelease: (version: string | null) => void
 
   // Queue
   queue: unknown[]
@@ -279,9 +298,24 @@ export const useTikiStore = create<TikiDesktopState>()(
         releases: [],
         setReleases: (releases) => set({ releases }),
         updateRelease: (version, release) =>
-          set((state) => ({
-            releases: state.releases.map((r) => (r.version === version ? release : r))
-          })),
+          set((state) => {
+            const exists = state.releases.some((r) => r.version === version)
+            if (exists) {
+              return {
+                releases: state.releases.map((r) => (r.version === version ? release : r))
+              }
+            } else {
+              // Add new release and sort (active first, then by version desc)
+              const newReleases = [...state.releases, release].sort((a, b) => {
+                if (a.status === 'active' && b.status !== 'active') return -1
+                if (b.status === 'active' && a.status !== 'active') return 1
+                return b.version.localeCompare(a.version)
+              })
+              return { releases: newReleases }
+            }
+          }),
+        selectedRelease: null,
+        setSelectedRelease: (selectedRelease) => set({ selectedRelease }),
 
         // Queue
         queue: [],

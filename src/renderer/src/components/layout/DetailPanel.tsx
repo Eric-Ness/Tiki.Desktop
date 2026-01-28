@@ -2,6 +2,7 @@ import { useTikiStore } from '../../stores/tiki-store'
 import { PhaseDetail, type PhaseData, type PhaseStatus } from '../detail/PhaseDetail'
 import { IssueDetail } from '../detail/IssueDetail'
 import { ShipDetail } from '../detail/ShipDetail'
+import { ReleaseDetail } from '../detail/ReleaseDetail'
 
 // Empty state component
 function EmptyState() {
@@ -37,10 +38,15 @@ function parsePhaseNumber(nodeId: string): number | null {
 }
 
 // Helper to determine selection type
-type SelectionType = 'empty' | 'phase' | 'issue' | 'ship' | 'github-issue'
+type SelectionType = 'empty' | 'phase' | 'issue' | 'ship' | 'github-issue' | 'release'
 
-function getSelectionType(nodeId: string | null, selectedIssue: number | null): SelectionType {
-  // Sidebar issue selection takes priority
+function getSelectionType(
+  nodeId: string | null,
+  selectedIssue: number | null,
+  selectedRelease: string | null
+): SelectionType {
+  // Sidebar selections take priority
+  if (selectedRelease !== null) return 'release'
   if (selectedIssue !== null) return 'github-issue'
   if (!nodeId) return 'empty'
   if (nodeId === 'issue-node') return 'issue'
@@ -56,14 +62,25 @@ interface DetailPanelProps {
 export function DetailPanel({ cwd }: DetailPanelProps) {
   const selectedNode = useTikiStore((state) => state.selectedNode)
   const selectedIssue = useTikiStore((state) => state.selectedIssue)
+  const selectedRelease = useTikiStore((state) => state.selectedRelease)
   const currentPlan = useTikiStore((state) => state.currentPlan)
   const issues = useTikiStore((state) => state.issues)
+  const releases = useTikiStore((state) => state.releases)
 
-  const selectionType = getSelectionType(selectedNode, selectedIssue)
+  const selectionType = getSelectionType(selectedNode, selectedIssue, selectedRelease)
 
   // Render content based on selection type
   const renderContent = () => {
     if (selectionType === 'empty') {
+      return <EmptyState />
+    }
+
+    // Release from sidebar selection
+    if (selectionType === 'release' && selectedRelease !== null) {
+      const release = releases.find((r) => r.version === selectedRelease)
+      if (release) {
+        return <ReleaseDetail release={release} />
+      }
       return <EmptyState />
     }
 

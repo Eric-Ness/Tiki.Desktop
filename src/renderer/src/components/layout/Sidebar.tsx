@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useTikiStore } from '../../stores/tiki-store'
 import { IssueList } from '../sidebar/IssueList'
+import { ReleaseList } from '../sidebar/ReleaseList'
 
 interface SidebarProps {
   cwd: string
@@ -145,10 +146,8 @@ export function Sidebar({ cwd }: SidebarProps) {
       </SidebarSection>
 
       {/* Releases Section */}
-      <SidebarSection title="Releases">
-        <div className="px-2 py-1 text-sm text-slate-500 italic">
-          No releases
-        </div>
+      <SidebarSection title="Releases" defaultOpen>
+        <ReleaseList />
       </SidebarSection>
 
       {/* Knowledge Section */}

@@ -4,7 +4,8 @@ import {
   stopWatching,
   getCurrentState,
   getPlan,
-  getQueue
+  getQueue,
+  getReleases
 } from '../services/file-watcher'
 
 export function registerTikiHandlers(): void {
@@ -33,5 +34,10 @@ export function registerTikiHandlers(): void {
   // Get the queue
   ipcMain.handle('tiki:get-queue', async () => {
     return getQueue()
+  })
+
+  // Get all releases
+  ipcMain.handle('tiki:get-releases', async () => {
+    return getReleases()
   })
 }

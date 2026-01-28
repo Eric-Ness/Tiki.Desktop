@@ -10,6 +10,7 @@ export function useTikiSync() {
   const setPlan = useTikiStore((state) => state.setPlan)
   const setCurrentPlan = useTikiStore((state) => state.setCurrentPlan)
   const setQueue = useTikiStore((state) => state.setQueue)
+  const setReleases = useTikiStore((state) => state.setReleases)
   const updateRelease = useTikiStore((state) => state.updateRelease)
   const tikiState = useTikiStore((state) => state.tikiState)
 
@@ -54,13 +55,18 @@ export function useTikiSync() {
       setTikiState(state as TikiState | null)
     })
 
+    // Load initial releases
+    window.tikiDesktop.tiki.getReleases().then((releases) => {
+      setReleases(releases as Release[])
+    })
+
     return () => {
       cleanupState()
       cleanupPlan()
       cleanupQueue()
       cleanupRelease()
     }
-  }, [setTikiState, setPlan, setCurrentPlan, setQueue, updateRelease, tikiState?.activeIssue])
+  }, [setTikiState, setPlan, setCurrentPlan, setQueue, setReleases, updateRelease, tikiState?.activeIssue])
 
   return null
 }
