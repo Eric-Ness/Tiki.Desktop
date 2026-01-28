@@ -5,8 +5,8 @@
 Tiki Desktop is an Electron-based desktop application that provides a visual interface for the Tiki workflow framework. Requirements are organized into three categories: Core Functionality, User Interface, and GitHub Integration.
 
 **Total Requirements:** 18
-- **Implemented:** 11 (61%)
-- **Pending:** 7 (39%)
+- **Implemented:** 15 (83%)
+- **Pending:** 3 (17%)
 
 ---
 
@@ -74,25 +74,25 @@ Tiki Desktop is an Electron-based desktop application that provides a visual int
 
 ---
 
-## v0.4.0 Requirements (Active)
+## v0.4.0 Requirements (Completed)
 
 ### GitHub Integration
 
 - **GITHUB-01**: GitHub Bridge service using gh CLI
   - *Verify: manual* - gh CLI commands execute successfully from main process
-  - *Status: Pending* - #8
+  - *Implemented by: #8* ✅
 
 - **GITHUB-02**: Issue list display with planned/unplanned indicators
   - *Verify: manual* - Issues show in sidebar with plan status indicators
-  - *Status: Pending* - #8
+  - *Implemented by: #8* ✅
 
 - **GITHUB-03**: Issue detail view with body, labels, status
   - *Verify: manual* - Clicking issue shows full details in panel
-  - *Status: Pending* - #8
+  - *Implemented by: #8* ✅
 
 - **GITHUB-04**: Release and milestone visualization
   - *Verify: manual* - Releases display with progress and milestone links
-  - *Status: Pending* - #10
+  - *Implemented by: #10* ✅
 
 ---
 
