@@ -569,12 +569,13 @@ tiki-desktop/
 
 ## Development Phases
 
-### Phase 1: Foundation
-- [ ] Project scaffolding (electron-vite + React + TypeScript)
-- [ ] Basic window with resizable panels
-- [ ] Tailwind + shadcn/ui setup
-- [ ] Basic terminal integration (single terminal)
-- [ ] File watcher for `.tiki/` directory
+### Phase 1: Foundation ✅ (v0.1.0)
+- [x] Project scaffolding (electron-vite + React + TypeScript)
+- [x] Basic window with resizable panels
+- [x] Tailwind + shadcn/ui setup
+- [x] Basic terminal integration (single terminal)
+- [x] File watcher for `.tiki/` directory
+- [x] Zustand state management
 
 ### Phase 2: Core UI
 - [ ] Sidebar with collapsible sections

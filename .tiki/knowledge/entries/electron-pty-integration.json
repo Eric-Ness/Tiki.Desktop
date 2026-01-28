@@ -1,0 +1,9 @@
+{
+  "id": "electron-pty-integration",
+  "title": "Electron PTY Integration Pattern",
+  "category": "architecture",
+  "createdAt": "2026-01-28T00:00:00.000Z",
+  "tags": ["electron", "node-pty", "xterm", "ipc"],
+  "content": "## Pattern: Terminal Integration in Electron\n\n### Architecture\n- **Main Process**: node-pty manages PTY processes\n- **Renderer Process**: xterm.js renders terminal UI\n- **IPC Bridge**: Bidirectional data flow via contextBridge\n\n### Key Files\n- `src/main/services/terminal-manager.ts` - PTY lifecycle management\n- `src/main/ipc/terminal.ts` - IPC handlers\n- `src/renderer/src/components/terminal/Terminal.tsx` - xterm.js wrapper\n\n### IPC Channels\n- `terminal:create` (invoke) - Create PTY, returns ID\n- `terminal:write` (send) - Write data to PTY\n- `terminal:resize` (send) - Resize PTY dimensions\n- `terminal:data` (on) - Data from PTY to renderer\n- `terminal:exit` (on) - PTY process exit\n\n### Gotchas\n1. xterm.js requires CSS import: `import 'xterm/css/xterm.css'`\n2. FitAddon must be loaded before calling fit()\n3. Resize must be sent to both xterm and PTY\n4. Use ResizeObserver for container size changes",
+  "relatedIssues": [2]
+}

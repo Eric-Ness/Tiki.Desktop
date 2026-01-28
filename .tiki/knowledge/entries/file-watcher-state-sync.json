@@ -1,0 +1,9 @@
+{
+  "id": "file-watcher-state-sync",
+  "title": "File Watcher to Zustand State Sync",
+  "category": "architecture",
+  "createdAt": "2026-01-28T00:00:00.000Z",
+  "tags": ["chokidar", "zustand", "ipc", "state-management"],
+  "content": "## Pattern: Real-time File Sync to UI State\n\n### Architecture\n- **Main Process**: chokidar watches .tiki/ directory\n- **Renderer Process**: Zustand store holds UI state\n- **Sync Hook**: useTikiSync connects IPC events to store\n\n### Key Files\n- `src/main/services/file-watcher.ts` - Chokidar setup, debouncing\n- `src/renderer/src/stores/tiki-store.ts` - Zustand store\n- `src/renderer/src/hooks/useTikiSync.ts` - Event subscription\n\n### Debouncing Strategy\n- 100ms debounce per file path\n- Prevents rapid updates during file writes\n- Each file type has separate debounce key\n\n### Error Handling\n- Safe JSON parsing (returns null on error)\n- No crashes on malformed JSON\n- File deletion sends null to renderer\n\n### Zustand Persistence\n- Only UI preferences persisted (sidebar state, active tab)\n- Runtime state (tikiState, plans) not persisted\n- Uses localStorage via zustand/middleware",
+  "relatedIssues": [4, 11]
+}

@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "entries": [
+    {
+      "id": "electron-pty-integration",
+      "title": "Electron PTY Integration Pattern",
+      "category": "architecture",
+      "tags": ["electron", "node-pty", "xterm", "ipc"]
+    },
+    {
+      "id": "file-watcher-state-sync",
+      "title": "File Watcher to Zustand State Sync",
+      "category": "architecture",
+      "tags": ["chokidar", "zustand", "ipc", "state-management"]
+    }
+  ],
+  "categories": ["architecture", "patterns", "troubleshooting"],
+  "lastUpdated": "2026-01-28T00:00:00.000Z"
+}
