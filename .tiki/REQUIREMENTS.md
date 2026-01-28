@@ -5,8 +5,8 @@
 Tiki Desktop is an Electron-based desktop application that provides a visual interface for the Tiki workflow framework. Requirements are organized into three categories: Core Functionality, User Interface, and GitHub Integration.
 
 **Total Requirements:** 18
-- **Implemented:** 15 (83%)
-- **Pending:** 3 (17%)
+- **Implemented:** 18 (100%)
+- **Pending:** 0 (0%)
 
 ---
 
@@ -96,20 +96,20 @@ Tiki Desktop is an Electron-based desktop application that provides a visual int
 
 ---
 
-## Future Requirements (v0.5.0+)
+## v0.5.0 Requirements (Completed)
 
 ### Core Functionality
 
 - **CORE-07**: Real-time workflow updates during phase execution
   - *Verify: manual* - Workflow diagram updates within 200ms of state change
-  - *Status: Pending* - #13
+  - *Implemented by: #13* ✅
 
 - **CORE-08**: Project management with multi-project switching
   - *Verify: manual* - Can add, switch, and remove projects
-  - *Status: Pending* - #14
+  - *Implemented by: #14* ✅
 
 ### User Interface
 
 - **UI-04**: Command palette for quick Tiki command access
   - *Verify: manual* - Cmd+K opens palette with searchable commands
-  - *Status: Pending* - #9
+  - *Implemented by: #9* ✅
