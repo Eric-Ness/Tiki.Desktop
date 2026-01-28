@@ -1,7 +1,8 @@
 {
   "version": "v0.4.0",
   "createdAt": "2026-01-28T16:58:30.000Z",
-  "status": "active",
+  "status": "shipped",
+  "shippedAt": "2026-01-28T17:48:38.000Z",
   "requirementsEnabled": true,
   "githubMilestone": {
     "number": 4,
