@@ -1,0 +1,31 @@
+{
+  "id": "gh-cli-electron-bridge",
+  "title": "GitHub CLI Integration Pattern for Electron",
+  "summary": "Pattern for wrapping gh CLI commands in Electron main process with IPC bridge to renderer",
+  "context": "Implementing GitHub integration in Tiki Desktop v0.4.0",
+  "issue": 8,
+  "createdAt": "2026-01-28T17:48:00.000Z",
+  "tags": ["electron", "github", "ipc", "gh-cli"],
+  "content": {
+    "problem": "Need to fetch GitHub issues and data in Electron app without embedding GitHub API tokens",
+    "solution": "Use gh CLI which handles authentication, wrapped in execFile with JSON output parsing",
+    "keyInsights": [
+      "gh CLI supports --json flag for structured output - eliminates parsing",
+      "execFile is safer than exec for command execution (no shell injection)",
+      "Use cwd option to run gh in correct repository context",
+      "Check gh auth status before operations to provide helpful error messages",
+      "Auto-refresh on window focus is good UX but needs throttling (30s minimum)"
+    ],
+    "implementation": {
+      "mainProcess": "src/main/services/github-bridge.ts - execFile wrapper with JSON parsing",
+      "ipcHandlers": "src/main/ipc/github.ts - IPC handlers registered with ipcMain.handle",
+      "preload": "src/preload/index.ts - contextBridge.exposeInMainWorld for renderer access",
+      "renderer": "src/renderer/src/hooks/useGitHubSync.ts - React hook for loading/refreshing"
+    },
+    "caveats": [
+      "gh CLI must be installed and authenticated (gh auth login)",
+      "Rate limiting is handled by gh CLI but errors should be caught",
+      "JSON fields returned by gh depend on version - test with target version"
+    ]
+  }
+}

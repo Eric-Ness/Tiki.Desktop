@@ -598,12 +598,13 @@ tiki-desktop/
 - [x] Collapsible detail panel (Ctrl+Shift+B)
 - [ ] CriteriaNode - deferred to Phase 4
 
-### Phase 4: GitHub Integration
-- [ ] Issue list from `gh` CLI
-- [ ] Issue detail view
-- [ ] Release list
-- [ ] Milestone visualization
-- [ ] Create issue from UI
+### Phase 4: GitHub Integration ✅ (v0.4.0)
+
+- [x] Issue list from `gh` CLI
+- [x] Issue detail view
+- [x] Release list
+- [x] Milestone visualization
+- [ ] Create issue from UI (deferred to Phase 5)
 
 ### Phase 5: Full Integration
 - [ ] Execute Tiki commands from UI

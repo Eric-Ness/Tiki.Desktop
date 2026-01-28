@@ -477,6 +477,26 @@ task-04  Git status integration
   - Smooth 150ms transitions between views
   - 62 tests added
 
+### v0.4.0 - GitHub Integration ✅ (Completed)
+
+- **Issue #8**: GitHub integration - Issue list and details
+  - GitHub Bridge service using `gh` CLI via `execFile`
+  - IPC handlers for `github:get-issues`, `github:get-issue`, `github:refresh`, `github:open-in-browser`
+  - Preload API exposing GitHub methods to renderer
+  - IssueList component in sidebar with loading/error/empty states
+  - Plan indicator showing which issues have `.tiki/plans/issue-N.json`
+  - IssueDetail component with GitHub-colored labels, state badge, "Open in GitHub" button
+  - Auto-refresh on window focus with 30-second throttle
+  - useGitHubSync hook for coordinating GitHub data
+
+- **Issue #10**: Release and milestone visualization
+  - Expanded Release type to match `.tiki/releases/*.json` structure
+  - getReleases IPC handler to load all releases (active first, then by version)
+  - ReleaseList component in sidebar with progress bars and status indicators
+  - ReleaseDetail component showing version, status, issue progress, requirements coverage
+  - Milestone link opens in browser via shell.openExternal
+  - Selection priority: selectedRelease > selectedIssue > selectedNode
+
 ---
 
 ## Next Steps
@@ -487,6 +507,6 @@ task-04  Git status integration
 4. ~~Set up project scaffolding~~ ✅
 5. ~~Implement core components~~ ✅ (Phase 1-2)
 6. ~~Implement workflow diagram (React Flow)~~ ✅ (Phase 3)
-7. GitHub integration (issue list, details) - Phase 4
+7. ~~GitHub integration (issue list, details)~~ ✅ (Phase 4)
 8. Full Tiki command integration - Phase 5
 

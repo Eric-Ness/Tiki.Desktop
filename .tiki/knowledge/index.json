@@ -48,8 +48,14 @@
       "title": "Context-Sensitive Panel Rendering Pattern",
       "category": "patterns",
       "tags": ["react", "zustand", "ui", "panels", "state"]
+    },
+    {
+      "id": "gh-cli-electron-bridge",
+      "title": "GitHub CLI Integration Pattern for Electron",
+      "category": "architecture",
+      "tags": ["electron", "github", "ipc", "gh-cli"]
     }
   ],
   "categories": ["architecture", "patterns", "troubleshooting"],
-  "lastUpdated": "2026-01-28T19:45:00.000Z"
+  "lastUpdated": "2026-01-28T17:50:00.000Z"
 }
