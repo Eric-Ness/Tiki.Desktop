@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
   // App info
   getVersion: () => ipcRenderer.invoke('app:version'),
   getCwd: () => ipcRenderer.invoke('app:cwd'),
+  getGitBranch: (cwd?: string) => ipcRenderer.invoke('git:branch', cwd),
 
   // Platform info
   platform: process.platform,
@@ -82,6 +83,7 @@ declare global {
     tikiDesktop: {
       getVersion: () => Promise<string>
       getCwd: () => Promise<string>
+      getGitBranch: (cwd?: string) => Promise<string | null>
       platform: string
       terminal: {
         create: (cwd: string, name?: string) => Promise<string>

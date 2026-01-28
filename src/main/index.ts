@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
+import { execSync } from 'child_process'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { setMainWindow, cleanupAllTerminals } from './services/terminal-manager'
 import { setFileWatcherWindow, startWatching, stopWatching } from './services/file-watcher'
@@ -95,4 +96,19 @@ ipcMain.handle('app:version', () => {
 // Get current working directory
 ipcMain.handle('app:cwd', () => {
   return process.cwd()
+})
+
+// Get git branch for a directory
+ipcMain.handle('git:branch', (_event, cwd?: string) => {
+  try {
+    const workDir = cwd || process.cwd()
+    const branch = execSync('git rev-parse --abbrev-ref HEAD', {
+      cwd: workDir,
+      encoding: 'utf-8',
+      timeout: 5000
+    }).trim()
+    return branch
+  } catch {
+    return null
+  }
 })

@@ -4,6 +4,9 @@ import { vi } from 'vitest'
 // Mock window.tikiDesktop for terminal API
 Object.defineProperty(window, 'tikiDesktop', {
   value: {
+    getVersion: vi.fn().mockResolvedValue('1.0.0'),
+    getCwd: vi.fn().mockResolvedValue('/mock/path'),
+    getGitBranch: vi.fn().mockResolvedValue('main'),
     terminal: {
       create: vi.fn().mockResolvedValue('mock-terminal-id'),
       kill: vi.fn().mockResolvedValue(undefined),
