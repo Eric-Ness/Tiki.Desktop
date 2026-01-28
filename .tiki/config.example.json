@@ -1,0 +1,39 @@
+{
+  "testing": {
+    "createTests": "ask",
+    "testFramework": "auto-detect"
+  },
+  "hooks": {
+    "codeSimplifier": {
+      "enabled": true,
+      "mode": "silent"
+    },
+    "testValidator": {
+      "enabled": true,
+      "runOn": ["phase-complete", "commit"]
+    }
+  },
+  "adr": {
+    "autoGenerate": false,
+    "directory": ".tiki/adr"
+  },
+  "autoFix": {
+    "enabled": "prompt",
+    "maxAttempts": 3,
+    "strategies": ["direct", "contextual-analysis", "approach-review"]
+  },
+  "workflow": {
+    "showNextStepMenu": true
+  },
+  "pickIssue": {
+    "maxIssues": 25,
+    "preferLabels": ["high-priority", "blocking"],
+    "deferLabels": ["nice-to-have", "low-priority"],
+    "excludeLabels": ["on-hold", "waiting-for-info"]
+  },
+  "knowledge": {
+    "autoCapture": true,
+    "captureOnShip": false,
+    "minPhasesForCapture": 3
+  }
+}
