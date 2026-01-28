@@ -1,13 +1,15 @@
 import { useState, useCallback } from 'react'
-import { useTikiStore } from '../../stores/tiki-store'
+import { useTikiStore, type Project } from '../../stores/tiki-store'
 import { IssueList } from '../sidebar/IssueList'
 import { ReleaseList } from '../sidebar/ReleaseList'
+import { ProjectList } from '../sidebar/ProjectList'
 
 interface SidebarProps {
   cwd: string
+  onProjectSwitch: (project: Project) => void
 }
 
-export function Sidebar({ cwd }: SidebarProps) {
+export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
   const tikiState = useTikiStore((state) => state.tikiState)
   const currentPlan = useTikiStore((state) => state.currentPlan)
   const setGithubLoading = useTikiStore((state) => state.setGithubLoading)
@@ -60,18 +62,7 @@ export function Sidebar({ cwd }: SidebarProps) {
     <div className="h-full bg-background-secondary border-r border-border flex flex-col shadow-sm">
       {/* Projects Section */}
       <SidebarSection title="Projects" defaultOpen>
-        <div className="text-sm text-slate-400 px-2 py-1">
-          {cwd ? (
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-              </svg>
-              <span className="truncate">{cwd.split(/[/\\]/).pop()}</span>
-            </div>
-          ) : (
-            <span className="italic">No project</span>
-          )}
-        </div>
+        <ProjectList onProjectSwitch={onProjectSwitch} />
       </SidebarSection>
 
       {/* State Section */}

@@ -71,6 +71,18 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
     getCommands: (cwd?: string) => ipcRenderer.invoke('tiki:get-commands', { cwd })
   },
 
+  // Projects API
+  projects: {
+    pickFolder: () => ipcRenderer.invoke('projects:pick-folder'),
+    validatePath: (path: string) => ipcRenderer.invoke('projects:validate-path', { path }),
+    switchProject: (path: string) => ipcRenderer.invoke('projects:switch', { path }),
+    onSwitched: (callback: (data: { path: string }) => void) => {
+      const handler = (_: unknown, data: { path: string }) => callback(data)
+      ipcRenderer.on('projects:switched', handler)
+      return () => ipcRenderer.removeListener('projects:switched', handler)
+    }
+  },
+
   // GitHub API
   github: {
     checkCli: () => ipcRenderer.invoke('github:check-cli'),
@@ -129,6 +141,12 @@ declare global {
           description: string
           argumentHint?: string
         }>>
+      }
+      projects: {
+        pickFolder: () => Promise<{ id: string; name: string; path: string } | null>
+        validatePath: (path: string) => Promise<{ valid: boolean; error?: string }>
+        switchProject: (path: string) => Promise<{ success: boolean; error?: string }>
+        onSwitched: (callback: (data: { path: string }) => void) => () => void
       }
       github: {
         checkCli: () => Promise<{ available: boolean; authenticated: boolean; error?: string }>

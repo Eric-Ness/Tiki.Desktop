@@ -8,6 +8,7 @@ import { setGitHubWindow } from './services/github-bridge'
 import { registerTerminalHandlers } from './ipc/terminal'
 import { registerTikiHandlers } from './ipc/tiki'
 import { registerGitHubHandlers } from './ipc/github'
+import { registerProjectHandlers } from './ipc/projects'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -62,11 +63,12 @@ app.whenReady().then(() => {
 
   createWindow()
 
-  // Set main window reference for terminal manager, file watcher, and github
+  // Set main window reference for terminal manager, file watcher, github, and projects
   if (mainWindow) {
     setMainWindow(mainWindow)
     setFileWatcherWindow(mainWindow)
     setGitHubWindow(mainWindow)
+    registerProjectHandlers(mainWindow)
 
     // Start watching the current working directory
     startWatching(process.cwd())

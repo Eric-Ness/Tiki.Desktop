@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { ImperativePanelHandle } from 'react-resizable-panels'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './components/ui/ResizablePanels'
 import { Sidebar } from './components/layout/Sidebar'
@@ -14,7 +14,7 @@ import { useDetailPanelShortcuts } from './hooks/useDetailPanelShortcuts'
 import { useCommandPaletteShortcut } from './hooks/useCommandPaletteShortcut'
 import { useTikiCommands } from './hooks/useTikiCommands'
 import { useCommandExecution } from './hooks/useCommandExecution'
-import { useTikiStore } from './stores/tiki-store'
+import { useTikiStore, type Project } from './stores/tiki-store'
 
 function App() {
   const [version, setVersion] = useState<string>('')
@@ -39,6 +39,40 @@ function App() {
   const { commands } = useTikiCommands()
   const { executeCommand } = useCommandExecution()
   const recentCommands = useTikiStore((state) => state.recentCommands)
+
+  // Project management
+  const activeProject = useTikiStore((state) => state.activeProject)
+  const setActiveProject = useTikiStore((state) => state.setActiveProject)
+  const setTikiState = useTikiStore((state) => state.setTikiState)
+  const setCurrentPlan = useTikiStore((state) => state.setCurrentPlan)
+  const setIssues = useTikiStore((state) => state.setIssues)
+
+  // Handle project switching
+  const handleProjectSwitch = useCallback(
+    async (project: Project) => {
+      // Update active project in store
+      setActiveProject(project)
+      setCwd(project.path)
+
+      // Clear current state for clean switch
+      setTikiState(null)
+      setCurrentPlan(null)
+      setIssues([])
+
+      // Switch file watcher to new project path
+      await window.tikiDesktop.projects.switchProject(project.path)
+    },
+    [setActiveProject, setTikiState, setCurrentPlan, setIssues]
+  )
+
+  // On mount, check for active project and set cwd
+  useEffect(() => {
+    if (activeProject) {
+      setCwd(activeProject.path)
+      // Ensure file watcher is watching the active project
+      window.tikiDesktop.projects.switchProject(activeProject.path)
+    }
+  }, []) // Only on mount
 
   // Sync sidebar panel collapse state with store
   useEffect(() => {
@@ -100,7 +134,7 @@ function App() {
             collapsible={true}
             collapsedSize={0}
           >
-            <Sidebar cwd={cwd} />
+            <Sidebar cwd={cwd} onProjectSwitch={handleProjectSwitch} />
           </ResizablePanel>
 
           <ResizableHandle />

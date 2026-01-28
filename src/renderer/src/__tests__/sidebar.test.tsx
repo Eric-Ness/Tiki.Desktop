@@ -10,67 +10,87 @@ vi.mock('../stores/tiki-store', () => ({
 
 const mockUseTikiStore = vi.mocked(useTikiStore)
 
+// Default mock project switch handler
+const mockOnProjectSwitch = vi.fn()
+
+// Helper to create default mock state with project-related fields
+const createDefaultMockState = (overrides = {}) => ({
+  tikiState: null,
+  currentPlan: null,
+  issues: [],
+  githubLoading: false,
+  githubError: null,
+  selectedIssue: null,
+  setSelectedIssue: vi.fn(),
+  setSelectedNode: vi.fn(),
+  setGithubLoading: vi.fn(),
+  setGithubError: vi.fn(),
+  setIssues: vi.fn(),
+  releases: [],
+  selectedRelease: null,
+  setSelectedRelease: vi.fn(),
+  // Project-related state
+  projects: [],
+  activeProject: null,
+  addProject: vi.fn(),
+  removeProject: vi.fn(),
+  ...overrides
+})
+
 describe('Sidebar', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // Default mock implementation
     mockUseTikiStore.mockImplementation((selector) => {
-      const state = {
-        tikiState: null,
-        currentPlan: null,
-        issues: [],
-        githubLoading: false,
-        githubError: null,
-        selectedIssue: null,
-        setSelectedIssue: vi.fn(),
-        setSelectedNode: vi.fn(),
-        setGithubLoading: vi.fn(),
-        setGithubError: vi.fn(),
-        setIssues: vi.fn(),
-        releases: [],
-        selectedRelease: null,
-        setSelectedRelease: vi.fn()
-      }
+      const state = createDefaultMockState()
       return selector ? selector(state as never) : state
     })
   })
 
   describe('Projects Section', () => {
-    it('should render project name when cwd is provided', () => {
-      render(<Sidebar cwd="C:\\Users\\test\\MyProject" />)
+    it('should render project name when project is active', () => {
+      mockUseTikiStore.mockImplementation((selector) => {
+        const state = createDefaultMockState({
+          projects: [{ id: '1', name: 'MyProject', path: 'C:\\Users\\test\\MyProject' }],
+          activeProject: { id: '1', name: 'MyProject', path: 'C:\\Users\\test\\MyProject' }
+        })
+        return selector ? selector(state as never) : state
+      })
+
+      render(<Sidebar cwd="C:\\Users\\test\\MyProject" onProjectSwitch={mockOnProjectSwitch} />)
 
       expect(screen.getByText('MyProject')).toBeInTheDocument()
     })
 
-    it('should render "No project" when cwd is empty', () => {
-      render(<Sidebar cwd="" />)
+    it('should render "No projects added" when no projects exist', () => {
+      render(<Sidebar cwd="" onProjectSwitch={mockOnProjectSwitch} />)
 
-      expect(screen.getByText('No project')).toBeInTheDocument()
+      expect(screen.getByText('No projects added')).toBeInTheDocument()
     })
 
-    it('should handle Unix-style paths', () => {
-      render(<Sidebar cwd="/home/user/my-project" />)
+    it('should render Add Project button', () => {
+      render(<Sidebar cwd="" onProjectSwitch={mockOnProjectSwitch} />)
 
-      expect(screen.getByText('my-project')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /add project/i })).toBeInTheDocument()
     })
   })
 
   describe('State Section', () => {
     it('should show Idle status when tikiState is null', () => {
-      render(<Sidebar cwd="/test" />)
+      render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
       expect(screen.getByText('Idle')).toBeInTheDocument()
     })
 
     it('should show "No active execution" when no active issue', () => {
-      render(<Sidebar cwd="/test" />)
+      render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
       expect(screen.getByText('No active execution')).toBeInTheDocument()
     })
 
     it('should show Executing status with active issue', () => {
       mockUseTikiStore.mockImplementation((selector) => {
-        const state = {
+        const state = createDefaultMockState({
           tikiState: {
             activeIssue: 42,
             currentPhase: 1,
@@ -85,24 +105,12 @@ describe('Sidebar', () => {
               { number: 1, title: 'Phase 1', status: 'in_progress', files: [], verification: [] },
               { number: 2, title: 'Phase 2', status: 'pending', files: [], verification: [] }
             ]
-          },
-          issues: [],
-          githubLoading: false,
-          githubError: null,
-          selectedIssue: null,
-          setSelectedIssue: vi.fn(),
-          setSelectedNode: vi.fn(),
-          setGithubLoading: vi.fn(),
-          setGithubError: vi.fn(),
-          setIssues: vi.fn(),
-          releases: [],
-          selectedRelease: null,
-          setSelectedRelease: vi.fn()
-        }
+          }
+        })
         return selector ? selector(state as never) : state
       })
 
-      render(<Sidebar cwd="/test" />)
+      render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
       expect(screen.getByText('Executing')).toBeInTheDocument()
       expect(screen.getByText('Issue #42')).toBeInTheDocument()
@@ -111,71 +119,45 @@ describe('Sidebar', () => {
 
     it('should show Paused status', () => {
       mockUseTikiStore.mockImplementation((selector) => {
-        const state = {
+        const state = createDefaultMockState({
           tikiState: {
             activeIssue: 10,
             currentPhase: 1,
             status: 'paused',
             completedPhases: [],
             lastActivity: null
-          },
-          currentPlan: null,
-          issues: [],
-          githubLoading: false,
-          githubError: null,
-          selectedIssue: null,
-          setSelectedIssue: vi.fn(),
-          setSelectedNode: vi.fn(),
-          setGithubLoading: vi.fn(),
-          setGithubError: vi.fn(),
-          setIssues: vi.fn(),
-          releases: [],
-          selectedRelease: null,
-          setSelectedRelease: vi.fn()
-        }
+          }
+        })
         return selector ? selector(state as never) : state
       })
 
-      render(<Sidebar cwd="/test" />)
+      render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
       expect(screen.getByText('Paused')).toBeInTheDocument()
     })
 
     it('should show Failed status', () => {
       mockUseTikiStore.mockImplementation((selector) => {
-        const state = {
+        const state = createDefaultMockState({
           tikiState: {
             activeIssue: 10,
             currentPhase: 1,
             status: 'failed',
             completedPhases: [],
             lastActivity: null
-          },
-          currentPlan: null,
-          issues: [],
-          githubLoading: false,
-          githubError: null,
-          selectedIssue: null,
-          setSelectedIssue: vi.fn(),
-          setSelectedNode: vi.fn(),
-          setGithubLoading: vi.fn(),
-          setGithubError: vi.fn(),
-          setIssues: vi.fn(),
-          releases: [],
-          selectedRelease: null,
-          setSelectedRelease: vi.fn()
-        }
+          }
+        })
         return selector ? selector(state as never) : state
       })
 
-      render(<Sidebar cwd="/test" />)
+      render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
       expect(screen.getByText('Failed')).toBeInTheDocument()
     })
 
     it('should show progress when phases exist', () => {
       mockUseTikiStore.mockImplementation((selector) => {
-        const state = {
+        const state = createDefaultMockState({
           tikiState: {
             activeIssue: 42,
             currentPhase: 2,
@@ -191,24 +173,12 @@ describe('Sidebar', () => {
               { number: 2, title: 'Phase 2', status: 'in_progress', files: [], verification: [] },
               { number: 3, title: 'Phase 3', status: 'pending', files: [], verification: [] }
             ]
-          },
-          issues: [],
-          githubLoading: false,
-          githubError: null,
-          selectedIssue: null,
-          setSelectedIssue: vi.fn(),
-          setSelectedNode: vi.fn(),
-          setGithubLoading: vi.fn(),
-          setGithubError: vi.fn(),
-          setIssues: vi.fn(),
-          releases: [],
-          selectedRelease: null,
-          setSelectedRelease: vi.fn()
-        }
+          }
+        })
         return selector ? selector(state as never) : state
       })
 
-      render(<Sidebar cwd="/test" />)
+      render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
       // Should show progress text
       expect(screen.getByText('Progress')).toBeInTheDocument()
@@ -218,19 +188,19 @@ describe('Sidebar', () => {
 
   describe('Empty States', () => {
     it('should show "No open issues" in Issues section when no issues', () => {
-      render(<Sidebar cwd="/test" />)
+      render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
       expect(screen.getByText('No open issues')).toBeInTheDocument()
     })
 
     it('should show "No releases" in Releases section', () => {
-      render(<Sidebar cwd="/test" />)
+      render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
       expect(screen.getByText('No releases')).toBeInTheDocument()
     })
 
     it('should show "No knowledge entries" in Knowledge section', () => {
-      render(<Sidebar cwd="/test" />)
+      render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
       expect(screen.getByText('No knowledge entries')).toBeInTheDocument()
     })
@@ -238,7 +208,7 @@ describe('Sidebar', () => {
 
   describe('Footer', () => {
     it('should render "Start Claude Code" button', () => {
-      render(<Sidebar cwd="/test" />)
+      render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
       expect(screen.getByRole('button', { name: 'Start Claude Code' })).toBeInTheDocument()
     })
@@ -249,42 +219,43 @@ describe('SidebarSection', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockUseTikiStore.mockImplementation((selector) => {
-      const state = {
-        tikiState: null,
-        currentPlan: null,
-        issues: [],
-        githubLoading: false,
-        githubError: null,
-        selectedIssue: null,
-        setSelectedIssue: vi.fn(),
-        setSelectedNode: vi.fn(),
-        setGithubLoading: vi.fn(),
-        setGithubError: vi.fn(),
-        setIssues: vi.fn(),
-        releases: [],
-        selectedRelease: null,
-        setSelectedRelease: vi.fn()
-      }
+      const state = createDefaultMockState()
       return selector ? selector(state as never) : state
     })
   })
 
   describe('Collapse/Expand behavior', () => {
     it('should start expanded when defaultOpen is true', () => {
-      render(<Sidebar cwd="/test" />)
+      mockUseTikiStore.mockImplementation((selector) => {
+        const state = createDefaultMockState({
+          projects: [{ id: '1', name: 'TestProject', path: '/test' }],
+          activeProject: { id: '1', name: 'TestProject', path: '/test' }
+        })
+        return selector ? selector(state as never) : state
+      })
+
+      render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
       // Projects section has defaultOpen=true, so its content should be visible
-      expect(screen.getByText('test')).toBeInTheDocument()
+      expect(screen.getByText('TestProject')).toBeInTheDocument()
     })
 
     it('should collapse section when header is clicked', () => {
-      render(<Sidebar cwd="/test" />)
+      mockUseTikiStore.mockImplementation((selector) => {
+        const state = createDefaultMockState({
+          projects: [{ id: '1', name: 'TestProject', path: '/test' }],
+          activeProject: { id: '1', name: 'TestProject', path: '/test' }
+        })
+        return selector ? selector(state as never) : state
+      })
+
+      render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
       // Find Projects section header button
       const projectsHeader = screen.getByRole('button', { name: /projects/i })
 
       // Initially content should be visible (defaultOpen=true)
-      expect(screen.getByText('test')).toBeInTheDocument()
+      expect(screen.getByText('TestProject')).toBeInTheDocument()
 
       // Click to collapse
       fireEvent.click(projectsHeader)
@@ -297,7 +268,7 @@ describe('SidebarSection', () => {
     })
 
     it('should expand section when collapsed header is clicked', () => {
-      render(<Sidebar cwd="/test" />)
+      render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
       // Find Knowledge section header (defaultOpen=false)
       const knowledgeHeader = screen.getByRole('button', { name: /knowledge/i })
@@ -316,7 +287,7 @@ describe('SidebarSection', () => {
     })
 
     it('should toggle arrow rotation on expand/collapse', () => {
-      render(<Sidebar cwd="/test" />)
+      render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
       const projectsHeader = screen.getByRole('button', { name: /projects/i })
       const arrow = projectsHeader.querySelector('svg')
@@ -332,7 +303,7 @@ describe('SidebarSection', () => {
     })
 
     it('should preserve independent collapse state per section', () => {
-      render(<Sidebar cwd="/test" />)
+      render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
       const projectsHeader = screen.getByRole('button', { name: /projects/i })
       const stateHeader = screen.getByRole('button', { name: /state/i })
@@ -358,7 +329,7 @@ describe('SidebarSection', () => {
 
   describe('Section titles', () => {
     it('should render all section titles', () => {
-      render(<Sidebar cwd="/test" />)
+      render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
       expect(screen.getByText('Projects')).toBeInTheDocument()
       expect(screen.getByText('State')).toBeInTheDocument()
@@ -371,7 +342,7 @@ describe('SidebarSection', () => {
   describe('Content rendering', () => {
     it('should render correct content in each section', () => {
       mockUseTikiStore.mockImplementation((selector) => {
-        const state = {
+        const state = createDefaultMockState({
           tikiState: {
             activeIssue: 5,
             currentPhase: 1,
@@ -386,23 +357,13 @@ describe('SidebarSection', () => {
               { number: 1, title: 'Setup', status: 'in_progress', files: [], verification: [] }
             ]
           },
-          issues: [],
-          githubLoading: false,
-          githubError: null,
-          selectedIssue: null,
-          setSelectedIssue: vi.fn(),
-          setSelectedNode: vi.fn(),
-          setGithubLoading: vi.fn(),
-          setGithubError: vi.fn(),
-          setIssues: vi.fn(),
-          releases: [],
-          selectedRelease: null,
-          setSelectedRelease: vi.fn()
-        }
+          projects: [{ id: '1', name: 'awesome-project', path: '/home/user/awesome-project' }],
+          activeProject: { id: '1', name: 'awesome-project', path: '/home/user/awesome-project' }
+        })
         return selector ? selector(state as never) : state
       })
 
-      render(<Sidebar cwd="/home/user/awesome-project" />)
+      render(<Sidebar cwd="/home/user/awesome-project" onProjectSwitch={mockOnProjectSwitch} />)
 
       // Projects section content
       expect(screen.getByText('awesome-project')).toBeInTheDocument()
