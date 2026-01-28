@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { TerminalTabs } from '../terminal/TerminalTabs'
+import { WorkflowCanvas } from '../workflow/WorkflowCanvas'
 
 type Tab = 'terminal' | 'workflow' | 'config'
 
@@ -37,7 +38,7 @@ export function MainContent({ cwd }: MainContentProps) {
       {/* Tab Content */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'terminal' && <TerminalTabs cwd={cwd} />}
-        {activeTab === 'workflow' && <WorkflowPlaceholder />}
+        {activeTab === 'workflow' && <WorkflowCanvas />}
         {activeTab === 'config' && <ConfigPlaceholder />}
       </div>
     </div>
@@ -64,28 +65,6 @@ function TabButton({ active, onClick, children }: TabButtonProps) {
     >
       {children}
     </button>
-  )
-}
-
-function WorkflowPlaceholder() {
-  return (
-    <div className="h-full flex items-center justify-center text-slate-500">
-      <div className="text-center px-6 max-w-[280px]">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-background-tertiary/50 flex items-center justify-center">
-          <svg className="w-8 h-8 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <rect x="3" y="3" width="6" height="6" rx="1" />
-            <rect x="15" y="3" width="6" height="6" rx="1" />
-            <rect x="9" y="15" width="6" height="6" rx="1" />
-            <path d="M6 9v3a1 1 0 0 0 1 1h4" />
-            <path d="M18 9v3a1 1 0 0 1-1 1h-4" />
-          </svg>
-        </div>
-        <p className="text-sm font-medium text-slate-400 mb-1">Workflow Diagram</p>
-        <p className="text-xs text-slate-500 leading-relaxed">
-          React Flow integration coming in issue #6
-        </p>
-      </div>
-    </div>
   )
 }
 
