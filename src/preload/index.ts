@@ -1,5 +1,68 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
+// Settings type definitions (mirrored from main process for type safety)
+export interface AppearanceSettings {
+  theme: 'dark' | 'light' | 'system'
+  fontSize: number
+  fontFamily: string
+  accentColor: string
+}
+
+export interface TerminalSettings {
+  fontSize: number
+  fontFamily: string
+  cursorStyle: 'block' | 'underline' | 'bar'
+  cursorBlink: boolean
+  scrollback: number
+  copyOnSelect: boolean
+  shell: string
+}
+
+export interface NotificationsSettings {
+  enabled: boolean
+  sound: boolean
+  phaseComplete: boolean
+  issuePlanned: boolean
+  issueShipped: boolean
+  errors: boolean
+}
+
+export interface KeyboardShortcutsSettings {
+  toggleSidebar: string
+  toggleDetailPanel: string
+  commandPalette: string
+  openSettings: string
+  newTerminal: string
+  closeTerminal: string
+}
+
+export interface GitHubSettings {
+  autoRefresh: boolean
+  refreshInterval: number
+  defaultIssueState: 'open' | 'closed' | 'all'
+}
+
+export interface DataPrivacySettings {
+  telemetry: boolean
+  crashReports: boolean
+  clearDataOnExit: boolean
+}
+
+export interface SettingsSchema {
+  appearance: AppearanceSettings
+  terminal: TerminalSettings
+  notifications: NotificationsSettings
+  keyboardShortcuts: KeyboardShortcutsSettings
+  github: GitHubSettings
+  dataPrivacy: DataPrivacySettings
+}
+
+export type SettingsCategory = keyof SettingsSchema
+
+export type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P]
+}
+
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('tikiDesktop', {
@@ -103,6 +166,31 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.on('github:error', handler)
       return () => ipcRenderer.removeListener('github:error', handler)
     }
+  },
+
+  // Settings API
+  settings: {
+    get: <K extends SettingsCategory>(category?: K) =>
+      ipcRenderer.invoke('settings:get', { category }),
+    set: (settings: DeepPartial<SettingsSchema>) =>
+      ipcRenderer.invoke('settings:set', { settings }),
+    reset: (category?: SettingsCategory) => ipcRenderer.invoke('settings:reset', { category }),
+    export: () => ipcRenderer.invoke('settings:export'),
+    import: () => ipcRenderer.invoke('settings:import'),
+    onChange: (callback: (settings: SettingsSchema) => void) => {
+      const handler = (_: unknown, settings: SettingsSchema) => callback(settings)
+      ipcRenderer.on('settings:changed', handler)
+      return () => ipcRenderer.removeListener('settings:changed', handler)
+    }
+  },
+
+  // Config API (for .tiki/config.json)
+  config: {
+    read: (projectPath: string) => ipcRenderer.invoke('config:read', { projectPath }),
+    write: (projectPath: string, config: unknown) =>
+      ipcRenderer.invoke('config:write', { projectPath, config }),
+    validate: (config: unknown) => ipcRenderer.invoke('config:validate', { config }),
+    reset: (projectPath: string) => ipcRenderer.invoke('config:reset', { projectPath })
   }
 })
 
@@ -157,6 +245,59 @@ declare global {
         onIssuesUpdated: (callback: (issues: unknown[]) => void) => () => void
         onError: (callback: (error: { error: string }) => void) => () => void
       }
+      settings: {
+        get: {
+          (): Promise<SettingsSchema>
+          <K extends SettingsCategory>(category: K): Promise<SettingsSchema[K]>
+        }
+        set: (settings: DeepPartial<SettingsSchema>) => Promise<SettingsSchema>
+        reset: (category?: SettingsCategory) => Promise<SettingsSchema>
+        export: () => Promise<{ success: boolean; path?: string; error?: string }>
+        import: () => Promise<{ success: boolean; error?: string }>
+        onChange: (callback: (settings: SettingsSchema) => void) => () => void
+      }
+      config: {
+        read: (projectPath: string) => Promise<{
+          config: TikiConfig
+          exists: boolean
+          error?: string
+        }>
+        write: (projectPath: string, config: TikiConfig) => Promise<{
+          success: boolean
+          error?: string
+        }>
+        validate: (config: unknown) => Promise<{
+          valid: boolean
+          errors: string[]
+          config?: TikiConfig
+        }>
+        reset: (projectPath: string) => Promise<{
+          success: boolean
+          config: TikiConfig
+          error?: string
+        }>
+      }
     }
   }
 }
+
+// Tiki config type (mirrors main process)
+interface TikiConfig {
+  tdd: {
+    enabled: boolean
+    framework: 'vitest' | 'jest' | 'pytest' | 'mocha' | 'other'
+  }
+  releases: {
+    requirementsEnabled: boolean
+    milestoneSync: boolean
+  }
+  execution: {
+    autoCommit: boolean
+    pauseOnFailure: boolean
+  }
+  knowledge: {
+    autoCapture: boolean
+    maxEntries: number
+  }
+}
+

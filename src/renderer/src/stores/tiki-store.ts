@@ -155,6 +155,11 @@ interface TikiDesktopState {
   recentCommands: string[]
   addRecentCommand: (commandName: string) => void
   clearRecentCommands: () => void
+
+  // Settings Modal
+  settingsModalOpen: boolean
+  setSettingsModalOpen: (open: boolean) => void
+  toggleSettingsModal: () => void
 }
 
 export const useTikiStore = create<TikiDesktopState>()(
@@ -336,7 +341,12 @@ export const useTikiStore = create<TikiDesktopState>()(
             const updated = [commandName, ...filtered].slice(0, 10)
             return { recentCommands: updated }
           }),
-        clearRecentCommands: () => set({ recentCommands: [] })
+        clearRecentCommands: () => set({ recentCommands: [] }),
+
+        // Settings Modal
+        settingsModalOpen: false,
+        setSettingsModalOpen: (open) => set({ settingsModalOpen: open }),
+        toggleSettingsModal: () => set((state) => ({ settingsModalOpen: !state.settingsModalOpen }))
       }),
       {
         name: 'tiki-desktop-storage',

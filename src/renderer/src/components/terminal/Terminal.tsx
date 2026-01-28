@@ -1,12 +1,24 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useMemo } from 'react'
 import { Terminal as XTerm } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 import { WebLinksAddon } from 'xterm-addon-web-links'
 import 'xterm/css/xterm.css'
+import { useSettingsCategory, TerminalSettings } from '../../hooks/useSettings'
 
 interface TerminalProps {
   terminalId: string | null
   onReady?: () => void
+}
+
+// Default terminal settings used when settings haven't loaded yet
+const DEFAULT_TERMINAL_SETTINGS: TerminalSettings = {
+  fontSize: 13,
+  fontFamily: '"Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace',
+  cursorStyle: 'bar',
+  cursorBlink: true,
+  scrollback: 10000,
+  copyOnSelect: false,
+  shell: ''
 }
 
 export function Terminal({ terminalId, onReady }: TerminalProps) {
@@ -14,6 +26,15 @@ export function Terminal({ terminalId, onReady }: TerminalProps) {
   const terminalRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const cleanupRef = useRef<(() => void)[]>([])
+
+  // Get terminal settings from the settings store
+  const { settings: terminalSettings } = useSettingsCategory('terminal')
+
+  // Use settings with fallback to defaults
+  const effectiveSettings = useMemo(
+    () => terminalSettings ?? DEFAULT_TERMINAL_SETTINGS,
+    [terminalSettings]
+  )
 
   // Handle resize
   const handleResize = useCallback(() => {
@@ -52,12 +73,13 @@ export function Terminal({ terminalId, onReady }: TerminalProps) {
         brightCyan: '#22d3ee',
         brightWhite: '#f8fafc'
       },
-      fontFamily: '"Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace',
-      fontSize: 13,
+      // Apply terminal settings from user preferences
+      fontFamily: effectiveSettings.fontFamily,
+      fontSize: effectiveSettings.fontSize,
       lineHeight: 1.2,
-      cursorBlink: true,
-      cursorStyle: 'bar',
-      scrollback: 10000,
+      cursorBlink: effectiveSettings.cursorBlink,
+      cursorStyle: effectiveSettings.cursorStyle,
+      scrollback: effectiveSettings.scrollback,
       allowProposedApi: true
     })
 
@@ -81,6 +103,42 @@ export function Terminal({ terminalId, onReady }: TerminalProps) {
       fitAddonRef.current = null
     }
   }, [onReady])
+
+  // Apply settings changes to the existing terminal
+  // This effect updates terminal options dynamically when settings change
+  // without recreating the terminal, avoiding flicker
+  useEffect(() => {
+    const terminal = terminalRef.current
+    const fitAddon = fitAddonRef.current
+    if (!terminal) return
+
+    // Update cursor settings - these can be changed dynamically
+    terminal.options.cursorStyle = effectiveSettings.cursorStyle
+    terminal.options.cursorBlink = effectiveSettings.cursorBlink
+
+    // Update font settings - these can be changed dynamically
+    // xterm.js handles font changes gracefully
+    terminal.options.fontFamily = effectiveSettings.fontFamily
+    terminal.options.fontSize = effectiveSettings.fontSize
+
+    // Update scrollback - this can be changed dynamically
+    // Note: Reducing scrollback may truncate existing buffer content
+    terminal.options.scrollback = effectiveSettings.scrollback
+
+    // After font changes, we need to re-fit the terminal
+    // to recalculate dimensions based on new character size
+    if (fitAddon) {
+      // Use requestAnimationFrame to ensure font metrics are calculated
+      requestAnimationFrame(() => {
+        fitAddon.fit()
+        // If connected to a PTY, notify it of the new dimensions
+        if (terminalId && terminalRef.current) {
+          const { cols, rows } = terminalRef.current
+          window.tikiDesktop.terminal.resize(terminalId, cols, rows)
+        }
+      })
+    }
+  }, [effectiveSettings, terminalId])
 
   // Handle terminal ID changes (connect/disconnect PTY)
   useEffect(() => {
@@ -139,6 +197,19 @@ export function Terminal({ terminalId, onReady }: TerminalProps) {
       window.removeEventListener('resize', handleResize)
     }
   }, [handleResize])
+
+  // Handle focus events from command execution
+  useEffect(() => {
+    const handleFocus = (e: Event) => {
+      const customEvent = e as CustomEvent<{ id: string }>
+      if (customEvent.detail.id === terminalId && terminalRef.current) {
+        terminalRef.current.focus()
+      }
+    }
+
+    window.addEventListener('terminal:focus', handleFocus)
+    return () => window.removeEventListener('terminal:focus', handleFocus)
+  }, [terminalId])
 
   return (
     <div

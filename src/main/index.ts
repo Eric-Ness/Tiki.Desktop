@@ -9,6 +9,10 @@ import { registerTerminalHandlers } from './ipc/terminal'
 import { registerTikiHandlers } from './ipc/tiki'
 import { registerGitHubHandlers } from './ipc/github'
 import { registerProjectHandlers } from './ipc/projects'
+import { registerSettingsHandlers } from './ipc/settings'
+import { registerConfigHandlers } from './ipc/config'
+import { setMainWindow as setSettingsWindow } from './services/settings-store'
+import { setMainWindow as setNotificationWindow } from './services/notification-service'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -60,14 +64,18 @@ app.whenReady().then(() => {
   registerTerminalHandlers()
   registerTikiHandlers()
   registerGitHubHandlers()
+  registerSettingsHandlers()
+  registerConfigHandlers()
 
   createWindow()
 
-  // Set main window reference for terminal manager, file watcher, github, and projects
+  // Set main window reference for terminal manager, file watcher, github, projects, settings, and notifications
   if (mainWindow) {
     setMainWindow(mainWindow)
     setFileWatcherWindow(mainWindow)
     setGitHubWindow(mainWindow)
+    setSettingsWindow(mainWindow)
+    setNotificationWindow(mainWindow)
     registerProjectHandlers(mainWindow)
 
     // Start watching the current working directory

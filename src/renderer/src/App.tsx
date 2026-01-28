@@ -7,6 +7,8 @@ import { DetailPanel } from './components/layout/DetailPanel'
 import { StatusBar } from './components/layout/StatusBar'
 import { TitleBar } from './components/layout/TitleBar'
 import { CommandPalette } from './components/command-palette'
+import { SettingsModal } from './components/settings'
+import { SettingsProvider } from './contexts/SettingsContext'
 import { useTikiSync } from './hooks/useTikiSync'
 import { useGitHubSync } from './hooks/useGitHubSync'
 import { useSidebarShortcuts } from './hooks/useSidebarShortcuts'
@@ -14,6 +16,7 @@ import { useDetailPanelShortcuts } from './hooks/useDetailPanelShortcuts'
 import { useCommandPaletteShortcut } from './hooks/useCommandPaletteShortcut'
 import { useTikiCommands } from './hooks/useTikiCommands'
 import { useCommandExecution } from './hooks/useCommandExecution'
+import { useSettingsShortcut } from './hooks/useSettingsShortcut'
 import { useTikiStore, type Project } from './stores/tiki-store'
 
 function App() {
@@ -37,8 +40,11 @@ function App() {
   // Command palette state and commands
   const { isOpen: commandPaletteOpen, close: closeCommandPalette } = useCommandPaletteShortcut()
   const { commands } = useTikiCommands()
-  const { executeCommand } = useCommandExecution()
+  const { executeCommand, executeCommandWithArgs } = useCommandExecution()
   const recentCommands = useTikiStore((state) => state.recentCommands)
+
+  // Settings modal state
+  const { isOpen: settingsOpen, close: closeSettings } = useSettingsShortcut()
 
   // Project management
   const activeProject = useTikiStore((state) => state.activeProject)
@@ -102,67 +108,82 @@ function App() {
     window.tikiDesktop.getCwd().then(setCwd)
   }, [])
 
-  // Handle command selection from palette
-  const handleCommandSelect = (command: { name: string; displayName: string; description: string; argumentHint?: string }) => {
+  // Handle command selection from palette (commands without arguments)
+  const handleCommandSelect = async (command: { name: string; displayName: string; description: string; argumentHint?: string }) => {
     closeCommandPalette()
-    executeCommand(command)
+    await executeCommand(command)
+  }
+
+  // Handle command selection with arguments
+  const handleCommandSelectWithArgs = async (
+    command: { name: string; displayName: string; description: string; argumentHint?: string },
+    args: string
+  ) => {
+    closeCommandPalette()
+    await executeCommandWithArgs(command, args)
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background text-slate-100">
-      {/* Command Palette */}
-      <CommandPalette
-        isOpen={commandPaletteOpen}
-        onClose={closeCommandPalette}
-        commands={commands}
-        recentCommands={recentCommands}
-        onSelect={handleCommandSelect}
-      />
+    <SettingsProvider>
+      <div className="h-screen flex flex-col bg-background text-slate-100">
+        {/* Command Palette */}
+        <CommandPalette
+          isOpen={commandPaletteOpen}
+          onClose={closeCommandPalette}
+          commands={commands}
+          recentCommands={recentCommands}
+          onSelect={handleCommandSelect}
+          onSelectWithArgs={handleCommandSelectWithArgs}
+        />
 
-      {/* Title Bar */}
-      <TitleBar />
+        {/* Settings Modal */}
+        <SettingsModal isOpen={settingsOpen} onClose={closeSettings} />
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden">
-        <ResizablePanelGroup direction="horizontal">
-          {/* Sidebar */}
-          <ResizablePanel
-            ref={sidebarPanelRef}
-            defaultSize={20}
-            minSize={15}
-            maxSize={30}
-            collapsible={true}
-            collapsedSize={0}
-          >
-            <Sidebar cwd={cwd} onProjectSwitch={handleProjectSwitch} />
-          </ResizablePanel>
+        {/* Title Bar */}
+        <TitleBar />
 
-          <ResizableHandle />
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-hidden">
+          <ResizablePanelGroup direction="horizontal">
+            {/* Sidebar */}
+            <ResizablePanel
+              ref={sidebarPanelRef}
+              defaultSize={20}
+              minSize={15}
+              maxSize={30}
+              collapsible={true}
+              collapsedSize={0}
+            >
+              <Sidebar cwd={cwd} onProjectSwitch={handleProjectSwitch} />
+            </ResizablePanel>
 
-          {/* Main Content */}
-          <ResizablePanel defaultSize={55} minSize={30}>
-            <MainContent cwd={cwd} />
-          </ResizablePanel>
+            <ResizableHandle />
 
-          <ResizableHandle />
+            {/* Main Content */}
+            <ResizablePanel defaultSize={55} minSize={30}>
+              <MainContent cwd={cwd} />
+            </ResizablePanel>
 
-          {/* Detail Panel */}
-          <ResizablePanel
-            ref={detailPanelRef}
-            defaultSize={25}
-            minSize={20}
-            maxSize={40}
-            collapsible={true}
-            collapsedSize={0}
-          >
-            <DetailPanel cwd={cwd} />
-          </ResizablePanel>
-        </ResizablePanelGroup>
+            <ResizableHandle />
+
+            {/* Detail Panel */}
+            <ResizablePanel
+              ref={detailPanelRef}
+              defaultSize={25}
+              minSize={20}
+              maxSize={40}
+              collapsible={true}
+              collapsedSize={0}
+            >
+              <DetailPanel cwd={cwd} />
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
+
+        {/* Status Bar */}
+        <StatusBar version={version} cwd={cwd} />
       </div>
-
-      {/* Status Bar */}
-      <StatusBar version={version} cwd={cwd} />
-    </div>
+    </SettingsProvider>
   )
 }
 

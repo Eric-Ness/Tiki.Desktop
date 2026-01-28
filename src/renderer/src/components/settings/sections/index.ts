@@ -1,0 +1,6 @@
+export { AppearanceSection } from './AppearanceSection'
+export { TerminalSection } from './TerminalSection'
+export { NotificationsSection } from './NotificationsSection'
+export { KeyboardShortcutsSection } from './KeyboardShortcutsSection'
+export { GitHubSection } from './GitHubSection'
+export { DataPrivacySection } from './DataPrivacySection'
