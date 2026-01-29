@@ -708,6 +708,44 @@ export interface AnalyticsExecutionRecord {
   retryCount: number
 }
 
+// Workspace type definitions (mirrored from main process for type safety)
+export interface WorkspaceTerminalSnapshot {
+  id: string
+  name: string
+  cwd: string
+}
+
+export interface WorkspaceLayoutSnapshot {
+  sidebarCollapsed: boolean
+  detailPanelCollapsed: boolean
+  sidebarWidth: number
+  detailPanelWidth: number
+}
+
+export interface WorkspaceSnapshot {
+  id: string
+  name: string
+  description?: string
+  createdAt: string
+  updatedAt: string
+  terminals: WorkspaceTerminalSnapshot[]
+  activeTerminal?: string
+  layout: WorkspaceLayoutSnapshot
+  activeTab: string
+  activeIssue?: number
+  currentPhase?: number
+  selectedNode?: string
+  size: number
+}
+
+export interface WorkspaceStorageInfo {
+  used: number
+  limit: number
+  snapshots: number
+}
+
+export type WorkspaceSnapshotInput = Omit<WorkspaceSnapshot, 'id' | 'createdAt' | 'updatedAt' | 'size'>
+
 // Heatmap type definitions (mirrored from main process for type safety)
 export type HeatMetricPreload = 'modifications' | 'bugs' | 'churn' | 'complexity'
 export type TimePeriodPreload = '7days' | '30days' | '90days' | 'all'
@@ -1282,6 +1320,22 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.invoke('analytics:record-execution', { cwd, record }),
     getRecent: (cwd: string, limit?: number) =>
       ipcRenderer.invoke('analytics:get-recent', { cwd, limit })
+  },
+
+  // Workspace API (for workspace snapshots and context switching)
+  workspace: {
+    save: (snapshot: WorkspaceSnapshotInput) =>
+      ipcRenderer.invoke('workspace:save', { snapshot }),
+    get: (id: string) =>
+      ipcRenderer.invoke('workspace:get', { id }),
+    list: () =>
+      ipcRenderer.invoke('workspace:list'),
+    delete: (id: string) =>
+      ipcRenderer.invoke('workspace:delete', { id }),
+    rename: (id: string, name: string) =>
+      ipcRenderer.invoke('workspace:rename', { id, name }),
+    getStorage: () =>
+      ipcRenderer.invoke('workspace:get-storage')
   }
 })
 
@@ -1740,6 +1794,14 @@ declare global {
         getInsights: (cwd: string, period: AnalyticsTimePeriod) => Promise<AnalyticsInsight[]>
         recordExecution: (cwd: string, record: AnalyticsExecutionRecord) => Promise<void>
         getRecent: (cwd: string, limit?: number) => Promise<AnalyticsExecutionRecord[]>
+      }
+      workspace: {
+        save: (snapshot: WorkspaceSnapshotInput) => Promise<WorkspaceSnapshot>
+        get: (id: string) => Promise<WorkspaceSnapshot | null>
+        list: () => Promise<WorkspaceSnapshot[]>
+        delete: (id: string) => Promise<boolean>
+        rename: (id: string, name: string) => Promise<WorkspaceSnapshot | null>
+        getStorage: () => Promise<WorkspaceStorageInfo>
       }
     }
   }

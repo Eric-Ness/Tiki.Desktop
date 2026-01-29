@@ -235,6 +235,23 @@ if (isBrowserEnv) {
         ]),
         recordExecution: vi.fn().mockResolvedValue(undefined),
         getRecent: vi.fn().mockResolvedValue([])
+      },
+      workspace: {
+        save: vi.fn().mockResolvedValue({
+          id: 'ws-123',
+          name: 'Test Workspace',
+          createdAt: '2026-01-30T00:00:00.000Z',
+          updatedAt: '2026-01-30T00:00:00.000Z',
+          terminals: [],
+          layout: { sidebarCollapsed: false, detailPanelCollapsed: false, sidebarWidth: 280, detailPanelWidth: 400 },
+          activeTab: 'terminal',
+          size: 500
+        }),
+        get: vi.fn().mockResolvedValue(null),
+        list: vi.fn().mockResolvedValue([]),
+        delete: vi.fn().mockResolvedValue(true),
+        rename: vi.fn().mockResolvedValue(null),
+        getStorage: vi.fn().mockResolvedValue({ used: 0, limit: 52428800, snapshots: 0 })
       }
     },
     writable: true,

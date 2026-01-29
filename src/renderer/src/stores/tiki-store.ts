@@ -74,6 +74,23 @@ export interface CachedPatternMatch {
   suggestedMeasuresCount: number
 }
 
+// Workspace layout snapshot for store state exposure
+export interface LayoutSnapshot {
+  sidebarCollapsed: boolean
+  detailPanelCollapsed: boolean
+  sidebarWidth: number
+  detailPanelWidth: number
+}
+
+// Workspace state for snapshot creation
+export interface WorkspaceStateSnapshot {
+  layout: LayoutSnapshot
+  activeTab: string
+  activeIssue?: number
+  currentPhase?: number
+  selectedNode: string | null
+}
+
 export interface BranchInfo {
   name: string
   current: boolean
@@ -253,6 +270,11 @@ interface TikiDesktopState {
   setPatternMatches: (issueNumber: number, matches: CachedPatternMatch[]) => void
   getPatternMatches: (issueNumber: number) => CachedPatternMatch[] | undefined
   clearPatternMatches: () => void
+
+  // Workspace state
+  activeWorkspace: string | null
+  setActiveWorkspace: (id: string | null) => void
+  getWorkspaceState: () => WorkspaceStateSnapshot
 }
 
 export const useTikiStore = create<TikiDesktopState>()(
@@ -628,7 +650,26 @@ export const useTikiStore = create<TikiDesktopState>()(
             }
           })),
         getPatternMatches: (issueNumber) => get().patternMatches[issueNumber],
-        clearPatternMatches: () => set({ patternMatches: {} })
+        clearPatternMatches: () => set({ patternMatches: {} }),
+
+        // Workspace state
+        activeWorkspace: null,
+        setActiveWorkspace: (activeWorkspace) => set({ activeWorkspace }),
+        getWorkspaceState: () => {
+          const state = get()
+          return {
+            layout: {
+              sidebarCollapsed: state.sidebarCollapsed,
+              detailPanelCollapsed: state.detailPanelCollapsed,
+              sidebarWidth: 256,
+              detailPanelWidth: 320
+            },
+            activeTab: state.activeTab,
+            activeIssue: state.selectedIssue ?? undefined,
+            currentPhase: state.tikiState?.currentPhase ?? undefined,
+            selectedNode: state.selectedNode
+          }
+        }
       }),
       {
         name: 'tiki-desktop-storage',
