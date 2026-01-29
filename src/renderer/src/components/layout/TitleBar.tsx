@@ -32,6 +32,7 @@ export function TitleBar() {
   const currentPhase = useTikiStore((state) => state.tikiState?.currentPhase ?? null)
   const activeWorkspace = useTikiStore((state) => state.activeWorkspace)
   const setActiveWorkspace = useTikiStore((state) => state.setActiveWorkspace)
+  const activeProject = useTikiStore((state) => state.activeProject)
 
   // Workspace UI state
   const [workspaceOpen, setWorkspaceOpen] = useState(false)
@@ -209,9 +210,11 @@ export function TitleBar() {
           </button>
         </div>
 
-        {/* Center - Project name (future) */}
+        {/* Center - Project name */}
         <div className="flex-1 flex justify-center">
-          <span className="text-xs text-slate-500">No project selected</span>
+          <span className={`text-xs ${activeProject ? 'text-slate-300' : 'text-slate-500'}`}>
+            {activeProject ? activeProject.name : 'No project selected'}
+          </span>
         </div>
 
         {/* Right side - Window controls on Windows */}
