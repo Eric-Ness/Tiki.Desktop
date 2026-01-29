@@ -164,9 +164,25 @@ export function getAllTerminals(): TerminalInstance[] {
 
 export function cleanupAllTerminals(): void {
   for (const terminal of terminals.values()) {
-    terminal.process.kill()
+    // Clear idle timer if exists
+    if (terminal.idleTimer) {
+      clearTimeout(terminal.idleTimer)
+      terminal.idleTimer = null
+    }
+
+    try {
+      terminal.process.kill()
+    } catch (error) {
+      console.error(`[TerminalManager] Error killing terminal ${terminal.id}:`, error)
+    }
   }
   terminals.clear()
+
+  // Clear any pending save timer
+  if (saveDebounceTimer) {
+    clearTimeout(saveDebounceTimer)
+    saveDebounceTimer = null
+  }
 }
 
 // ============ Persistence Functions ============

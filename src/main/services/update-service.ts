@@ -1,5 +1,8 @@
 import { autoUpdater, UpdateInfo } from 'electron-updater'
 import { BrowserWindow, app } from 'electron'
+import { cleanupAllTerminals, saveTerminalStateImmediate } from './terminal-manager'
+import { stopWatching } from './file-watcher'
+import { stopAllPolling } from '../ipc/workflow'
 
 export type UpdateStatus =
   | { type: 'checking' }
@@ -193,10 +196,33 @@ export async function downloadUpdate(): Promise<void> {
   }
 }
 
-export function installUpdate(): void {
+export async function installUpdate(): Promise<void> {
   if (process.platform === 'darwin') {
     return
   }
 
+  console.log('[AutoUpdater] Preparing to install update...')
+
+  // Save terminal state first (preserve user's session for after update)
+  console.log('[AutoUpdater] Saving terminal state...')
+  saveTerminalStateImmediate()
+
+  // Stop all background processes
+  console.log('[AutoUpdater] Stopping file watcher...')
+  stopWatching()
+
+  console.log('[AutoUpdater] Stopping workflow polling...')
+  stopAllPolling()
+
+  // Force cleanup all terminal processes
+  // This is critical on Windows where PTY processes may not respond to SIGTERM quickly
+  console.log('[AutoUpdater] Cleaning up terminal processes...')
+  cleanupAllTerminals()
+
+  // Brief delay to allow cleanup to complete
+  // This gives node-pty time to clean up child processes
+  await new Promise((resolve) => setTimeout(resolve, 100))
+
+  console.log('[AutoUpdater] Calling quitAndInstall...')
   autoUpdater.quitAndInstall(false, true)
 }
