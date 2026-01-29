@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { useTikiStore, type GitHubIssue, type TikiState, type ExecutionPlan } from '../stores/tiki-store'
 
-export type IssueActionType = 'yolo' | 'plan' | 'execute' | 'resume' | 'ship' | 'verify'
+export type IssueActionType = 'yolo' | 'plan' | 'execute' | 'resume' | 'ship' | 'verify' | 'get' | 'review' | 'audit'
 
 type BranchOption = 'create' | 'existing' | 'current'
 
@@ -68,12 +68,12 @@ export function getIssueWorkState(
     case 'none':
       // No plan - offer to start work or create plan
       primaryAction = 'yolo'
-      secondaryActions.push('plan')
+      secondaryActions.push('get', 'review', 'plan')
       break
     case 'pending':
       // Has plan but not started - offer to execute or start yolo
       primaryAction = 'execute'
-      secondaryActions.push('yolo', 'plan')
+      secondaryActions.push('audit', 'yolo', 'plan')
       break
     case 'in_progress':
       // In progress - offer to resume or continue execution
@@ -104,7 +104,7 @@ export function getIssueWorkState(
  */
 export function getActionInfo(action: IssueActionType): {
   label: string
-  icon: 'play' | 'document' | 'resume' | 'ship' | 'check' | 'execute'
+  icon: 'play' | 'document' | 'resume' | 'ship' | 'check' | 'execute' | 'download' | 'search' | 'shield'
   description: string
 } {
   switch (action) {
@@ -143,6 +143,24 @@ export function getActionInfo(action: IssueActionType): {
         label: 'Verify',
         icon: 'check',
         description: 'Run verification checks'
+      }
+    case 'get':
+      return {
+        label: 'Get Issue',
+        icon: 'download',
+        description: 'Fetch and display issue details'
+      }
+    case 'review':
+      return {
+        label: 'Review',
+        icon: 'search',
+        description: 'Pre-planning review and analysis'
+      }
+    case 'audit':
+      return {
+        label: 'Audit Plan',
+        icon: 'shield',
+        description: 'Validate and audit the execution plan'
       }
   }
 }
@@ -222,6 +240,15 @@ export function useIssueActions() {
             break
           case 'verify':
             command = `/tiki:verify\n`
+            break
+          case 'get':
+            command = `/tiki:get-issue ${issueNumber}\n`
+            break
+          case 'review':
+            command = `/tiki:review-issue ${issueNumber}\n`
+            break
+          case 'audit':
+            command = `/tiki:audit-plan ${issueNumber}\n`
             break
         }
 

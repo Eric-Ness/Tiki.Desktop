@@ -1,0 +1,23 @@
+{
+  "version": "v0.9.5",
+  "createdAt": "2026-01-29T15:06:22.630Z",
+  "status": "active",
+  "requirementsEnabled": false,
+  "githubMilestone": null,
+  "issues": [
+    {
+      "number": 56,
+      "title": "Issue Buttons",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": 5,
+      "totalPhases": 5,
+      "completedAt": "2026-01-29T15:20:00.000Z"
+    }
+  ],
+  "requirements": {
+    "total": 0,
+    "implemented": 0,
+    "verified": 0
+  }
+}
