@@ -42,7 +42,8 @@ describe('Export Types', () => {
               phaseComplete: true,
               issuePlanned: true,
               issueShipped: true,
-              errors: true
+              errors: true,
+              workflowFailed: true
             },
             keyboardShortcuts: {
               toggleSidebar: 'Ctrl+Shift+B',
@@ -116,7 +117,8 @@ describe('Export Types', () => {
               phaseComplete: true,
               issuePlanned: true,
               issueShipped: true,
-              errors: true
+              errors: true,
+              workflowFailed: true
             },
             keyboardShortcuts: {
               toggleSidebar: 'Ctrl+Shift+B',

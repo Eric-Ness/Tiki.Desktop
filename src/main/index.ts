@@ -20,6 +20,7 @@ import { registerFailureHandlers } from './ipc/failure'
 import { registerTemplateHandlers } from './ipc/templates'
 import { registerUpdateHandlers } from './ipc/updates'
 import { registerSearchHandlers } from './ipc/search'
+import { registerWorkflowHandlers, setWorkflowWindow, stopAllPolling } from './ipc/workflow'
 import { setMainWindow as setSettingsWindow } from './services/settings-store'
 import { setMainWindow as setNotificationWindow } from './services/notification-service'
 import { setUpdateWindow, initAutoUpdater, checkForUpdates } from './services/update-service'
@@ -85,6 +86,7 @@ app.whenReady().then(() => {
   registerTemplateHandlers()
   registerUpdateHandlers()
   registerSearchHandlers()
+  registerWorkflowHandlers()
 
   createWindow()
 
@@ -96,6 +98,7 @@ app.whenReady().then(() => {
     setSettingsWindow(mainWindow)
     setNotificationWindow(mainWindow)
     setUpdateWindow(mainWindow)
+    setWorkflowWindow(mainWindow)
     registerProjectHandlers(mainWindow)
 
     // Start watching the current working directory
@@ -129,6 +132,7 @@ app.on('before-quit', () => {
   saveTerminalStateImmediate()
   cleanupAllTerminals()
   stopWatching()
+  stopAllPolling()
 })
 
 // IPC Handlers - will be expanded in future issues

@@ -37,6 +37,7 @@ export interface NotificationsSettings {
   issuePlanned: boolean
   issueShipped: boolean
   errors: boolean
+  workflowFailed: boolean
 }
 
 export interface KeyboardShortcutsSettings {
@@ -92,7 +93,8 @@ const defaultSettings: SettingsSchema = {
     phaseComplete: true,
     issuePlanned: true,
     issueShipped: true,
-    errors: true
+    errors: true,
+    workflowFailed: true
   },
   keyboardShortcuts: {
     toggleSidebar: 'Ctrl+Shift+B',

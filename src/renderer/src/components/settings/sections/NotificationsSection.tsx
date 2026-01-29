@@ -78,6 +78,16 @@ export function NotificationsSection() {
               }
               disabled={!notifications.enabled}
             />
+
+            <SettingsToggle
+              label="Workflow Failures"
+              description="A CI workflow fails or recovers"
+              checked={notifications.workflowFailed}
+              onChange={(checked) =>
+                updateSettings({ notifications: { workflowFailed: checked } })
+              }
+              disabled={!notifications.enabled}
+            />
           </div>
         </div>
       </div>

@@ -25,6 +25,7 @@ export interface NotificationsSettings {
   issuePlanned: boolean
   issueShipped: boolean
   errors: boolean
+  workflowFailed: boolean
 }
 
 export interface KeyboardShortcutsSettings {
@@ -464,6 +465,42 @@ export type UpdateStatus =
   | { type: 'downloaded'; version: string }
   | { type: 'error'; message: string }
 
+// Workflow type definitions (mirrored from main process for type safety)
+export interface Workflow {
+  id: number
+  name: string
+  state: string
+}
+
+export interface WorkflowRun {
+  id: number
+  name: string
+  status: string
+  conclusion: string | null
+  event: string
+  headSha: string
+  createdAt: string
+  updatedAt: string
+  url: string
+}
+
+export interface Job {
+  name: string
+  status: string
+  conclusion: string | null
+}
+
+export interface RunDetails extends WorkflowRun {
+  jobs: Job[]
+  logsUrl: string
+}
+
+export interface WorkflowRunsUpdate {
+  workflowId: number
+  cwd: string
+  runs: WorkflowRun[]
+}
+
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('tikiDesktop', {
@@ -896,6 +933,25 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.invoke('failure:record-outcome', { patternId, strategyId, outcome, context }),
     getLearningStats: (projectPath: string) =>
       ipcRenderer.invoke('failure:get-learning-stats', { projectPath })
+  },
+
+  // Workflow API (for CI/CD status dashboard)
+  workflow: {
+    list: (cwd: string) => ipcRenderer.invoke('workflow:list', { cwd }),
+    runs: (workflowId: number, cwd: string) =>
+      ipcRenderer.invoke('workflow:runs', { workflowId, cwd }),
+    runDetails: (runId: number, cwd: string) =>
+      ipcRenderer.invoke('workflow:run-details', { runId, cwd }),
+    openInBrowser: (url: string) => ipcRenderer.invoke('workflow:open-in-browser', { url }),
+    subscribe: (workflowId: number, cwd: string) =>
+      ipcRenderer.invoke('workflow:subscribe', { workflowId, cwd }),
+    unsubscribe: (workflowId: number, cwd: string) =>
+      ipcRenderer.invoke('workflow:unsubscribe', { workflowId, cwd }),
+    onRunsUpdate: (callback: (data: WorkflowRunsUpdate) => void) => {
+      const handler = (_: unknown, data: WorkflowRunsUpdate) => callback(data)
+      ipcRenderer.on('workflow:runs-updated', handler)
+      return () => ipcRenderer.removeListener('workflow:runs-updated', handler)
+    }
   }
 })
 
@@ -1255,6 +1311,21 @@ declare global {
           json: string
         ) => Promise<{ success: boolean; template?: PlanTemplate; error?: string }>
         extractVariables: (plan: ExecutionPlanForTemplate) => Promise<TemplateVariable[]>
+      }
+      workflow: {
+        list: (cwd: string) => Promise<Workflow[]>
+        runs: (workflowId: number, cwd: string) => Promise<WorkflowRun[]>
+        runDetails: (runId: number, cwd: string) => Promise<RunDetails>
+        openInBrowser: (url: string) => Promise<void>
+        subscribe: (
+          workflowId: number,
+          cwd: string
+        ) => Promise<{ subscribed: boolean; workflowId: number; cwd: string }>
+        unsubscribe: (
+          workflowId: number,
+          cwd: string
+        ) => Promise<{ unsubscribed: boolean; workflowId: number; cwd: string }>
+        onRunsUpdate: (callback: (data: WorkflowRunsUpdate) => void) => () => void
       }
     }
   }

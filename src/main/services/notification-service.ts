@@ -15,6 +15,8 @@ export type NotificationEvent =
   | 'issue-shipped'
   | 'execution-paused'
   | 'error'
+  | 'workflow-failed'
+  | 'workflow-recovered'
 
 interface NotificationOptions {
   event: NotificationEvent
@@ -24,6 +26,7 @@ interface NotificationOptions {
     issueNumber?: number
     phaseNumber?: number
     planFile?: string
+    runUrl?: string
   }
 }
 
@@ -47,6 +50,9 @@ function isNotificationEnabled(event: NotificationEvent): boolean {
       return settings.issuePlanned
     case 'issue-shipped':
       return settings.issueShipped
+    case 'workflow-failed':
+    case 'workflow-recovered':
+      return settings.workflowFailed
     default:
       return settings.enabled
   }
@@ -87,7 +93,7 @@ export function showNotification(options: NotificationOptions): void {
     title,
     body,
     icon: getNotificationIcon(event),
-    urgency: event === 'phase-failed' || event === 'error' ? 'critical' : 'normal'
+    urgency: event === 'phase-failed' || event === 'error' || event === 'workflow-failed' ? 'critical' : 'normal'
   })
 
   // Handle notification click
@@ -197,5 +203,28 @@ export function notifyError(title: string, message: string): void {
     event: 'error',
     title,
     body: message
+  })
+}
+
+/**
+ * Notification helper for workflow failures
+ */
+export function notifyWorkflowFailed(workflowName: string, runUrl: string): void {
+  showNotification({
+    event: 'workflow-failed',
+    title: 'CI Workflow Failed',
+    body: workflowName,
+    context: { runUrl }
+  })
+}
+
+/**
+ * Notification helper for workflow recovery
+ */
+export function notifyWorkflowRecovered(workflowName: string): void {
+  showNotification({
+    event: 'workflow-recovered',
+    title: 'CI Workflow Recovered',
+    body: `${workflowName} is now passing`
   })
 }

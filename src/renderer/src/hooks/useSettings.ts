@@ -27,6 +27,7 @@ export interface NotificationsSettings {
   issuePlanned: boolean
   issueShipped: boolean
   errors: boolean
+  workflowFailed: boolean
 }
 
 export interface KeyboardShortcutsSettings {
