@@ -1,6 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-const client = new Anthropic()
+// Lazy initialization - only create client when needed
+let client: Anthropic | null = null
+
+function getClient(): Anthropic {
+  if (!client) {
+    client = new Anthropic()
+  }
+  return client
+}
 
 export interface IssueRecommendation {
   number: number
@@ -22,6 +30,14 @@ export async function recommendIssuesForRelease(
   issues: Array<{ number: number; title: string; body?: string; labels?: string[] }>,
   version: string
 ): Promise<RecommendationResult | RecommendationError> {
+  // Check for API key first
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return {
+      error:
+        'ANTHROPIC_API_KEY not set. Please set it in your environment variables or start the app with the key set.'
+    }
+  }
+
   if (issues.length === 0) {
     return { error: 'No issues provided' }
   }
@@ -34,7 +50,8 @@ export async function recommendIssuesForRelease(
     .join('\n\n')
 
   try {
-    const response = await client.messages.create({
+    const anthropic = getClient()
+    const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2048,
       messages: [
@@ -93,15 +110,29 @@ Include ALL issues in the recommendations array, with includeInRelease set to tr
     }
   } catch (error) {
     console.error('LLM recommendation error:', error)
+
+    // Check for Anthropic API errors
     if (error instanceof Anthropic.APIError) {
       if (error.status === 401) {
-        return { error: 'API key not configured. Set ANTHROPIC_API_KEY environment variable.' }
+        return { error: 'Invalid API key. Please check your ANTHROPIC_API_KEY.' }
       }
       if (error.status === 429) {
         return { error: 'Rate limited. Please try again later.' }
       }
-      return { error: `API error: ${error.message}` }
+      if (error.status === 400) {
+        return { error: `Bad request: ${error.message}` }
+      }
+      return { error: `API error (${error.status}): ${error.message}` }
     }
-    return { error: error instanceof Error ? error.message : 'LLM recommendation failed' }
+
+    // Check for network errors
+    if (error instanceof Error) {
+      if (error.message.includes('fetch') || error.message.includes('network')) {
+        return { error: 'Network error. Please check your internet connection.' }
+      }
+      return { error: error.message }
+    }
+
+    return { error: 'LLM recommendation failed. Check console for details.' }
   }
 }
