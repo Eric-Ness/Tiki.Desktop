@@ -1,14 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
-
-// Lazy initialization - only create client when needed
-let client: Anthropic | null = null
-
-function getClient(): Anthropic {
-  if (!client) {
-    client = new Anthropic()
-  }
-  return client
-}
+import { spawn } from 'child_process'
 
 export interface IssueRecommendation {
   number: number
@@ -26,18 +16,45 @@ export interface RecommendationError {
   error: string
 }
 
+/**
+ * Run a prompt through Claude CLI and get the response
+ */
+async function runClaudePrompt(prompt: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('claude', ['-p', prompt, '--output-format', 'text'], {
+      shell: true,
+      env: { ...process.env }
+    })
+
+    let stdout = ''
+    let stderr = ''
+
+    proc.stdout.on('data', (data) => {
+      stdout += data.toString()
+    })
+
+    proc.stderr.on('data', (data) => {
+      stderr += data.toString()
+    })
+
+    proc.on('close', (code) => {
+      if (code === 0) {
+        resolve(stdout.trim())
+      } else {
+        reject(new Error(stderr || `Claude CLI exited with code ${code}`))
+      }
+    })
+
+    proc.on('error', (err) => {
+      reject(new Error(`Failed to spawn Claude CLI: ${err.message}`))
+    })
+  })
+}
+
 export async function recommendIssuesForRelease(
   issues: Array<{ number: number; title: string; body?: string; labels?: string[] }>,
   version: string
 ): Promise<RecommendationResult | RecommendationError> {
-  // Check for API key first
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return {
-      error:
-        'ANTHROPIC_API_KEY not set. Please set it in your environment variables or start the app with the key set.'
-    }
-  }
-
   if (issues.length === 0) {
     return { error: 'No issues provided' }
   }
@@ -49,15 +66,7 @@ export async function recommendIssuesForRelease(
     )
     .join('\n\n')
 
-  try {
-    const anthropic = getClient()
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2048,
-      messages: [
-        {
-          role: 'user',
-          content: `You are helping plan a software release ${version}.
+  const prompt = `You are helping plan a software release ${version}.
 
 Analyze these open issues and recommend which should be grouped into this release. Consider:
 - Thematic coherence (related features/fixes that make sense together)
@@ -77,14 +86,12 @@ Respond ONLY with valid JSON in this exact format (no markdown code blocks, just
 }
 
 Include ALL issues in the recommendations array, with includeInRelease set to true or false for each.`
-        }
-      ]
-    })
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : ''
+  try {
+    const response = await runClaudePrompt(prompt)
 
     // Try to parse the JSON, handling potential markdown code blocks
-    let jsonText = text.trim()
+    let jsonText = response.trim()
     if (jsonText.startsWith('```')) {
       // Remove markdown code block
       jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
@@ -111,24 +118,12 @@ Include ALL issues in the recommendations array, with includeInRelease set to tr
   } catch (error) {
     console.error('LLM recommendation error:', error)
 
-    // Check for Anthropic API errors
-    if (error instanceof Anthropic.APIError) {
-      if (error.status === 401) {
-        return { error: 'Invalid API key. Please check your ANTHROPIC_API_KEY.' }
-      }
-      if (error.status === 429) {
-        return { error: 'Rate limited. Please try again later.' }
-      }
-      if (error.status === 400) {
-        return { error: `Bad request: ${error.message}` }
-      }
-      return { error: `API error (${error.status}): ${error.message}` }
-    }
-
-    // Check for network errors
     if (error instanceof Error) {
-      if (error.message.includes('fetch') || error.message.includes('network')) {
-        return { error: 'Network error. Please check your internet connection.' }
+      if (error.message.includes('not found') || error.message.includes('ENOENT')) {
+        return { error: 'Claude CLI not found. Make sure "claude" is installed and in your PATH.' }
+      }
+      if (error.message.includes('spawn')) {
+        return { error: 'Failed to run Claude CLI. Check that it is properly installed.' }
       }
       return { error: error.message }
     }
