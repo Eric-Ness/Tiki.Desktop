@@ -5,6 +5,7 @@ import { RollbackDialog } from '../rollback'
 import { FailureAnalysis } from './FailureAnalysis'
 import { StrategySelector } from './StrategySelector'
 import { RetryControls } from './RetryControls'
+import { FilePreviewList } from '../code'
 import type {
   FailureAnalysis as FailureAnalysisType,
   RetryStrategy,
@@ -48,26 +49,6 @@ const badgeStyles: Record<PhaseStatus, string> = {
   skipped: 'bg-slate-500 text-slate-200'
 }
 
-// Simple file icon SVG component
-function FileIcon() {
-  return (
-    <svg
-      className="w-4 h-4 text-slate-400 flex-shrink-0"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-      />
-    </svg>
-  )
-}
-
 export function PhaseDetail({ phase }: PhaseDetailProps) {
   const { number, title, status, files, verification, summary, error, startCommit, endCommit } = phase
   const isCompleted = status === 'completed'
@@ -94,6 +75,22 @@ export function PhaseDetail({ phase }: PhaseDetailProps) {
   const activeProject = useTikiStore((state) => state.activeProject)
   const currentPlan = useTikiStore((state) => state.currentPlan)
   const issueNumber = currentPlan?.issue?.number
+
+  // Project cwd for file preview
+  const [projectCwd, setProjectCwd] = useState<string>('')
+
+  useEffect(() => {
+    const getCwd = async () => {
+      // Try to get from active project, fallback to app cwd
+      if (activeProject?.path) {
+        setProjectCwd(activeProject.path)
+      } else {
+        const cwd = await window.tikiDesktop.getCwd()
+        setProjectCwd(cwd)
+      }
+    }
+    getCwd()
+  }, [activeProject?.path])
 
   // Check if the phase has tracked commits for rollback
   useEffect(() => {
@@ -322,14 +319,13 @@ export function PhaseDetail({ phase }: PhaseDetailProps) {
       <div>
         <h3 className="text-sm font-semibold text-slate-300 mb-2">Files</h3>
         {files.length > 0 ? (
-          <ul className="space-y-1">
-            {files.map((file, index) => (
-              <li key={index} className="flex items-center gap-2">
-                <FileIcon />
-                <span className="text-sm text-slate-400 font-mono">{file}</span>
-              </li>
-            ))}
-          </ul>
+          <FilePreviewList
+            files={files}
+            cwd={projectCwd}
+            fromRef={startCommit}
+            toRef={endCommit}
+            autoExpandFirst={true}
+          />
         ) : (
           <p className="text-sm text-slate-500">No files</p>
         )}

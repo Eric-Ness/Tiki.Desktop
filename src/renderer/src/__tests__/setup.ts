@@ -174,6 +174,17 @@ if (isBrowserEnv) {
         delete: vi.fn().mockResolvedValue({ success: true }),
         top: vi.fn().mockResolvedValue([])
       },
+      code: {
+        readFile: vi.fn().mockResolvedValue({
+          content: '// mock content',
+          language: 'typescript',
+          lineCount: 1,
+          isTruncated: false,
+          originalSize: 15
+        }),
+        getLanguage: vi.fn().mockResolvedValue('typescript'),
+        openInEditor: vi.fn().mockResolvedValue({ success: true })
+      },
       heatmap: {
         generate: vi.fn().mockResolvedValue({
           files: [],

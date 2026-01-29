@@ -1199,6 +1199,14 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.invoke('patterns:top', { cwd, limit })
   },
 
+  // Code Preview API (for inline code preview with syntax highlighting)
+  code: {
+    readFile: (cwd: string, filePath: string) =>
+      ipcRenderer.invoke('code:read-file', { cwd, filePath }),
+    getLanguage: (filePath: string) => ipcRenderer.invoke('code:get-language', { filePath }),
+    openInEditor: (filePath: string) => ipcRenderer.invoke('code:open-in-editor', { filePath })
+  },
+
   // Heatmap API (for codebase heat map visualization)
   heatmap: {
     generate: (cwd: string, metric: HeatMetricPreload, period: TimePeriodPreload) =>
@@ -1628,6 +1636,20 @@ declare global {
         resolve: (cwd: string, patternId: string) => Promise<{ success: boolean }>
         delete: (cwd: string, patternId: string) => Promise<{ success: boolean }>
         top: (cwd: string, limit?: number) => Promise<FailurePatternPreload[]>
+      }
+      code: {
+        readFile: (
+          cwd: string,
+          filePath: string
+        ) => Promise<{
+          content: string
+          language: string
+          lineCount: number
+          isTruncated: boolean
+          originalSize: number
+        }>
+        getLanguage: (filePath: string) => Promise<string>
+        openInEditor: (filePath: string) => Promise<{ success: boolean }>
       }
       heatmap: {
         generate: (

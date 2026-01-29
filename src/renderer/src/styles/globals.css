@@ -114,3 +114,76 @@
     opacity: 1;
   }
 }
+
+/* Prism.js syntax highlighting - Dark theme matching slate/amber palette */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #6b7280; /* slate-500 */
+  font-style: italic;
+}
+
+.token.punctuation {
+  color: #94a3b8; /* slate-400 */
+}
+
+.token.property,
+.token.tag,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: #f87171; /* red-400 */
+}
+
+.token.boolean,
+.token.number {
+  color: #c084fc; /* purple-400 */
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+  color: #4ade80; /* green-400 */
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string,
+.token.variable {
+  color: #fbbf24; /* amber-400 */
+}
+
+.token.atrule,
+.token.attr-value,
+.token.function,
+.token.class-name {
+  color: #60a5fa; /* blue-400 */
+}
+
+.token.keyword {
+  color: #f472b6; /* pink-400 */
+}
+
+.token.regex,
+.token.important {
+  color: #f59e0b; /* amber-500 */
+}
+
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+.token.entity {
+  cursor: help;
+}
