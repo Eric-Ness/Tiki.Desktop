@@ -64,6 +64,20 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
   const [templateKey, setTemplateKey] = useState(0)
   const [showCreateRelease, setShowCreateRelease] = useState(false)
 
+  const handleStartClaudeCode = useCallback(async () => {
+    if (!cwd) return
+
+    try {
+      // Create a new terminal named "Claude" in the project directory
+      const terminalId = await window.tikiDesktop.terminal.create(cwd, 'Claude')
+
+      // Write the claude command and press Enter
+      window.tikiDesktop.terminal.write(terminalId, 'claude --dangerously-skip-permissions\r')
+    } catch (error) {
+      console.error('Failed to start Claude Code:', error)
+    }
+  }, [cwd])
+
   const handleRefreshIssues = useCallback(async () => {
     if (!cwd) return
     setGithubLoading(true)
@@ -306,7 +320,10 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
 
       {/* Footer */}
       <div className="p-2 border-t border-border">
-        <button className="w-full px-3 py-2 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 rounded text-sm font-medium transition-colors shadow-sm hover:shadow-md active:shadow-sm">
+        <button
+          onClick={handleStartClaudeCode}
+          className="w-full px-3 py-2 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 rounded text-sm font-medium transition-colors shadow-sm hover:shadow-md active:shadow-sm"
+        >
           Start Claude Code
         </button>
       </div>
