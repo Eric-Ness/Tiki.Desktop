@@ -18,8 +18,10 @@ import { registerUsageHandlers } from './ipc/usage'
 import { registerRollbackHandlers } from './ipc/rollback'
 import { registerFailureHandlers } from './ipc/failure'
 import { registerTemplateHandlers } from './ipc/templates'
+import { registerUpdateHandlers } from './ipc/updates'
 import { setMainWindow as setSettingsWindow } from './services/settings-store'
 import { setMainWindow as setNotificationWindow } from './services/notification-service'
+import { setUpdateWindow, initAutoUpdater, checkForUpdates } from './services/update-service'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -80,6 +82,7 @@ app.whenReady().then(() => {
   registerRollbackHandlers()
   registerFailureHandlers()
   registerTemplateHandlers()
+  registerUpdateHandlers()
 
   createWindow()
 
@@ -90,10 +93,20 @@ app.whenReady().then(() => {
     setGitHubWindow(mainWindow)
     setSettingsWindow(mainWindow)
     setNotificationWindow(mainWindow)
+    setUpdateWindow(mainWindow)
     registerProjectHandlers(mainWindow)
 
     // Start watching the current working directory
     startWatching(process.cwd())
+
+    // Initialize auto-updater and check for updates on startup (Windows/Linux only)
+    initAutoUpdater()
+    if (process.platform !== 'darwin') {
+      // Delay check to let app fully initialize
+      setTimeout(() => {
+        checkForUpdates()
+      }, 3000)
+    }
   }
 
   app.on('activate', () => {

@@ -342,6 +342,15 @@ export interface CommitTracking {
   isMergeCommit: boolean
 }
 
+// Update status type (mirrored from main process for type safety)
+export type UpdateStatus =
+  | { type: 'checking' }
+  | { type: 'available'; version: string; releaseNotes?: string }
+  | { type: 'not-available' }
+  | { type: 'downloading'; percent: number; bytesPerSecond: number; total: number; transferred: number }
+  | { type: 'downloaded'; version: string }
+  | { type: 'error'; message: string }
+
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('tikiDesktop', {
@@ -352,6 +361,18 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
 
   // Platform info
   platform: process.platform,
+
+  // Updates API
+  updates: {
+    check: () => ipcRenderer.invoke('app:check-updates'),
+    download: () => ipcRenderer.invoke('app:download-update'),
+    install: () => ipcRenderer.invoke('app:install-update'),
+    onStatus: (callback: (status: UpdateStatus) => void) => {
+      const handler = (_: unknown, status: UpdateStatus) => callback(status)
+      ipcRenderer.on('app:update-status', handler)
+      return () => ipcRenderer.removeListener('app:update-status', handler)
+    }
+  },
 
   // Terminal API (to be implemented in #2)
   terminal: {
@@ -750,6 +771,15 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
   }
 })
 
+// Update status type for renderer
+type UpdateStatusType =
+  | { type: 'checking' }
+  | { type: 'available'; version: string; releaseNotes?: string }
+  | { type: 'not-available' }
+  | { type: 'downloading'; percent: number; bytesPerSecond: number; total: number; transferred: number }
+  | { type: 'downloaded'; version: string }
+  | { type: 'error'; message: string }
+
 // Type declaration for renderer
 declare global {
   interface Window {
@@ -758,6 +788,12 @@ declare global {
       getCwd: () => Promise<string>
       getGitBranch: (cwd?: string) => Promise<string | null>
       platform: string
+      updates: {
+        check: () => Promise<void>
+        download: () => Promise<void>
+        install: () => Promise<void>
+        onStatus: (callback: (status: UpdateStatusType) => void) => () => void
+      }
       terminal: {
         create: (cwd: string, name?: string) => Promise<string>
         write: (id: string, data: string) => void

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { ImperativePanelHandle } from 'react-resizable-panels'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './components/ui/ResizablePanels'
 import { Sidebar } from './components/layout/Sidebar'
@@ -19,10 +19,13 @@ import { useCommandExecution } from './hooks/useCommandExecution'
 import { useSettingsShortcut } from './hooks/useSettingsShortcut'
 import { useActivityLogger } from './hooks/useActivityLogger'
 import { useTikiStore, type Project } from './stores/tiki-store'
+import { UpdateToast, type UpdateStatus } from './components/UpdateToast'
 
 function App() {
   const [version, setVersion] = useState<string>('')
   const [cwd, setCwd] = useState<string>('')
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
+  const [updateDismissed, setUpdateDismissed] = useState(false)
   const sidebarPanelRef = useRef<ImperativePanelHandle>(null)
   const detailPanelRef = useRef<ImperativePanelHandle>(null)
   const sidebarCollapsed = useTikiStore((state) => state.sidebarCollapsed)
@@ -112,6 +115,40 @@ function App() {
     window.tikiDesktop.getCwd().then(setCwd)
   }, [])
 
+  // Listen for update status events
+  useEffect(() => {
+    const unsubscribe = window.tikiDesktop.updates.onStatus((status) => {
+      setUpdateStatus(status)
+      // Reset dismissed state when a new update becomes available
+      if (status.type === 'available' || status.type === 'downloaded') {
+        setUpdateDismissed(false)
+      }
+    })
+    return () => unsubscribe()
+  }, [])
+
+  // Update toast handlers
+  const handleDownloadUpdate = useCallback(() => {
+    window.tikiDesktop.updates.download()
+  }, [])
+
+  const handleInstallUpdate = useCallback(() => {
+    window.tikiDesktop.updates.install()
+  }, [])
+
+  const handleDismissUpdate = useCallback(() => {
+    setUpdateDismissed(true)
+  }, [])
+
+  // Memoize whether to show the update toast
+  const showUpdateToast = useMemo(() => {
+    if (!updateStatus || updateDismissed) return false
+    return updateStatus.type === 'available' ||
+           updateStatus.type === 'downloading' ||
+           updateStatus.type === 'downloaded' ||
+           updateStatus.type === 'error'
+  }, [updateStatus, updateDismissed])
+
   // Handle command selection from palette (commands without arguments)
   const handleCommandSelect = async (command: { name: string; displayName: string; description: string; argumentHint?: string }) => {
     closeCommandPalette()
@@ -186,6 +223,16 @@ function App() {
 
         {/* Status Bar */}
         <StatusBar version={version} cwd={cwd} />
+
+        {/* Update Toast */}
+        {showUpdateToast && updateStatus && (
+          <UpdateToast
+            status={updateStatus}
+            onDownload={handleDownloadUpdate}
+            onInstall={handleInstallUpdate}
+            onDismiss={handleDismissUpdate}
+          />
+        )}
       </div>
     </SettingsProvider>
   )
