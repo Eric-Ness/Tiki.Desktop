@@ -7,6 +7,7 @@ import { DetailPanel } from './components/layout/DetailPanel'
 import { StatusBar } from './components/layout/StatusBar'
 import { TitleBar } from './components/layout/TitleBar'
 import { CommandPalette } from './components/command-palette'
+import { GlobalSearch } from './components/search'
 import { SettingsModal } from './components/settings'
 import { SettingsProvider } from './contexts/SettingsContext'
 import { useTikiSync } from './hooks/useTikiSync'
@@ -17,6 +18,8 @@ import { useCommandPaletteShortcut } from './hooks/useCommandPaletteShortcut'
 import { useTikiCommands } from './hooks/useTikiCommands'
 import { useCommandExecution } from './hooks/useCommandExecution'
 import { useSettingsShortcut } from './hooks/useSettingsShortcut'
+import { useSearchShortcut } from './hooks/useSearchShortcut'
+import { useSearchIndexSync } from './hooks/useSearchIndexSync'
 import { useActivityLogger } from './hooks/useActivityLogger'
 import { useTikiStore, type Project } from './stores/tiki-store'
 import { UpdateToast, type UpdateStatus } from './components/UpdateToast'
@@ -37,6 +40,9 @@ function App() {
   // Sync GitHub issues
   useGitHubSync(cwd)
 
+  // Sync store data to search index
+  useSearchIndexSync()
+
   // Register keyboard shortcuts
   useSidebarShortcuts()
   useDetailPanelShortcuts()
@@ -52,6 +58,9 @@ function App() {
 
   // Settings modal state
   const { isOpen: settingsOpen, close: closeSettings } = useSettingsShortcut()
+
+  // Global search state
+  const { isOpen: searchOpen, close: closeSearch } = useSearchShortcut()
 
   // Project management
   const activeProject = useTikiStore((state) => state.activeProject)
@@ -176,6 +185,9 @@ function App() {
           onSelect={handleCommandSelect}
           onSelectWithArgs={handleCommandSelectWithArgs}
         />
+
+        {/* Global Search */}
+        <GlobalSearch isOpen={searchOpen} onClose={closeSearch} />
 
         {/* Settings Modal */}
         <SettingsModal isOpen={settingsOpen} onClose={closeSettings} />

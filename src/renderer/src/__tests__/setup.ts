@@ -120,6 +120,16 @@ if (isBrowserEnv) {
           recordCount: 0
         }),
         getDailyUsage: vi.fn().mockResolvedValue([])
+      },
+      search: {
+        query: vi.fn().mockResolvedValue([]),
+        indexContent: vi.fn().mockResolvedValue(undefined),
+        removeFromIndex: vi.fn().mockResolvedValue(undefined),
+        clearIndex: vi.fn().mockResolvedValue(undefined),
+        getStats: vi.fn().mockResolvedValue({
+          totalDocuments: 0,
+          documentsByType: { issue: 0, plan: 0, knowledge: 0, release: 0 }
+        })
       }
     },
     writable: true,

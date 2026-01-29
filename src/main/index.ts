@@ -19,6 +19,7 @@ import { registerRollbackHandlers } from './ipc/rollback'
 import { registerFailureHandlers } from './ipc/failure'
 import { registerTemplateHandlers } from './ipc/templates'
 import { registerUpdateHandlers } from './ipc/updates'
+import { registerSearchHandlers } from './ipc/search'
 import { setMainWindow as setSettingsWindow } from './services/settings-store'
 import { setMainWindow as setNotificationWindow } from './services/notification-service'
 import { setUpdateWindow, initAutoUpdater, checkForUpdates } from './services/update-service'
@@ -83,6 +84,7 @@ app.whenReady().then(() => {
   registerFailureHandlers()
   registerTemplateHandlers()
   registerUpdateHandlers()
+  registerSearchHandlers()
 
   createWindow()
 

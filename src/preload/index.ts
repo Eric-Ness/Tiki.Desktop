@@ -226,6 +226,32 @@ export interface RecordContext {
   errorSignature: string
 }
 
+// Search type definitions (mirrored from main process for type safety)
+export type ContentType = 'issue' | 'plan' | 'release' | 'knowledge'
+
+export interface SearchableContent {
+  type: ContentType
+  id: string
+  title: string
+  body?: string
+  labels?: string[]
+  tags?: string[]
+}
+
+export interface SearchResult {
+  type: ContentType
+  id: string
+  title: string
+  preview: string
+  matches: string[]
+  score: number
+}
+
+export interface SearchOptions {
+  types?: ContentType[]
+  limit?: number
+}
+
 // Template type definitions (mirrored from main process for type safety)
 export type VariableType = 'string' | 'file' | 'component' | 'number'
 export type TemplateCategory = 'issue_type' | 'component' | 'workflow' | 'custom'
@@ -639,6 +665,15 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.invoke('knowledge:tags', { projectPath })
   },
 
+  // Search API (for cross-content search)
+  search: {
+    query: (query: string, options?: SearchOptions) =>
+      ipcRenderer.invoke('search:query', { query, options }),
+    updateIndex: (type: ContentType, items: SearchableContent[]) =>
+      ipcRenderer.invoke('search:update-index', { type, items }),
+    clearIndex: () => ipcRenderer.invoke('search:clear-index')
+  },
+
   // Rollback API (for smart rollback with preview)
   rollback: {
     preview: (
@@ -1021,6 +1056,11 @@ declare global {
         ) => Promise<KnowledgeEntry | null>
         delete: (projectPath: string, id: string) => Promise<boolean>
         tags: (projectPath: string) => Promise<string[]>
+      }
+      search: {
+        query: (query: string, options?: SearchOptions) => Promise<SearchResult[]>
+        updateIndex: (type: ContentType, items: SearchableContent[]) => Promise<{ success: boolean }>
+        clearIndex: () => Promise<{ success: boolean }>
       }
       rollback: {
         preview: (

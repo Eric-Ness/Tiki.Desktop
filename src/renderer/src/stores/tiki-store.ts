@@ -207,6 +207,11 @@ interface TikiDesktopState {
   selectedKnowledge: string | null
   setSelectedKnowledge: (id: string | null) => void
 
+  // Recent Searches (for search functionality)
+  recentSearches: string[]
+  addRecentSearch: (query: string) => void
+  clearRecentSearches: () => void
+
   // Branch State
   currentBranch: BranchInfo | null
   branchAssociations: Record<number, { branchName: string; createdAt: string }>
@@ -538,6 +543,20 @@ export const useTikiStore = create<TikiDesktopState>()(
         selectedKnowledge: null,
         setSelectedKnowledge: (selectedKnowledge) => set({ selectedKnowledge }),
 
+        // Recent Searches (for search functionality)
+        recentSearches: [],
+        addRecentSearch: (query) =>
+          set((state) => {
+            const trimmedQuery = query.trim()
+            if (!trimmedQuery) return {}
+            // Remove existing occurrence (for deduplication)
+            const filtered = state.recentSearches.filter((q) => q !== trimmedQuery)
+            // Add to front, limit to 10
+            const updated = [trimmedQuery, ...filtered].slice(0, 10)
+            return { recentSearches: updated }
+          }),
+        clearRecentSearches: () => set({ recentSearches: [] }),
+
         // Branch State
         currentBranch: null,
         branchAssociations: {},
@@ -566,6 +585,7 @@ export const useTikiStore = create<TikiDesktopState>()(
           detailPanelCollapsed: state.detailPanelCollapsed,
           activeTab: state.activeTab,
           recentCommands: state.recentCommands,
+          recentSearches: state.recentSearches,
           terminalLayout: state.terminalLayout,
           focusedPaneId: state.focusedPaneId
         })
