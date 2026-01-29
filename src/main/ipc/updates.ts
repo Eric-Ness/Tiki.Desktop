@@ -1,10 +1,10 @@
 import { ipcMain } from 'electron'
-import { checkForUpdates, downloadUpdate, installUpdate } from '../services/update-service'
+import { checkForUpdates, downloadUpdate, installUpdate, CheckResult } from '../services/update-service'
 
 export function registerUpdateHandlers(): void {
-  // Check for updates
-  ipcMain.handle('app:check-updates', async () => {
-    await checkForUpdates()
+  // Check for updates - returns result so renderer knows when check completes
+  ipcMain.handle('app:check-updates', async (): Promise<CheckResult> => {
+    return await checkForUpdates()
   })
 
   // Download update

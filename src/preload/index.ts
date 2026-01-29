@@ -465,6 +465,11 @@ export type UpdateStatus =
   | { type: 'downloaded'; version: string }
   | { type: 'error'; message: string }
 
+// Check result type (mirrored from main process for type safety)
+export type CheckResult =
+  | { success: true; status: 'available' | 'not-available'; version?: string }
+  | { success: false; error: string }
+
 // Workflow type definitions (mirrored from main process for type safety)
 export interface Workflow {
   id: number
@@ -824,7 +829,7 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
 
   // Updates API
   updates: {
-    check: () => ipcRenderer.invoke('app:check-updates'),
+    check: (): Promise<CheckResult> => ipcRenderer.invoke('app:check-updates'),
     download: () => ipcRenderer.invoke('app:download-update'),
     install: () => ipcRenderer.invoke('app:install-update'),
     onStatus: (callback: (status: UpdateStatus) => void) => {
@@ -1387,6 +1392,11 @@ type UpdateStatusType =
   | { type: 'downloaded'; version: string }
   | { type: 'error'; message: string }
 
+// Check result type for renderer
+type CheckResultType =
+  | { success: true; status: 'available' | 'not-available'; version?: string }
+  | { success: false; error: string }
+
 // Type declaration for renderer
 declare global {
   interface Window {
@@ -1396,7 +1406,7 @@ declare global {
       getGitBranch: (cwd?: string) => Promise<string | null>
       platform: string
       updates: {
-        check: () => Promise<void>
+        check: () => Promise<CheckResultType>
         download: () => Promise<void>
         install: () => Promise<void>
         onStatus: (callback: (status: UpdateStatusType) => void) => () => void

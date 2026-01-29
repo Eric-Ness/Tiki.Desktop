@@ -1,5 +1,5 @@
 import { autoUpdater, UpdateInfo } from 'electron-updater'
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, app } from 'electron'
 
 export type UpdateStatus =
   | { type: 'checking' }
@@ -9,7 +9,12 @@ export type UpdateStatus =
   | { type: 'downloaded'; version: string }
   | { type: 'error'; message: string }
 
+export type CheckResult =
+  | { success: true; status: 'available' | 'not-available'; version?: string }
+  | { success: false; error: string }
+
 let mainWindow: BrowserWindow | null = null
+const UPDATE_CHECK_TIMEOUT = 30000 // 30 seconds
 
 export function setUpdateWindow(window: BrowserWindow): void {
   mainWindow = window
@@ -22,15 +27,31 @@ function sendStatus(status: UpdateStatus): void {
 }
 
 export function initAutoUpdater(): void {
+  console.log('[AutoUpdater] Initializing...')
+  console.log('[AutoUpdater] Platform:', process.platform)
+  console.log('[AutoUpdater] app.isPackaged:', app.isPackaged)
+  console.log('[AutoUpdater] App version:', app.getVersion())
+
   // Skip on macOS (requires code signing)
   if (process.platform === 'darwin') {
     console.log('[AutoUpdater] Skipping on macOS (code signing required)')
     return
   }
 
+  // electron-updater only works in packaged builds
+  if (!app.isPackaged) {
+    console.log('[AutoUpdater] Skipping initialization - app is not packaged (dev mode)')
+    return
+  }
+
   // Configure auto-updater
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
+
+  // Enable logging for debugging
+  autoUpdater.logger = console
+
+  console.log('[AutoUpdater] Configuration complete')
 
   // Event handlers
   autoUpdater.on('checking-for-update', () => {
@@ -74,18 +95,89 @@ export function initAutoUpdater(): void {
   })
 }
 
-export async function checkForUpdates(): Promise<void> {
+export async function checkForUpdates(): Promise<CheckResult> {
+  console.log('[AutoUpdater] checkForUpdates() called')
+  console.log('[AutoUpdater] app.isPackaged:', app.isPackaged)
+  console.log('[AutoUpdater] Current version:', app.getVersion())
+
   if (process.platform === 'darwin') {
-    sendStatus({ type: 'error', message: 'Auto-updates not available on macOS (requires code signing)' })
-    return
+    const error = 'Auto-updates not available on macOS (requires code signing)'
+    sendStatus({ type: 'error', message: error })
+    return { success: false, error }
   }
 
-  try {
-    await autoUpdater.checkForUpdates()
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    sendStatus({ type: 'error', message })
+  // electron-updater only works in packaged builds
+  if (!app.isPackaged) {
+    const error = 'Auto-updates only work in the installed app, not in development mode. Please install the app from a release build.'
+    console.log('[AutoUpdater]', error)
+    sendStatus({ type: 'error', message: error })
+    return { success: false, error }
   }
+
+  sendStatus({ type: 'checking' })
+
+  return new Promise((resolve) => {
+    let resolved = false
+
+    const cleanup = (): void => {
+      autoUpdater.removeListener('update-available', onAvailable)
+      autoUpdater.removeListener('update-not-available', onNotAvailable)
+      autoUpdater.removeListener('error', onError)
+      clearTimeout(timeoutId)
+    }
+
+    const onAvailable = (info: UpdateInfo): void => {
+      if (resolved) return
+      resolved = true
+      cleanup()
+      console.log('[AutoUpdater] Check complete: update available', info.version)
+      resolve({ success: true, status: 'available', version: info.version })
+    }
+
+    const onNotAvailable = (): void => {
+      if (resolved) return
+      resolved = true
+      cleanup()
+      console.log('[AutoUpdater] Check complete: no update available')
+      resolve({ success: true, status: 'not-available' })
+    }
+
+    const onError = (error: Error): void => {
+      if (resolved) return
+      resolved = true
+      cleanup()
+      console.error('[AutoUpdater] Check failed with error:', error.message)
+      resolve({ success: false, error: error.message })
+    }
+
+    const timeoutId = setTimeout(() => {
+      if (resolved) return
+      resolved = true
+      cleanup()
+      const error = 'Update check timed out. Please check your internet connection and try again.'
+      console.error('[AutoUpdater] Check timed out after', UPDATE_CHECK_TIMEOUT, 'ms')
+      sendStatus({ type: 'error', message: error })
+      resolve({ success: false, error })
+    }, UPDATE_CHECK_TIMEOUT)
+
+    autoUpdater.once('update-available', onAvailable)
+    autoUpdater.once('update-not-available', onNotAvailable)
+    autoUpdater.once('error', onError)
+
+    console.log('[AutoUpdater] Starting update check...')
+    console.log('[AutoUpdater] Feed URL:', autoUpdater.getFeedURL())
+    autoUpdater.checkForUpdates().then((result) => {
+      console.log('[AutoUpdater] checkForUpdates() returned:', result?.updateInfo?.version || 'no update info')
+    }).catch((error) => {
+      if (resolved) return
+      resolved = true
+      cleanup()
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      console.error('[AutoUpdater] checkForUpdates() threw:', message)
+      sendStatus({ type: 'error', message })
+      resolve({ success: false, error: message })
+    })
+  })
 }
 
 export async function downloadUpdate(): Promise<void> {

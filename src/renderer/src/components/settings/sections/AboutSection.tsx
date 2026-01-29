@@ -20,13 +20,10 @@ export function AboutSection() {
     window.tikiDesktop.getVersion().then(setVersion)
   }, [])
 
-  // Listen for update status events
+  // Listen for update status events from the main process
   useEffect(() => {
     const unsubscribe = window.tikiDesktop.updates.onStatus((status) => {
       setUpdateStatus(status)
-      if (status.type !== 'checking') {
-        setIsChecking(false)
-      }
     })
     return () => unsubscribe()
   }, [])
@@ -34,7 +31,19 @@ export function AboutSection() {
   const handleCheckForUpdates = useCallback(async () => {
     setIsChecking(true)
     setUpdateStatus({ type: 'checking' })
-    await window.tikiDesktop.updates.check()
+    try {
+      const result = await window.tikiDesktop.updates.check()
+      // If check completed but we didn't receive status via events, handle it here
+      if (result && !result.success) {
+        setUpdateStatus({ type: 'error', message: result.error })
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to check for updates'
+      setUpdateStatus({ type: 'error', message })
+    } finally {
+      // Always reset isChecking when the check completes (success or failure)
+      setIsChecking(false)
+    }
   }, [])
 
   const handleDownload = useCallback(() => {
