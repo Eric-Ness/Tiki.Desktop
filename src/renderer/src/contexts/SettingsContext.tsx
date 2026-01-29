@@ -1,5 +1,12 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
 import type { SettingsSchema, DeepPartial } from '../types/settings'
+import type {
+  ExportAppDataInput,
+  ImportPreviewResult,
+  ImportModeType,
+  ExportDataResult,
+  ImportResultType
+} from '../../../preload'
 
 // Default settings matching the main process defaults
 const defaultSettings: SettingsSchema = {
@@ -51,8 +58,13 @@ interface SettingsContextValue {
   isLoading: boolean
   updateSettings: (partial: DeepPartial<SettingsSchema>) => Promise<void>
   resetSettings: (category?: keyof SettingsSchema) => Promise<void>
-  exportSettings: () => Promise<{ success: boolean; path?: string; error?: string }>
-  importSettings: () => Promise<{ success: boolean; error?: string }>
+  exportSettings: (appData?: ExportAppDataInput) => Promise<{ success: boolean; path?: string; error?: string }>
+  previewImport: (currentAppData?: ExportAppDataInput) => Promise<ImportPreviewResult | null>
+  importSettings: (
+    mode: ImportModeType,
+    data: ExportDataResult,
+    currentAppData?: ExportAppDataInput
+  ) => Promise<ImportResultType>
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null)
@@ -113,14 +125,29 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     }
   }, [])
 
-  // Export settings
-  const exportSettings = useCallback(async () => {
-    return window.tikiDesktop.settings.export()
+  // Export settings with app data
+  const exportSettings = useCallback(async (appData?: ExportAppDataInput) => {
+    return window.tikiDesktop.settings.export(appData)
   }, [])
 
-  // Import settings
-  const importSettings = useCallback(async () => {
-    const result = await window.tikiDesktop.settings.import()
+  // Preview import - opens file dialog and returns preview
+  const previewImport = useCallback(async (currentAppData?: ExportAppDataInput): Promise<ImportPreviewResult | null> => {
+    try {
+      const preview = await window.tikiDesktop.settings.previewImport(currentAppData)
+      return preview
+    } catch (err) {
+      console.error('Failed to preview import:', err)
+      return null
+    }
+  }, [])
+
+  // Import settings with mode and data
+  const importSettings = useCallback(async (
+    mode: ImportModeType,
+    data: ExportDataResult,
+    currentAppData?: ExportAppDataInput
+  ): Promise<ImportResultType> => {
+    const result = await window.tikiDesktop.settings.import(mode, data, currentAppData)
     if (result.success) {
       // Reload settings after import
       const loaded = await window.tikiDesktop.settings.get()
@@ -139,6 +166,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         updateSettings,
         resetSettings,
         exportSettings,
+        previewImport,
         importSettings
       }}
     >

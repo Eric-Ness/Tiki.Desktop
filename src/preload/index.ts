@@ -63,6 +63,93 @@ export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P]
 }
 
+// Export app data types for full backup
+export interface ExportTerminalPane {
+  id: string
+  terminalId: string
+  size: number
+}
+
+export interface ExportTerminalLayout {
+  direction: 'horizontal' | 'vertical' | 'none'
+  panes: ExportTerminalPane[]
+}
+
+export interface ExportLayoutInput {
+  sidebarCollapsed: boolean
+  detailPanelCollapsed: boolean
+  activeTab: string
+  terminalLayout: ExportTerminalLayout
+  focusedPaneId: string | null
+}
+
+export interface ExportProjectInput {
+  id: string
+  name: string
+  path: string
+}
+
+export interface ExportAppDataInput {
+  projects: ExportProjectInput[]
+  layout: ExportLayoutInput
+  recentCommands: string[]
+  recentSearches: string[]
+}
+
+// Import preview types
+export interface SettingsCategoryChange {
+  category: string
+  fieldsChanged: number
+}
+
+export interface ImportPreviewResult {
+  valid: boolean
+  errors: string[]
+  warnings: string[]
+  version: string
+  changes: {
+    settings: SettingsCategoryChange[]
+    projects: { added: number; removed: number; unchanged: number }
+    layout: boolean
+    recentCommands: boolean
+  }
+  data: ExportDataResult | null
+}
+
+export interface ExportDataResult {
+  version: string
+  exportedAt: string
+  appVersion: string
+  data: {
+    settings: SettingsSchema
+    projects: ExportProjectInput[]
+    layout: ExportLayoutInput
+    recentCommands: string[]
+    recentSearches: string[]
+  }
+}
+
+// Import mode type
+export type ImportModeType = 'replace' | 'merge'
+
+// Import result type
+export interface ImportResultType {
+  success: boolean
+  error?: string
+  imported: {
+    settings: boolean
+    projects: number
+    layout: boolean
+    recentCommands: boolean
+  }
+  mergedData?: {
+    projects: ExportProjectInput[]
+    layout: ExportLayoutInput
+    recentCommands: string[]
+    recentSearches: string[]
+  }
+}
+
 // Rollback type definitions (mirrored from main process for type safety)
 export type RollbackScope = 'phase' | 'issue' | 'checkpoint'
 
@@ -588,8 +675,14 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
     set: (settings: DeepPartial<SettingsSchema>) =>
       ipcRenderer.invoke('settings:set', { settings }),
     reset: (category?: SettingsCategory) => ipcRenderer.invoke('settings:reset', { category }),
-    export: () => ipcRenderer.invoke('settings:export'),
-    import: () => ipcRenderer.invoke('settings:import'),
+    export: (appData?: ExportAppDataInput) => ipcRenderer.invoke('settings:export', { appData }),
+    import: (
+      mode: ImportModeType,
+      data: ExportDataResult,
+      currentAppData?: ExportAppDataInput
+    ) => ipcRenderer.invoke('settings:import', { mode, data, currentAppData }),
+    previewImport: (appData?: ExportAppDataInput) =>
+      ipcRenderer.invoke('settings:preview-import', { appData }),
     onChange: (callback: (settings: SettingsSchema) => void) => {
       const handler = (_: unknown, settings: SettingsSchema) => callback(settings)
       ipcRenderer.on('settings:changed', handler)
@@ -987,8 +1080,13 @@ declare global {
         }
         set: (settings: DeepPartial<SettingsSchema>) => Promise<SettingsSchema>
         reset: (category?: SettingsCategory) => Promise<SettingsSchema>
-        export: () => Promise<{ success: boolean; path?: string; error?: string }>
-        import: () => Promise<{ success: boolean; error?: string }>
+        export: (appData?: ExportAppDataInput) => Promise<{ success: boolean; path?: string; error?: string }>
+        import: (
+          mode: ImportModeType,
+          data: ExportDataResult,
+          currentAppData?: ExportAppDataInput
+        ) => Promise<ImportResultType>
+        previewImport: (appData?: ExportAppDataInput) => Promise<ImportPreviewResult>
         onChange: (callback: (settings: SettingsSchema) => void) => () => void
       }
       config: {

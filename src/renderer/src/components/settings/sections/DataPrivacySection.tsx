@@ -1,35 +1,166 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useSettings } from '../../../contexts/SettingsContext'
 import { useTikiStore } from '../../../stores/tiki-store'
 import { SettingsToggle } from '../controls'
+import { ImportPreviewDialog } from '../ImportPreviewDialog'
+import type {
+  ImportPreviewResult,
+  ImportModeType,
+  ExportAppDataInput
+} from '../../../../../preload'
 
 export function DataPrivacySection() {
-  const { settings, updateSettings, resetSettings, exportSettings, importSettings } =
-    useSettings()
+  const {
+    settings,
+    updateSettings,
+    resetSettings,
+    exportSettings,
+    previewImport,
+    importSettings
+  } = useSettings()
   const { dataPrivacy } = settings
+
+  // Get store data for export/import
+  const projects = useTikiStore((state) => state.projects)
+  const sidebarCollapsed = useTikiStore((state) => state.sidebarCollapsed)
+  const detailPanelCollapsed = useTikiStore((state) => state.detailPanelCollapsed)
+  const activeTab = useTikiStore((state) => state.activeTab)
+  const terminalLayout = useTikiStore((state) => state.terminalLayout)
+  const focusedPaneId = useTikiStore((state) => state.focusedPaneId)
+  const recentCommands = useTikiStore((state) => state.recentCommands)
+  const recentSearches = useTikiStore((state) => state.recentSearches)
   const clearRecentCommands = useTikiStore((state) => state.clearRecentCommands)
+
   const [exportStatus, setExportStatus] = useState<string | null>(null)
   const [importStatus, setImportStatus] = useState<string | null>(null)
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
+  const [importPreview, setImportPreview] = useState<ImportPreviewResult | null>(null)
+
+  // Build app data for export/import
+  const getAppData = useCallback((): ExportAppDataInput => {
+    return {
+      projects: projects.map((p) => ({
+        id: p.id,
+        name: p.name,
+        path: p.path
+      })),
+      layout: {
+        sidebarCollapsed,
+        detailPanelCollapsed,
+        activeTab,
+        terminalLayout: {
+          direction: terminalLayout.direction,
+          panes: terminalLayout.panes.map((p) => ({
+            id: p.id,
+            terminalId: p.terminalId,
+            size: p.size
+          }))
+        },
+        focusedPaneId
+      },
+      recentCommands,
+      recentSearches
+    }
+  }, [
+    projects,
+    sidebarCollapsed,
+    detailPanelCollapsed,
+    activeTab,
+    terminalLayout,
+    focusedPaneId,
+    recentCommands,
+    recentSearches
+  ])
 
   const handleExport = async () => {
     setExportStatus('Exporting...')
-    const result = await exportSettings()
+    const appData = getAppData()
+    const result = await exportSettings(appData)
     if (result.success) {
-      setExportStatus('Settings exported successfully')
+      setExportStatus('Data exported successfully')
     } else {
       setExportStatus(result.error || 'Export failed')
     }
     setTimeout(() => setExportStatus(null), 3000)
   }
 
-  const handleImport = async () => {
-    setImportStatus('Importing...')
-    const result = await importSettings()
-    if (result.success) {
-      setImportStatus('Settings imported successfully')
-    } else {
-      setImportStatus(result.error || 'Import failed')
+  const handleImportClick = async () => {
+    setImportStatus('Loading file...')
+    const appData = getAppData()
+    const preview = await previewImport(appData)
+
+    if (!preview) {
+      setImportStatus('No file selected')
+      setTimeout(() => setImportStatus(null), 3000)
+      return
     }
+
+    setImportPreview(preview)
+    setPreviewDialogOpen(true)
+    setImportStatus(null)
+  }
+
+  const handleImport = async (mode: ImportModeType) => {
+    if (!importPreview?.data) {
+      throw new Error('No import data available')
+    }
+
+    const appData = getAppData()
+    const result = await importSettings(mode, importPreview.data, appData)
+
+    if (!result.success) {
+      throw new Error(result.error || 'Import failed')
+    }
+
+    // Apply merged data to the store if available
+    if (result.mergedData) {
+      const store = useTikiStore.getState()
+
+      // Update projects
+      if (result.imported.projects > 0 || mode === 'replace') {
+        // Clear existing projects
+        store.projects.forEach((p) => store.removeProject(p.id))
+        // Add imported/merged projects
+        result.mergedData.projects.forEach((p) => store.addProject(p))
+      }
+
+      // Update layout
+      if (result.imported.layout) {
+        store.setSidebarCollapsed(result.mergedData.layout.sidebarCollapsed)
+        store.setDetailPanelCollapsed(result.mergedData.layout.detailPanelCollapsed)
+        store.setActiveTab(result.mergedData.layout.activeTab as 'terminal' | 'workflow' | 'config')
+        store.setTerminalLayout({
+          direction: result.mergedData.layout.terminalLayout.direction,
+          panes: result.mergedData.layout.terminalLayout.panes.map((p) => ({
+            id: p.id,
+            terminalId: p.terminalId,
+            size: p.size
+          }))
+        })
+        if (result.mergedData.layout.focusedPaneId) {
+          store.setFocusedPane(result.mergedData.layout.focusedPaneId)
+        }
+      }
+
+      // Update recent commands
+      if (result.imported.recentCommands) {
+        store.clearRecentCommands()
+        // Add in reverse order so the most recent is first
+        ;[...result.mergedData.recentCommands].reverse().forEach((cmd) => {
+          store.addRecentCommand(cmd)
+        })
+      }
+
+      // Update recent searches
+      if (result.mergedData.recentSearches) {
+        store.clearRecentSearches()
+        ;[...result.mergedData.recentSearches].reverse().forEach((search) => {
+          store.addRecentSearch(search)
+        })
+      }
+    }
+
+    setImportStatus('Data imported successfully')
     setTimeout(() => setImportStatus(null), 3000)
   }
 
@@ -108,20 +239,24 @@ export function DataPrivacySection() {
       {/* Export/Import Section */}
       <div className="pt-4 border-t border-border">
         <h4 className="text-sm font-medium text-slate-200 mb-3">
-          Settings Backup
+          Data Export & Import
         </h4>
+        <p className="text-xs text-slate-500 mb-3">
+          Export all your settings, projects, and preferences to a file. Import
+          to restore or transfer your data.
+        </p>
         <div className="flex gap-3">
           <button
             onClick={handleExport}
             className="flex-1 px-3 py-2 text-sm bg-background-tertiary hover:bg-background-tertiary/80 border border-border rounded transition-colors text-slate-200"
           >
-            Export Settings
+            Export Data
           </button>
           <button
-            onClick={handleImport}
+            onClick={handleImportClick}
             className="flex-1 px-3 py-2 text-sm bg-background-tertiary hover:bg-background-tertiary/80 border border-border rounded transition-colors text-slate-200"
           >
-            Import Settings
+            Import Data
           </button>
         </div>
         {(exportStatus || importStatus) && (
@@ -139,6 +274,17 @@ export function DataPrivacySection() {
           Reset to Defaults
         </button>
       </div>
+
+      {/* Import Preview Dialog */}
+      <ImportPreviewDialog
+        isOpen={previewDialogOpen}
+        onClose={() => {
+          setPreviewDialogOpen(false)
+          setImportPreview(null)
+        }}
+        preview={importPreview}
+        onImport={handleImport}
+      />
     </div>
   )
 }
