@@ -26,7 +26,7 @@ export function ReleaseList() {
 
   // Separate active/in-progress from shipped
   const activeReleases = releases.filter((r) => r.status !== 'shipped')
-  const shippedReleases = releases.filter((r) => r.status === 'shipped')
+  const shippedReleases = releases.filter((r) => r.status === 'shipped').slice(-10)
 
   return (
     <div className="space-y-2">
