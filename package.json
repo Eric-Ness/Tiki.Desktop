@@ -82,19 +82,22 @@
       "target": [
         "nsis"
       ],
-      "icon": "resources/icon.ico"
+      "icon": "resources/icon.ico",
+      "artifactName": "Tiki.Desktop.Setup.${version}.${ext}"
     },
     "mac": {
       "target": [
         "dmg"
       ],
-      "icon": "resources/icon.icns"
+      "icon": "resources/icon.icns",
+      "artifactName": "Tiki.Desktop-${version}-${arch}.${ext}"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "icon": "resources/icon.png"
+      "icon": "resources/icon.png",
+      "artifactName": "Tiki.Desktop-${version}.${ext}"
     },
     "publish": {
       "provider": "github",
