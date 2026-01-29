@@ -1,0 +1,23 @@
+{
+  "version": "v1.0.0",
+  "createdAt": "2026-01-29T22:50:21.804Z",
+  "status": "shipped",
+  "requirementsEnabled": true,
+  "githubMilestone": null,
+  "issues": [
+    {
+      "number": 66,
+      "title": "Tiki Update Issue",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": 1,
+      "totalPhases": 1,
+      "completedAt": "2026-01-29T12:20:00.000Z"
+    }
+  ],
+  "requirements": {
+    "total": 0,
+    "implemented": 0,
+    "verified": 0
+  }
+}
