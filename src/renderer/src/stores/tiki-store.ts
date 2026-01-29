@@ -169,6 +169,7 @@ interface TikiDesktopState {
   // Plans cache
   plans: Map<number, ExecutionPlan>
   setPlan: (issueNumber: number, plan: ExecutionPlan) => void
+  cleanupOldPlans: () => void
 
   // UI State
   selectedNode: string | null
@@ -310,6 +311,16 @@ export const useTikiStore = create<TikiDesktopState>()(
             const newPlans = new Map(state.plans)
             newPlans.set(issueNumber, plan)
             return { plans: newPlans }
+          }),
+        cleanupOldPlans: () =>
+          set((state) => {
+            const MAX_PLANS = 30
+            if (state.plans.size > MAX_PLANS) {
+              const entries = Array.from(state.plans.entries())
+              const toKeep = entries.slice(-MAX_PLANS)
+              return { plans: new Map(toKeep) }
+            }
+            return {}
           }),
 
         // UI State

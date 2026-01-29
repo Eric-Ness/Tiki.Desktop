@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow'
 import { useTikiStore } from '../../stores/tiki-store'
 import { PhaseDetail, type PhaseData, type PhaseStatus } from '../detail/PhaseDetail'
 import { IssueDetail } from '../detail/IssueDetail'
@@ -63,13 +64,24 @@ interface DetailPanelProps {
 }
 
 export function DetailPanel({ cwd }: DetailPanelProps) {
-  const selectedNode = useTikiStore((state) => state.selectedNode)
-  const selectedIssue = useTikiStore((state) => state.selectedIssue)
-  const selectedRelease = useTikiStore((state) => state.selectedRelease)
-  const selectedKnowledge = useTikiStore((state) => state.selectedKnowledge)
-  const currentPlan = useTikiStore((state) => state.currentPlan)
-  const issues = useTikiStore((state) => state.issues)
-  const releases = useTikiStore((state) => state.releases)
+  // Selection state - consolidated selectors
+  const { selectedNode, selectedIssue, selectedRelease, selectedKnowledge } = useTikiStore(
+    useShallow((state) => ({
+      selectedNode: state.selectedNode,
+      selectedIssue: state.selectedIssue,
+      selectedRelease: state.selectedRelease,
+      selectedKnowledge: state.selectedKnowledge
+    }))
+  )
+
+  // Data state - consolidated selectors
+  const { currentPlan, issues, releases } = useTikiStore(
+    useShallow((state) => ({
+      currentPlan: state.currentPlan,
+      issues: state.issues,
+      releases: state.releases
+    }))
+  )
 
   const selectionType = getSelectionType(selectedNode, selectedIssue, selectedRelease, selectedKnowledge)
 

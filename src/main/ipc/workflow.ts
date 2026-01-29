@@ -12,17 +12,52 @@ import {
 interface PollingSubscription {
   workflowId: number
   cwd: string
-  intervalId: NodeJS.Timeout
+  intervalId: NodeJS.Timeout | null // null when paused
 }
 
 const activeSubscriptions: Map<string, PollingSubscription> = new Map()
 let mainWindow: BrowserWindow | null = null
+let windowFocused = true
+
+/**
+ * Check if window is currently focused (for testing)
+ */
+export function isWindowFocused(): boolean {
+  return windowFocused
+}
+
+/**
+ * Get the number of active subscriptions (for testing)
+ */
+export function getActiveSubscriptionCount(): number {
+  return activeSubscriptions.size
+}
+
+/**
+ * Reset workflow polling state (for testing only)
+ */
+export function resetWorkflowPollingForTesting(): void {
+  stopAllPolling()
+  mainWindow = null
+  windowFocused = true
+}
 
 /**
  * Set the main window reference for sending updates
  */
 export function setWorkflowWindow(window: BrowserWindow): void {
   mainWindow = window
+
+  // Track focus state
+  window.on('focus', () => {
+    windowFocused = true
+    resumeAllPolling()
+  })
+
+  window.on('blur', () => {
+    windowFocused = false
+    pauseAllPolling()
+  })
 }
 
 /**
@@ -30,6 +65,54 @@ export function setWorkflowWindow(window: BrowserWindow): void {
  */
 function getSubscriptionKey(workflowId: number, cwd: string): string {
   return `${cwd}:${workflowId}`
+}
+
+/**
+ * Poll for workflow run updates
+ */
+async function poll(workflowId: number, cwd: string): Promise<void> {
+  try {
+    const runs = await getWorkflowRuns(workflowId, cwd)
+
+    // Check for status transitions and emit notifications
+    checkStatusTransitions(workflowId, cwd, runs)
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('workflow:runs-updated', {
+        workflowId,
+        cwd,
+        runs
+      })
+    }
+  } catch (error) {
+    // Log error but continue polling
+    console.error('Workflow polling error:', error)
+  }
+}
+
+/**
+ * Pause all polling subscriptions (called when window loses focus)
+ */
+function pauseAllPolling(): void {
+  Array.from(activeSubscriptions.values()).forEach((sub) => {
+    if (sub.intervalId !== null) {
+      clearInterval(sub.intervalId)
+      sub.intervalId = null // Mark as paused
+    }
+  })
+}
+
+/**
+ * Resume all polling subscriptions (called when window regains focus)
+ */
+function resumeAllPolling(): void {
+  Array.from(activeSubscriptions.values()).forEach((sub) => {
+    if (sub.intervalId === null) {
+      // Fetch immediately on resume, then restart interval
+      poll(sub.workflowId, sub.cwd)
+      sub.intervalId = setInterval(() => poll(sub.workflowId, sub.cwd), POLLING_INTERVAL_MS)
+    }
+  })
 }
 
 /**
@@ -43,36 +126,34 @@ function startPolling(workflowId: number, cwd: string): void {
     return
   }
 
-  const poll = async (): Promise<void> => {
-    try {
-      const runs = await getWorkflowRuns(workflowId, cwd)
+  // If window is focused, start polling immediately
+  // Otherwise, just register the subscription (polling will start when focus returns)
+  if (windowFocused) {
+    // Fetch immediately, then start interval
+    poll(workflowId, cwd)
 
-      // Check for status transitions and emit notifications
-      checkStatusTransitions(workflowId, cwd, runs)
+    const intervalId = setInterval(() => poll(workflowId, cwd), POLLING_INTERVAL_MS)
 
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('workflow:runs-updated', {
-          workflowId,
-          cwd,
-          runs
-        })
-      }
-    } catch (error) {
-      // Log error but continue polling
-      console.error('Workflow polling error:', error)
-    }
+    activeSubscriptions.set(key, {
+      workflowId,
+      cwd,
+      intervalId
+    })
+  } else {
+    // Register subscription but don't start interval (window not focused)
+    activeSubscriptions.set(key, {
+      workflowId,
+      cwd,
+      intervalId: null
+    })
   }
+}
 
-  // Fetch immediately, then start interval
-  poll()
-
-  const intervalId = setInterval(poll, POLLING_INTERVAL_MS)
-
-  activeSubscriptions.set(key, {
-    workflowId,
-    cwd,
-    intervalId
-  })
+/**
+ * Expose startPolling for testing
+ */
+export function startPollingForTesting(workflowId: number, cwd: string): void {
+  startPolling(workflowId, cwd)
 }
 
 /**
@@ -83,7 +164,9 @@ function stopPolling(workflowId: number, cwd: string): void {
   const subscription = activeSubscriptions.get(key)
 
   if (subscription) {
-    clearInterval(subscription.intervalId)
+    if (subscription.intervalId !== null) {
+      clearInterval(subscription.intervalId)
+    }
     activeSubscriptions.delete(key)
   }
 }
@@ -93,7 +176,9 @@ function stopPolling(workflowId: number, cwd: string): void {
  */
 export function stopAllPolling(): void {
   Array.from(activeSubscriptions.values()).forEach((subscription) => {
-    clearInterval(subscription.intervalId)
+    if (subscription.intervalId !== null) {
+      clearInterval(subscription.intervalId)
+    }
   })
   activeSubscriptions.clear()
 }

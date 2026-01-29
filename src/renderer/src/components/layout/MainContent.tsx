@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { TerminalTabs } from '../terminal/TerminalTabs'
 import { WorkflowCanvas } from '../workflow/WorkflowCanvas'
 import { ConfigEditor } from '../config'
@@ -20,12 +21,18 @@ interface MainContentProps {
 export function MainContent({ cwd }: MainContentProps) {
   const [activeTab, setActiveTab] = useState<Tab>('terminal')
   const activityEventCount = useActivityStore((state) => state.events.length)
-  const currentPlan = useTikiStore((state) => state.currentPlan)
-  const tikiState = useTikiStore((state) => state.tikiState)
-  const issues = useTikiStore((state) => state.issues)
-  const releases = useTikiStore((state) => state.releases)
-  const setSelectedIssue = useTikiStore((state) => state.setSelectedIssue)
-  const setSelectedNode = useTikiStore((state) => state.setSelectedNode)
+
+  // Tiki store state - consolidated selectors
+  const { currentPlan, tikiState, issues, releases, setSelectedIssue, setSelectedNode } = useTikiStore(
+    useShallow((state) => ({
+      currentPlan: state.currentPlan,
+      tikiState: state.tikiState,
+      issues: state.issues,
+      releases: state.releases,
+      setSelectedIssue: state.setSelectedIssue,
+      setSelectedNode: state.setSelectedNode
+    }))
+  )
 
   // Extract timeline data from current plan and state
   const timeline = useMemo(

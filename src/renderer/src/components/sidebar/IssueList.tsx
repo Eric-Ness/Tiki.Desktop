@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useTikiStore, GitHubIssue, CachedPrediction } from '../../stores/tiki-store'
 import { CreateIssueDialog } from './CreateIssueDialog'
 
@@ -11,18 +12,36 @@ interface IssueListProps {
 export function IssueList({ onRefresh }: IssueListProps) {
   const [filter, setFilter] = useState<IssueFilter>('open')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const issues = useTikiStore((state) => state.issues)
-  const githubLoading = useTikiStore((state) => state.githubLoading)
-  const githubError = useTikiStore((state) => state.githubError)
-  const selectedIssue = useTikiStore((state) => state.selectedIssue)
-  const setSelectedIssue = useTikiStore((state) => state.setSelectedIssue)
-  const setSelectedNode = useTikiStore((state) => state.setSelectedNode)
-  const setSelectedRelease = useTikiStore((state) => state.setSelectedRelease)
-  const setSelectedKnowledge = useTikiStore((state) => state.setSelectedKnowledge)
-  const tikiState = useTikiStore((state) => state.tikiState)
-  const branchAssociations = useTikiStore((state) => state.branchAssociations)
-  const currentBranch = useTikiStore((state) => state.currentBranch)
-  const predictions = useTikiStore((state) => state.predictions)
+
+  // Group 1: GitHub data
+  const { issues, githubLoading, githubError } = useTikiStore(
+    useShallow((state) => ({
+      issues: state.issues,
+      githubLoading: state.githubLoading,
+      githubError: state.githubError
+    }))
+  )
+
+  // Group 2: Selection state
+  const { selectedIssue, setSelectedIssue, setSelectedNode, setSelectedRelease, setSelectedKnowledge } = useTikiStore(
+    useShallow((state) => ({
+      selectedIssue: state.selectedIssue,
+      setSelectedIssue: state.setSelectedIssue,
+      setSelectedNode: state.setSelectedNode,
+      setSelectedRelease: state.setSelectedRelease,
+      setSelectedKnowledge: state.setSelectedKnowledge
+    }))
+  )
+
+  // Group 3: Context data
+  const { tikiState, branchAssociations, currentBranch, predictions } = useTikiStore(
+    useShallow((state) => ({
+      tikiState: state.tikiState,
+      branchAssociations: state.branchAssociations,
+      currentBranch: state.currentBranch,
+      predictions: state.predictions
+    }))
+  )
 
   const handleSelectIssue = (issueNumber: number) => {
     // Clear other selections when selecting an issue from sidebar

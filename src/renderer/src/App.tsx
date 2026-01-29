@@ -23,6 +23,7 @@ import { useSettingsShortcut } from './hooks/useSettingsShortcut'
 import { useSearchShortcut } from './hooks/useSearchShortcut'
 import { useSearchIndexSync } from './hooks/useSearchIndexSync'
 import { useActivityLogger } from './hooks/useActivityLogger'
+import { useShallow } from 'zustand/react/shallow'
 import { useTikiStore, type Project } from './stores/tiki-store'
 import { useLayoutPresetsStore, builtInPresets } from './stores/layout-presets'
 import { UpdateToast, type UpdateStatus } from './components/UpdateToast'
@@ -35,11 +36,23 @@ function App() {
   const [enablePanelTransition, setEnablePanelTransition] = useState(false)
   const sidebarPanelRef = useRef<ImperativePanelHandle>(null)
   const detailPanelRef = useRef<ImperativePanelHandle>(null)
-  const sidebarCollapsed = useTikiStore((state) => state.sidebarCollapsed)
-  const detailPanelCollapsed = useTikiStore((state) => state.detailPanelCollapsed)
-  const updatePanelSizes = useLayoutPresetsStore((state) => state.updatePanelSizes)
-  const activePresetId = useLayoutPresetsStore((state) => state.activePresetId)
-  const presets = useLayoutPresetsStore((state) => state.presets)
+
+  // Layout state - consolidated selectors
+  const { sidebarCollapsed, detailPanelCollapsed } = useTikiStore(
+    useShallow((state) => ({
+      sidebarCollapsed: state.sidebarCollapsed,
+      detailPanelCollapsed: state.detailPanelCollapsed
+    }))
+  )
+
+  // Layout presets - consolidated selectors
+  const { updatePanelSizes, activePresetId, presets } = useLayoutPresetsStore(
+    useShallow((state) => ({
+      updatePanelSizes: state.updatePanelSizes,
+      activePresetId: state.activePresetId,
+      presets: state.presets
+    }))
+  )
 
   // Sync file watcher with Zustand store
   useTikiSync()
@@ -62,7 +75,6 @@ function App() {
   const { isOpen: commandPaletteOpen, close: closeCommandPalette } = useCommandPaletteShortcut()
   const { commands } = useTikiCommands()
   const { executeCommand, executeCommandWithArgs } = useCommandExecution()
-  const recentCommands = useTikiStore((state) => state.recentCommands)
 
   // Settings modal state
   const { isOpen: settingsOpen, close: closeSettings } = useSettingsShortcut()
@@ -70,12 +82,17 @@ function App() {
   // Global search state
   const { isOpen: searchOpen, close: closeSearch } = useSearchShortcut()
 
-  // Project management
-  const activeProject = useTikiStore((state) => state.activeProject)
-  const setActiveProject = useTikiStore((state) => state.setActiveProject)
-  const setTikiState = useTikiStore((state) => state.setTikiState)
-  const setCurrentPlan = useTikiStore((state) => state.setCurrentPlan)
-  const setIssues = useTikiStore((state) => state.setIssues)
+  // Project state and actions - consolidated selectors
+  const { recentCommands, activeProject, setActiveProject, setTikiState, setCurrentPlan, setIssues } = useTikiStore(
+    useShallow((state) => ({
+      recentCommands: state.recentCommands,
+      activeProject: state.activeProject,
+      setActiveProject: state.setActiveProject,
+      setTikiState: state.setTikiState,
+      setCurrentPlan: state.setCurrentPlan,
+      setIssues: state.setIssues
+    }))
+  )
 
   // Handle project switching
   const handleProjectSwitch = useCallback(

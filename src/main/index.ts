@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
-import { execSync } from 'child_process'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { getBranch } from './services/git-branch-service'
 import { setMainWindow, cleanupAllTerminals, saveTerminalStateImmediate } from './services/terminal-manager'
 import { setFileWatcherWindow, startWatching, stopWatching } from './services/file-watcher'
 import { setGitHubWindow } from './services/github-bridge'
@@ -161,19 +161,10 @@ ipcMain.handle('app:cwd', () => {
   return process.cwd()
 })
 
-// Get git branch for a directory
-ipcMain.handle('git:branch', (_event, cwd?: string) => {
-  try {
-    const workDir = cwd || process.cwd()
-    const branch = execSync('git rev-parse --abbrev-ref HEAD', {
-      cwd: workDir,
-      encoding: 'utf-8',
-      timeout: 5000
-    }).trim()
-    return branch
-  } catch {
-    return null
-  }
+// Get git branch for a directory (async with caching)
+ipcMain.handle('git:branch', async (_event, cwd?: string) => {
+  const workDir = cwd || process.cwd()
+  return await getBranch(workDir)
 })
 
 // Open external URL in default browser
