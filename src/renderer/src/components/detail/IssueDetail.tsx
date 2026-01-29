@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { GitHubIssue, useTikiStore } from '../../stores/tiki-store'
+import { GitHubIssue, useTikiStore, CachedPrediction } from '../../stores/tiki-store'
 import { IssueActions } from '../issues'
 import { PRPreview } from './PRPreview'
 import { RollbackDialog } from '../rollback'
 import { TemplateSuggestions, CreateTemplateDialog, ApplyTemplateDialog } from '../templates'
+import { CostPrediction } from '../prediction'
 
 // Template type for ApplyTemplateDialog
 type TemplateCategory = 'issue_type' | 'component' | 'workflow' | 'custom'
@@ -89,8 +90,10 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
 
   const activeProject = useTikiStore((state) => state.activeProject)
   const plans = useTikiStore((state) => state.plans)
+  const setPrediction = useTikiStore((state) => state.setPrediction)
   const [showRollbackDialog, setShowRollbackDialog] = useState(false)
   const [hasTrackedCommits, setHasTrackedCommits] = useState(false)
+  const [showCostPrediction, setShowCostPrediction] = useState(true)
 
   // Template dialog state
   const [showCreateTemplateDialog, setShowCreateTemplateDialog] = useState(false)
@@ -148,6 +151,14 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
     setSelectedTemplate(null)
     // The plan will be created/updated through the normal workflow
   }, [])
+
+  // Handle prediction loaded - cache it in the store
+  const handlePredictionLoaded = useCallback(
+    (prediction: CachedPrediction) => {
+      setPrediction(number, prediction)
+    },
+    [setPrediction, number]
+  )
 
   const handleOpenInBrowser = async () => {
     if (number) {
@@ -352,6 +363,42 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
               </span>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Cost Prediction section */}
+      {(cwd || activeProject?.path) && (
+        <div className="border-t border-slate-700/50 pt-4">
+          <button
+            onClick={() => setShowCostPrediction(!showCostPrediction)}
+            className="flex items-center gap-2 w-full text-left mb-2"
+          >
+            <svg
+              className={`w-3 h-3 text-slate-400 transition-transform ${showCostPrediction ? 'rotate-90' : ''}`}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            <h3 className="text-sm font-semibold text-slate-300">Cost Prediction</h3>
+          </button>
+          {showCostPrediction && (
+            <div className="bg-slate-800/50 rounded-lg border border-slate-700/50">
+              <CostPrediction
+                cwd={(cwd || activeProject?.path)!}
+                issue={{
+                  number,
+                  title,
+                  body,
+                  labels: normalizedLabels
+                }}
+                plan={plan ? { phases: plan.phases } : undefined}
+                onPredictionLoaded={handlePredictionLoaded}
+              />
+            </div>
+          )}
         </div>
       )}
 

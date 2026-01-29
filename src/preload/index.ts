@@ -501,6 +501,93 @@ export interface WorkflowRunsUpdate {
   runs: WorkflowRun[]
 }
 
+// Cost prediction type definitions (mirrored from main process for type safety)
+export interface CostPrediction {
+  estimatedTokens: {
+    low: number
+    expected: number
+    high: number
+  }
+  estimatedCost: {
+    low: number
+    expected: number
+    high: number
+  }
+  confidence: 'low' | 'medium' | 'high'
+  factors: PredictionFactor[]
+  comparisons: {
+    vsAverage: number
+    vsSimilar: number | null
+    vsRecent: number | null
+  }
+  breakdown: {
+    planning: number
+    execution: number
+    verification: number
+    fixes: number
+  }
+  similarIssues: Array<{
+    number: number
+    title: string
+    actualCost: number
+    similarity: number
+  }>
+}
+
+export interface PredictionFactor {
+  name: string
+  impact: 'increases' | 'decreases' | 'neutral'
+  weight: number
+  reason: string
+}
+
+export interface BudgetSettings {
+  dailyBudget: number | null
+  weeklyBudget: number | null
+  warnThreshold: number
+}
+
+export interface BudgetStatus {
+  settings: BudgetSettings
+  dailySpend: number
+  weeklySpend: number
+}
+
+export interface IssueFeatures {
+  bodyLength: number
+  criteriaCount: number
+  estimatedFiles: number
+  hasTests: boolean
+  issueType: 'bug' | 'feature' | 'refactor' | 'docs' | 'other'
+  labelComplexity: number
+  codeKeywords: string[]
+}
+
+export interface ExecutionRecord {
+  issueNumber: number
+  issueTitle: string
+  features: IssueFeatures
+  actualInputTokens: number
+  actualOutputTokens: number
+  actualCost: number
+  phases: number
+  durationMs: number
+  retries: number
+  success: boolean
+  executedAt: string
+}
+
+export interface PredictionIssueInput {
+  number: number
+  title: string
+  body?: string
+  labels?: Array<{ name: string }>
+}
+
+export interface PredictionPlanInput {
+  phases: Array<{ files: string[]; verification: string[] }>
+}
+
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('tikiDesktop', {
@@ -952,6 +1039,25 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.on('workflow:runs-updated', handler)
       return () => ipcRenderer.removeListener('workflow:runs-updated', handler)
     }
+  },
+
+  // Prediction API (for cost prediction before issue execution)
+  prediction: {
+    estimateIssue: (cwd: string, issue: PredictionIssueInput) =>
+      ipcRenderer.invoke('prediction:estimate-issue', { cwd, issue }),
+    estimatePlan: (cwd: string, plan: PredictionPlanInput, issue: PredictionIssueInput) =>
+      ipcRenderer.invoke('prediction:estimate-plan', { cwd, plan, issue }),
+    recordActual: (cwd: string, record: ExecutionRecord) =>
+      ipcRenderer.invoke('prediction:record-actual', { cwd, record }),
+    getHistory: (cwd: string, limit?: number) =>
+      ipcRenderer.invoke('prediction:get-history', { cwd, limit }),
+    getBudget: (cwd: string) => ipcRenderer.invoke('prediction:get-budget', { cwd }),
+    setBudget: (cwd: string, settings: BudgetSettings) =>
+      ipcRenderer.invoke('prediction:set-budget', { cwd, settings }),
+    getAverageCost: (cwd: string) => ipcRenderer.invoke('prediction:get-average-cost', { cwd }),
+    isHighCost: (cwd: string, prediction: CostPrediction, threshold?: number) =>
+      ipcRenderer.invoke('prediction:is-high-cost', { cwd, prediction, threshold }),
+    clearCache: (cwd: string) => ipcRenderer.invoke('prediction:clear-cache', { cwd })
   }
 })
 
@@ -1326,6 +1432,21 @@ declare global {
           cwd: string
         ) => Promise<{ unsubscribed: boolean; workflowId: number; cwd: string }>
         onRunsUpdate: (callback: (data: WorkflowRunsUpdate) => void) => () => void
+      }
+      prediction: {
+        estimateIssue: (cwd: string, issue: PredictionIssueInput) => Promise<CostPrediction>
+        estimatePlan: (
+          cwd: string,
+          plan: PredictionPlanInput,
+          issue: PredictionIssueInput
+        ) => Promise<CostPrediction>
+        recordActual: (cwd: string, record: ExecutionRecord) => Promise<{ success: boolean }>
+        getHistory: (cwd: string, limit?: number) => Promise<ExecutionRecord[]>
+        getBudget: (cwd: string) => Promise<BudgetStatus>
+        setBudget: (cwd: string, settings: BudgetSettings) => Promise<{ success: boolean }>
+        getAverageCost: (cwd: string) => Promise<{ average: number | null; recent: number | null }>
+        isHighCost: (cwd: string, prediction: CostPrediction, threshold?: number) => Promise<boolean>
+        clearCache: (cwd: string) => Promise<{ success: boolean }>
       }
     }
   }

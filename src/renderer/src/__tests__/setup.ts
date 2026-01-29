@@ -130,6 +130,37 @@ if (isBrowserEnv) {
           totalDocuments: 0,
           documentsByType: { issue: 0, plan: 0, knowledge: 0, release: 0 }
         })
+      },
+      prediction: {
+        estimateIssue: vi.fn().mockResolvedValue({
+          estimatedTokens: { low: 50000, expected: 100000, high: 150000 },
+          estimatedCost: { low: 1.0, expected: 2.0, high: 3.0 },
+          confidence: 'medium',
+          factors: [],
+          comparisons: { vsAverage: 1.0, vsSimilar: null, vsRecent: null },
+          breakdown: { planning: 20000, execution: 60000, verification: 15000, fixes: 5000 },
+          similarIssues: []
+        }),
+        estimatePlan: vi.fn().mockResolvedValue({
+          estimatedTokens: { low: 50000, expected: 100000, high: 150000 },
+          estimatedCost: { low: 1.0, expected: 2.0, high: 3.0 },
+          confidence: 'medium',
+          factors: [],
+          comparisons: { vsAverage: 1.0, vsSimilar: null, vsRecent: null },
+          breakdown: { planning: 20000, execution: 60000, verification: 15000, fixes: 5000 },
+          similarIssues: []
+        }),
+        recordActual: vi.fn().mockResolvedValue({ success: true }),
+        getHistory: vi.fn().mockResolvedValue([]),
+        getBudget: vi.fn().mockResolvedValue({
+          settings: { dailyBudget: null, weeklyBudget: null, warnThreshold: 0.8 },
+          dailySpend: 0,
+          weeklySpend: 0
+        }),
+        setBudget: vi.fn().mockResolvedValue({ success: true }),
+        getAverageCost: vi.fn().mockResolvedValue({ average: null, recent: null }),
+        isHighCost: vi.fn().mockResolvedValue(false),
+        clearCache: vi.fn().mockResolvedValue({ success: true })
       }
     },
     writable: true,

@@ -55,6 +55,16 @@ export interface ReleaseIssue {
   completedAt: string | null
 }
 
+export interface CachedPrediction {
+  estimatedCost: {
+    low: number
+    expected: number
+    high: number
+  }
+  confidence: 'low' | 'medium' | 'high'
+  cachedAt: number
+}
+
 export interface BranchInfo {
   name: string
   current: boolean
@@ -222,6 +232,12 @@ interface TikiDesktopState {
   ) => void
   associateBranch: (issueNumber: number, branchName: string) => void
   setBranchOperationInProgress: (inProgress: boolean) => void
+
+  // Cost Predictions Cache
+  predictions: Record<number, CachedPrediction>
+  setPrediction: (issueNumber: number, prediction: CachedPrediction) => void
+  getPrediction: (issueNumber: number) => CachedPrediction | undefined
+  clearPredictions: () => void
 }
 
 export const useTikiStore = create<TikiDesktopState>()(
@@ -573,7 +589,19 @@ export const useTikiStore = create<TikiDesktopState>()(
               }
             }
           })),
-        setBranchOperationInProgress: (branchOperationInProgress) => set({ branchOperationInProgress })
+        setBranchOperationInProgress: (branchOperationInProgress) => set({ branchOperationInProgress }),
+
+        // Cost Predictions Cache
+        predictions: {},
+        setPrediction: (issueNumber, prediction) =>
+          set((state) => ({
+            predictions: {
+              ...state.predictions,
+              [issueNumber]: prediction
+            }
+          })),
+        getPrediction: (issueNumber) => get().predictions[issueNumber],
+        clearPredictions: () => set({ predictions: {} })
       }),
       {
         name: 'tiki-desktop-storage',

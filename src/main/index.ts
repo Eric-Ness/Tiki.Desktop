@@ -21,6 +21,7 @@ import { registerTemplateHandlers } from './ipc/templates'
 import { registerUpdateHandlers } from './ipc/updates'
 import { registerSearchHandlers } from './ipc/search'
 import { registerWorkflowHandlers, setWorkflowWindow, stopAllPolling } from './ipc/workflow'
+import { registerPredictionHandlers } from './ipc/prediction'
 import { setMainWindow as setSettingsWindow } from './services/settings-store'
 import { setMainWindow as setNotificationWindow } from './services/notification-service'
 import { setUpdateWindow, initAutoUpdater, checkForUpdates } from './services/update-service'
@@ -87,6 +88,7 @@ app.whenReady().then(() => {
   registerUpdateHandlers()
   registerSearchHandlers()
   registerWorkflowHandlers()
+  registerPredictionHandlers()
 
   createWindow()
 

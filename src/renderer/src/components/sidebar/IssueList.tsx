@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useTikiStore, GitHubIssue } from '../../stores/tiki-store'
+import { useTikiStore, GitHubIssue, CachedPrediction } from '../../stores/tiki-store'
 import { CreateIssueDialog } from './CreateIssueDialog'
 
 type IssueFilter = 'open' | 'closed' | 'all'
@@ -22,6 +22,7 @@ export function IssueList({ onRefresh }: IssueListProps) {
   const tikiState = useTikiStore((state) => state.tikiState)
   const branchAssociations = useTikiStore((state) => state.branchAssociations)
   const currentBranch = useTikiStore((state) => state.currentBranch)
+  const predictions = useTikiStore((state) => state.predictions)
 
   const handleSelectIssue = (issueNumber: number) => {
     // Clear other selections when selecting an issue from sidebar
@@ -159,6 +160,7 @@ export function IssueList({ onRefresh }: IssueListProps) {
         filteredIssues.map((issue) => {
           const branchInfo = branchAssociations[issue.number]
           const isCurrentBranch = branchInfo && currentBranch?.name === branchInfo.branchName
+          const cachedPrediction = predictions[issue.number]
           return (
             <IssueItem
               key={issue.number}
@@ -167,6 +169,7 @@ export function IssueList({ onRefresh }: IssueListProps) {
               isActive={tikiState?.activeIssue === issue.number}
               branchName={branchInfo?.branchName}
               isCurrentBranch={isCurrentBranch}
+              prediction={cachedPrediction}
               onClick={() => handleSelectIssue(issue.number)}
             />
           )
@@ -212,6 +215,7 @@ interface IssueItemProps {
   isActive: boolean
   branchName?: string
   isCurrentBranch?: boolean
+  prediction?: CachedPrediction
   onClick: () => void
 }
 
@@ -221,7 +225,7 @@ function truncateBranchName(name: string, maxLength: number = 10): string {
   return name.slice(0, maxLength - 1) + '\u2026'
 }
 
-function IssueItem({ issue, isSelected, isActive, branchName, isCurrentBranch, onClick }: IssueItemProps) {
+function IssueItem({ issue, isSelected, isActive, branchName, isCurrentBranch, prediction, onClick }: IssueItemProps) {
   return (
     <button
       onClick={onClick}
@@ -274,6 +278,20 @@ function IssueItem({ issue, isSelected, isActive, branchName, isCurrentBranch, o
                   <path d="M9.5 3.25a2.25 2.25 0 1 1 3 2.122V6A2.5 2.5 0 0 1 10 8.5H6a1 1 0 0 0-1 1v1.128a2.251 2.251 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.5 0v1.836A2.493 2.493 0 0 1 6 7h4a1 1 0 0 0 1-1v-.628A2.25 2.25 0 0 1 9.5 3.25Zm-6 0a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Zm8.25-.75a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5ZM4.25 12a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z" />
                 </svg>
                 {truncateBranchName(branchName)}
+              </span>
+            )}
+            {prediction && (
+              <span
+                className={`text-[10px] px-1 py-0.5 rounded ${
+                  prediction.confidence === 'high'
+                    ? 'bg-green-500/20 text-green-400'
+                    : prediction.confidence === 'medium'
+                      ? 'bg-amber-500/20 text-amber-400'
+                      : 'bg-slate-500/20 text-slate-400'
+                }`}
+                title={`${prediction.confidence} confidence`}
+              >
+                ~${prediction.estimatedCost.expected.toFixed(2)}
               </span>
             )}
           </div>
