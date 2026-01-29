@@ -213,6 +213,28 @@ if (isBrowserEnv) {
           generatedAt: new Date().toISOString()
         }),
         clearCache: vi.fn().mockResolvedValue({ success: true })
+      },
+      analytics: {
+        getVelocity: vi.fn().mockResolvedValue({
+          period: '30days',
+          issues: { completed: 10, failed: 1, successRate: 0.91, avgDuration: 3600000 },
+          phases: { completed: 40, retried: 3, retryRate: 0.075, avgDuration: 900000 },
+          tokens: { total: 500000, perIssue: 50000, perPhase: 12500 },
+          comparison: { issuesDelta: 0.1, successRateDelta: 0.05, durationDelta: -0.1, tokensDelta: 0 }
+        }),
+        getTimeSeries: vi.fn().mockResolvedValue([
+          { date: '2026-01-01', value: 3 },
+          { date: '2026-01-02', value: 5 }
+        ]),
+        getBreakdown: vi.fn().mockResolvedValue([
+          { label: 'feature', value: 5, percentage: 0.5 },
+          { label: 'bug', value: 3, percentage: 0.3 }
+        ]),
+        getInsights: vi.fn().mockResolvedValue([
+          { id: 'success-high', type: 'positive', category: 'success', title: 'High success rate', description: 'Success rate is 91%', priority: 3 }
+        ]),
+        recordExecution: vi.fn().mockResolvedValue(undefined),
+        getRecent: vi.fn().mockResolvedValue([])
       }
     },
     writable: true,

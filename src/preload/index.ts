@@ -662,6 +662,52 @@ export interface ExecutionPlanForPatternPreload {
   }>
 }
 
+// Analytics type definitions (mirrored from main process for type safety)
+export type AnalyticsTimePeriod = '7days' | '30days' | '90days' | 'all'
+export type AnalyticsMetricType = 'issues' | 'phases' | 'tokens' | 'duration'
+export type AnalyticsGranularity = 'day' | 'week' | 'month'
+
+export interface AnalyticsVelocityMetrics {
+  period: AnalyticsTimePeriod
+  issues: { completed: number; failed: number; successRate: number; avgDuration: number }
+  phases: { completed: number; retried: number; retryRate: number; avgDuration: number }
+  tokens: { total: number; perIssue: number; perPhase: number }
+  comparison?: { issuesDelta: number; successRateDelta: number; durationDelta: number; tokensDelta: number }
+}
+
+export interface AnalyticsTimeSeriesPoint { date: string; value: number }
+export interface AnalyticsBreakdownItem { label: string; value: number; percentage: number }
+export interface AnalyticsInsight {
+  id: string
+  type: 'positive' | 'improvement' | 'warning'
+  category: 'success' | 'duration' | 'efficiency' | 'tokens' | 'trend'
+  title: string
+  description: string
+  metric?: { current: number; previous?: number; change?: number }
+  priority: number
+}
+
+export interface AnalyticsExecutionRecord {
+  issueNumber: number
+  issueTitle: string
+  issueType: 'bug' | 'feature' | 'refactor' | 'docs' | 'other'
+  startedAt: string
+  completedAt?: string
+  status: 'completed' | 'failed' | 'in_progress'
+  phases: Array<{
+    number: number
+    title: string
+    startedAt: string
+    completedAt?: string
+    duration: number
+    status: 'completed' | 'failed' | 'skipped'
+    tokens: number
+    retried: boolean
+  }>
+  totalTokens: number
+  retryCount: number
+}
+
 // Heatmap type definitions (mirrored from main process for type safety)
 export type HeatMetricPreload = 'modifications' | 'bugs' | 'churn' | 'complexity'
 export type TimePeriodPreload = '7days' | '30days' | '90days' | 'all'
@@ -1220,6 +1266,22 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
     refresh: (cwd: string, metric: HeatMetricPreload, period: TimePeriodPreload) =>
       ipcRenderer.invoke('heatmap:refresh', { cwd, metric, period }),
     clearCache: (cwd: string) => ipcRenderer.invoke('heatmap:clear-cache', { cwd })
+  },
+
+  // Analytics API (for velocity dashboard with productivity metrics)
+  analytics: {
+    getVelocity: (cwd: string, period: AnalyticsTimePeriod) =>
+      ipcRenderer.invoke('analytics:get-velocity', { cwd, period }),
+    getTimeSeries: (cwd: string, metric: AnalyticsMetricType, period: AnalyticsTimePeriod, granularity: AnalyticsGranularity) =>
+      ipcRenderer.invoke('analytics:get-timeseries', { cwd, metric, period, granularity }),
+    getBreakdown: (cwd: string, dimension: 'type' | 'phase' | 'status') =>
+      ipcRenderer.invoke('analytics:get-breakdown', { cwd, dimension }),
+    getInsights: (cwd: string, period: AnalyticsTimePeriod) =>
+      ipcRenderer.invoke('analytics:get-insights', { cwd, period }),
+    recordExecution: (cwd: string, record: AnalyticsExecutionRecord) =>
+      ipcRenderer.invoke('analytics:record-execution', { cwd, record }),
+    getRecent: (cwd: string, limit?: number) =>
+      ipcRenderer.invoke('analytics:get-recent', { cwd, limit })
   }
 })
 
@@ -1670,6 +1732,14 @@ declare global {
           period: TimePeriodPreload
         ) => Promise<HeatMapDataPreload>
         clearCache: (cwd: string) => Promise<{ success: boolean }>
+      }
+      analytics: {
+        getVelocity: (cwd: string, period: AnalyticsTimePeriod) => Promise<AnalyticsVelocityMetrics>
+        getTimeSeries: (cwd: string, metric: AnalyticsMetricType, period: AnalyticsTimePeriod, granularity: AnalyticsGranularity) => Promise<AnalyticsTimeSeriesPoint[]>
+        getBreakdown: (cwd: string, dimension: 'type' | 'phase' | 'status') => Promise<AnalyticsBreakdownItem[]>
+        getInsights: (cwd: string, period: AnalyticsTimePeriod) => Promise<AnalyticsInsight[]>
+        recordExecution: (cwd: string, record: AnalyticsExecutionRecord) => Promise<void>
+        getRecent: (cwd: string, limit?: number) => Promise<AnalyticsExecutionRecord[]>
       }
     }
   }
