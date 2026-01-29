@@ -17,6 +17,7 @@ import { useCommandPaletteShortcut } from './hooks/useCommandPaletteShortcut'
 import { useTikiCommands } from './hooks/useTikiCommands'
 import { useCommandExecution } from './hooks/useCommandExecution'
 import { useSettingsShortcut } from './hooks/useSettingsShortcut'
+import { useActivityLogger } from './hooks/useActivityLogger'
 import { useTikiStore, type Project } from './stores/tiki-store'
 
 function App() {
@@ -36,6 +37,9 @@ function App() {
   // Register keyboard shortcuts
   useSidebarShortcuts()
   useDetailPanelShortcuts()
+
+  // Log activity events
+  useActivityLogger()
 
   // Command palette state and commands
   const { isOpen: commandPaletteOpen, close: closeCommandPalette } = useCommandPaletteShortcut()

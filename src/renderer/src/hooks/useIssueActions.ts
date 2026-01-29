@@ -3,6 +3,14 @@ import { useTikiStore, type GitHubIssue, type TikiState, type ExecutionPlan } fr
 
 export type IssueActionType = 'yolo' | 'plan' | 'execute' | 'resume' | 'ship' | 'verify'
 
+type BranchOption = 'create' | 'existing' | 'current'
+
+export interface StartDialogState {
+  isOpen: boolean
+  pendingAction: IssueActionType | null
+  pendingIssue: GitHubIssue | null
+}
+
 export interface IssueWorkState {
   hasPlan: boolean
   planStatus: 'none' | 'pending' | 'in_progress' | 'completed' | 'failed' | 'shipped'
@@ -144,9 +152,17 @@ export function getActionInfo(action: IssueActionType): {
  */
 export function useIssueActions() {
   const activeProject = useTikiStore((state) => state.activeProject)
-  const activeTerminal = useTikiStore((state) => state.activeTerminal)
   const setActiveTab = useTikiStore((state) => state.setActiveTab)
+  const associateBranch = useTikiStore((state) => state.associateBranch)
+  const setBranchOperationInProgress = useTikiStore((state) => state.setBranchOperationInProgress)
   const [executing, setExecuting] = useState<IssueActionType | null>(null)
+
+  // State for the start issue dialog
+  const [startDialogState, setStartDialogState] = useState<StartDialogState>({
+    isOpen: false,
+    pendingAction: null,
+    pendingIssue: null
+  })
 
   /**
    * Ensure we have an active terminal, creating one if necessary
@@ -172,9 +188,9 @@ export function useIssueActions() {
   }, [activeProject?.path])
 
   /**
-   * Execute an action for an issue
+   * Execute an action directly (without branch dialog)
    */
-  const executeAction = useCallback(
+  const executeActionDirect = useCallback(
     async (action: IssueActionType, issueNumber: number): Promise<boolean> => {
       setExecuting(action)
 
@@ -232,10 +248,115 @@ export function useIssueActions() {
     [ensureTerminal, setActiveTab]
   )
 
+  /**
+   * Execute an action for an issue - intercepts yolo/execute to show branch dialog
+   */
+  const executeAction = useCallback(
+    async (action: IssueActionType, issueNumber: number, issue?: GitHubIssue): Promise<boolean> => {
+      // For yolo and execute actions, show the start dialog first
+      if ((action === 'yolo' || action === 'execute') && issue) {
+        setStartDialogState({
+          isOpen: true,
+          pendingAction: action,
+          pendingIssue: issue
+        })
+        return true // Dialog will handle the execution
+      }
+
+      // For other actions, execute directly
+      return executeActionDirect(action, issueNumber)
+    },
+    [executeActionDirect]
+  )
+
+  /**
+   * Close the start dialog without executing
+   */
+  const closeStartDialog = useCallback(() => {
+    setStartDialogState({
+      isOpen: false,
+      pendingAction: null,
+      pendingIssue: null
+    })
+  }, [])
+
+  /**
+   * Handle confirmation from the start dialog with branch options
+   */
+  const handleStartWithBranch = useCallback(
+    async (options: {
+      branchOption: BranchOption
+      branchName: string
+      stashChanges: boolean
+    }): Promise<boolean> => {
+      const { pendingAction, pendingIssue } = startDialogState
+      if (!pendingAction || !pendingIssue || !activeProject?.path) {
+        closeStartDialog()
+        return false
+      }
+
+      const cwd = activeProject.path
+      setBranchOperationInProgress(true)
+
+      try {
+        // Handle branch operations based on selected option
+        if (options.branchOption === 'create') {
+          // Create and switch to new branch
+          const result = await window.tikiDesktop.branch.create(cwd, {
+            name: options.branchName,
+            checkout: true
+          })
+
+          if (!result.success) {
+            console.error('Failed to create branch:', result.error)
+            setBranchOperationInProgress(false)
+            return false
+          }
+
+          // Associate the branch with the issue
+          await window.tikiDesktop.branch.associateIssue(cwd, options.branchName, pendingIssue.number)
+          associateBranch(pendingIssue.number, options.branchName)
+        } else if (options.branchOption === 'existing') {
+          // Switch to existing branch
+          const result = await window.tikiDesktop.branch.switch(cwd, options.branchName, {
+            stash: options.stashChanges
+          })
+
+          if (!result.success) {
+            console.error('Failed to switch branch:', result.error)
+            setBranchOperationInProgress(false)
+            return false
+          }
+
+          // Associate the branch with the issue
+          await window.tikiDesktop.branch.associateIssue(cwd, options.branchName, pendingIssue.number)
+          associateBranch(pendingIssue.number, options.branchName)
+        }
+        // For 'current' option, we don't need to switch branches
+
+        // Close the dialog
+        closeStartDialog()
+        setBranchOperationInProgress(false)
+
+        // Execute the original action
+        return executeActionDirect(pendingAction, pendingIssue.number)
+      } catch (error) {
+        console.error('Branch operation failed:', error)
+        setBranchOperationInProgress(false)
+        return false
+      }
+    },
+    [startDialogState, activeProject?.path, closeStartDialog, executeActionDirect, associateBranch, setBranchOperationInProgress]
+  )
+
   return {
     executing,
     executeAction,
     getIssueWorkState,
-    getActionInfo
+    getActionInfo,
+    // Dialog state and handlers
+    startDialogState,
+    closeStartDialog,
+    handleStartWithBranch
   }
 }

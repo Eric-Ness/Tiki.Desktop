@@ -1,5 +1,6 @@
 import { GitHubIssue } from '../../stores/tiki-store'
 import { IssueActions } from '../issues'
+import { PRPreview } from './PRPreview'
 
 export interface IssueDetailProps {
   issue: GitHubIssue | {
@@ -160,6 +161,9 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
           </div>
         </div>
       )}
+
+      {/* PR Preview section */}
+      <PRPreview issueNumber={number} />
     </div>
   )
 }

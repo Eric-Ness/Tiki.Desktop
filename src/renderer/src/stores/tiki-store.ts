@@ -55,6 +55,23 @@ export interface ReleaseIssue {
   completedAt: string | null
 }
 
+export interface BranchInfo {
+  name: string
+  current: boolean
+  remote: string | undefined
+  ahead: number
+  behind: number
+  lastCommit: string | undefined
+  associatedIssue: number | undefined
+}
+
+export interface BranchAssociations {
+  [issueNumber: number]: {
+    branchName: string
+    createdAt: string
+  }
+}
+
 export interface Release {
   version: string
   createdAt?: string
@@ -78,6 +95,20 @@ export interface TerminalTab {
   id: string
   name: string
   status: TerminalTabStatus
+}
+
+// Terminal Split Layout Types
+export type SplitDirection = 'horizontal' | 'vertical' | 'none'
+
+export interface TerminalPane {
+  id: string
+  terminalId: string
+  size: number // percentage
+}
+
+export interface TerminalLayout {
+  direction: SplitDirection
+  panes: TerminalPane[]
 }
 
 type ActiveTab = 'terminal' | 'workflow' | 'config'
@@ -131,6 +162,16 @@ interface TikiDesktopState {
   setTabStatus: (id: string, status: TerminalTabStatus) => void
   getTabByIndex: (index: number) => TerminalTab | undefined
 
+  // Terminal Split Layout
+  terminalLayout: TerminalLayout
+  setTerminalLayout: (layout: TerminalLayout) => void
+  splitTerminal: (direction: 'horizontal' | 'vertical') => void
+  closeSplit: (paneId: string) => void
+  focusedPaneId: string | null
+  setFocusedPane: (paneId: string) => void
+  moveFocusBetweenPanes: (direction: 'left' | 'right' | 'up' | 'down') => void
+  updatePaneTerminal: (paneId: string, terminalId: string) => void
+
   // GitHub
   issues: GitHubIssue[]
   setIssues: (issues: GitHubIssue[]) => void
@@ -164,6 +205,17 @@ interface TikiDesktopState {
   // Knowledge
   selectedKnowledge: string | null
   setSelectedKnowledge: (id: string | null) => void
+
+  // Branch State
+  currentBranch: BranchInfo | null
+  branchAssociations: Record<number, { branchName: string; createdAt: string }>
+  branchOperationInProgress: boolean
+  setCurrentBranch: (branch: BranchInfo | null) => void
+  setBranchAssociations: (
+    associations: Record<number, { branchName: string; createdAt: string }>
+  ) => void
+  associateBranch: (issueNumber: number, branchName: string) => void
+  setBranchOperationInProgress: (inProgress: boolean) => void
 }
 
 export const useTikiStore = create<TikiDesktopState>()(
@@ -299,6 +351,135 @@ export const useTikiStore = create<TikiDesktopState>()(
           return get().terminals[index]
         },
 
+        // Terminal Split Layout
+        terminalLayout: {
+          direction: 'none',
+          panes: [{ id: 'pane-default', terminalId: '', size: 100 }]
+        },
+        focusedPaneId: 'pane-default',
+
+        setTerminalLayout: (layout) => set({ terminalLayout: layout }),
+
+        splitTerminal: (direction) => {
+          set((state) => {
+            const currentPanes = state.terminalLayout.panes
+            const focusedPane = currentPanes.find((p) => p.id === state.focusedPaneId)
+            const currentTerminalId = focusedPane?.terminalId || state.activeTerminal || ''
+
+            // Find another terminal to use for the new pane
+            const usedTerminalIds = currentPanes.map((p) => p.terminalId)
+            const availableTerminal = state.terminals.find(
+              (t) => !usedTerminalIds.includes(t.id)
+            )
+            const newTerminalId = availableTerminal?.id || currentTerminalId
+
+            // Generate new pane ID
+            const newPaneId = `pane-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+            // Calculate new sizes - split existing panes evenly
+            const newPaneCount = currentPanes.length + 1
+            const newSize = 100 / newPaneCount
+
+            const newPanes = [
+              ...currentPanes.map((p) => ({ ...p, size: newSize })),
+              { id: newPaneId, terminalId: newTerminalId, size: newSize }
+            ]
+
+            return {
+              terminalLayout: {
+                direction,
+                panes: newPanes
+              },
+              focusedPaneId: newPaneId
+            }
+          })
+        },
+
+        closeSplit: (paneId) => {
+          set((state) => {
+            const currentPanes = state.terminalLayout.panes
+
+            // Don't remove the last pane
+            if (currentPanes.length <= 1) {
+              return {}
+            }
+
+            const remainingPanes = currentPanes.filter((p) => p.id !== paneId)
+
+            // Recalculate sizes to fill the space
+            const newSize = 100 / remainingPanes.length
+            const updatedPanes = remainingPanes.map((p) => ({ ...p, size: newSize }))
+
+            // If only one pane remains, reset direction to 'none'
+            const newDirection = updatedPanes.length === 1 ? 'none' : state.terminalLayout.direction
+
+            // If closing the focused pane, focus the first remaining pane
+            const newFocusedPaneId =
+              state.focusedPaneId === paneId
+                ? updatedPanes[0]?.id || null
+                : state.focusedPaneId
+
+            return {
+              terminalLayout: {
+                direction: newDirection,
+                panes: updatedPanes.length > 0 ? updatedPanes : [{ id: 'pane-default', terminalId: '', size: 100 }]
+              },
+              focusedPaneId: newFocusedPaneId
+            }
+          })
+        },
+
+        setFocusedPane: (paneId) => {
+          set((state) => {
+            const paneExists = state.terminalLayout.panes.some((p) => p.id === paneId)
+            if (paneExists) {
+              return { focusedPaneId: paneId }
+            }
+            return {}
+          })
+        },
+
+        moveFocusBetweenPanes: (direction) => {
+          set((state) => {
+            const { panes, direction: layoutDirection } = state.terminalLayout
+            if (panes.length <= 1) return {}
+
+            const currentIndex = panes.findIndex((p) => p.id === state.focusedPaneId)
+            if (currentIndex === -1) return {}
+
+            let newIndex = currentIndex
+
+            // For horizontal layout, left/right moves between panes
+            // For vertical layout, up/down moves between panes
+            if (layoutDirection === 'horizontal') {
+              if (direction === 'left') {
+                newIndex = currentIndex > 0 ? currentIndex - 1 : panes.length - 1
+              } else if (direction === 'right') {
+                newIndex = currentIndex < panes.length - 1 ? currentIndex + 1 : 0
+              }
+            } else if (layoutDirection === 'vertical') {
+              if (direction === 'up') {
+                newIndex = currentIndex > 0 ? currentIndex - 1 : panes.length - 1
+              } else if (direction === 'down') {
+                newIndex = currentIndex < panes.length - 1 ? currentIndex + 1 : 0
+              }
+            }
+
+            return { focusedPaneId: panes[newIndex].id }
+          })
+        },
+
+        updatePaneTerminal: (paneId, terminalId) => {
+          set((state) => ({
+            terminalLayout: {
+              ...state.terminalLayout,
+              panes: state.terminalLayout.panes.map((p) =>
+                p.id === paneId ? { ...p, terminalId } : p
+              )
+            }
+          }))
+        },
+
         // GitHub
         issues: [],
         setIssues: (issues) => set({ issues }),
@@ -354,7 +535,25 @@ export const useTikiStore = create<TikiDesktopState>()(
 
         // Knowledge
         selectedKnowledge: null,
-        setSelectedKnowledge: (selectedKnowledge) => set({ selectedKnowledge })
+        setSelectedKnowledge: (selectedKnowledge) => set({ selectedKnowledge }),
+
+        // Branch State
+        currentBranch: null,
+        branchAssociations: {},
+        branchOperationInProgress: false,
+        setCurrentBranch: (currentBranch) => set({ currentBranch }),
+        setBranchAssociations: (branchAssociations) => set({ branchAssociations }),
+        associateBranch: (issueNumber, branchName) =>
+          set((state) => ({
+            branchAssociations: {
+              ...state.branchAssociations,
+              [issueNumber]: {
+                branchName,
+                createdAt: new Date().toISOString()
+              }
+            }
+          })),
+        setBranchOperationInProgress: (branchOperationInProgress) => set({ branchOperationInProgress })
       }),
       {
         name: 'tiki-desktop-storage',
@@ -365,7 +564,9 @@ export const useTikiStore = create<TikiDesktopState>()(
           sidebarCollapsed: state.sidebarCollapsed,
           detailPanelCollapsed: state.detailPanelCollapsed,
           activeTab: state.activeTab,
-          recentCommands: state.recentCommands
+          recentCommands: state.recentCommands,
+          terminalLayout: state.terminalLayout,
+          focusedPaneId: state.focusedPaneId
         })
       }
     ),

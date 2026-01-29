@@ -147,6 +147,13 @@ async function handleReleaseChange(filePath: string): Promise<void> {
   })
 }
 
+async function handleBranchesChange(filePath: string): Promise<void> {
+  debounce('branches', async () => {
+    const data = await safeReadJson(filePath)
+    sendToRenderer('tiki:branches-changed', data)
+  })
+}
+
 function handleFileChange(filePath: string): void {
   // Normalize path separators
   const normalizedPath = filePath.replace(/\\/g, '/')
@@ -159,6 +166,8 @@ function handleFileChange(filePath: string): void {
     handleQueueChange(filePath)
   } else if (normalizedPath.includes('/releases/') && normalizedPath.endsWith('.json')) {
     handleReleaseChange(filePath)
+  } else if (normalizedPath.endsWith('/branches.json')) {
+    handleBranchesChange(filePath)
   }
 }
 
@@ -180,7 +189,8 @@ export function startWatching(path: string): void {
       join(tikiPath, 'state', '*.json'),
       join(tikiPath, 'plans', '*.json'),
       join(tikiPath, 'queue', '*.json'),
-      join(tikiPath, 'releases', '*.json')
+      join(tikiPath, 'releases', '*.json'),
+      join(tikiPath, 'branches.json')
     ],
     {
       persistent: true,
@@ -239,6 +249,12 @@ export async function getQueue(): Promise<unknown | null> {
   if (!projectPath) return null
   const queuePath = join(projectPath, '.tiki', 'queue', 'pending.json')
   return safeReadJson(queuePath)
+}
+
+export async function getBranches(): Promise<unknown | null> {
+  if (!projectPath) return null
+  const branchesPath = join(projectPath, '.tiki', 'branches.json')
+  return safeReadJson(branchesPath)
 }
 
 export async function getReleases(): Promise<unknown[]> {

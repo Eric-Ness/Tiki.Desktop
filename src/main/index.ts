@@ -2,16 +2,19 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { execSync } from 'child_process'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { setMainWindow, cleanupAllTerminals } from './services/terminal-manager'
+import { setMainWindow, cleanupAllTerminals, saveTerminalStateImmediate } from './services/terminal-manager'
 import { setFileWatcherWindow, startWatching, stopWatching } from './services/file-watcher'
 import { setGitHubWindow } from './services/github-bridge'
 import { registerTerminalHandlers } from './ipc/terminal'
 import { registerTikiHandlers } from './ipc/tiki'
 import { registerGitHubHandlers } from './ipc/github'
+import { registerGitHandlers } from './ipc/git'
+import { registerBranchHandlers } from './ipc/branch'
 import { registerProjectHandlers } from './ipc/projects'
 import { registerSettingsHandlers } from './ipc/settings'
 import { registerConfigHandlers } from './ipc/config'
 import { registerKnowledgeHandlers } from './ipc/knowledge'
+import { registerUsageHandlers } from './ipc/usage'
 import { setMainWindow as setSettingsWindow } from './services/settings-store'
 import { setMainWindow as setNotificationWindow } from './services/notification-service'
 
@@ -65,9 +68,12 @@ app.whenReady().then(() => {
   registerTerminalHandlers()
   registerTikiHandlers()
   registerGitHubHandlers()
+  registerGitHandlers()
+  registerBranchHandlers()
   registerSettingsHandlers()
   registerConfigHandlers()
   registerKnowledgeHandlers()
+  registerUsageHandlers()
 
   createWindow()
 
@@ -98,6 +104,8 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
+  // Save terminal state before quitting (for session restoration)
+  saveTerminalStateImmediate()
   cleanupAllTerminals()
   stopWatching()
 })
@@ -127,4 +135,9 @@ ipcMain.handle('git:branch', (_event, cwd?: string) => {
   } catch {
     return null
   }
+})
+
+// Open external URL in default browser
+ipcMain.handle('shell:open-external', async (_event, url: string) => {
+  await shell.openExternal(url)
 })

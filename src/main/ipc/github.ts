@@ -6,6 +6,14 @@ import {
   openIssueInBrowser,
   checkGhCli
 } from '../services/github-bridge'
+import { getPRForIssue, getPRChecks } from '../services/pr-service'
+
+// Track current project path
+let currentProjectPath: string = process.cwd()
+
+export function setGitHubProjectPath(path: string): void {
+  currentProjectPath = path
+}
 
 export function registerGitHubHandlers(): void {
   // Check if gh CLI is available
@@ -34,5 +42,15 @@ export function registerGitHubHandlers(): void {
   // Open issue in browser
   ipcMain.handle('github:open-in-browser', async (_, { number, cwd }: { number: number; cwd?: string }) => {
     await openIssueInBrowser(number, cwd)
+  })
+
+  // Get PR for an issue
+  ipcMain.handle('github:get-pr-for-issue', async (_, issueNumber: number) => {
+    return getPRForIssue(currentProjectPath, issueNumber)
+  })
+
+  // Get PR checks
+  ipcMain.handle('github:get-pr-checks', async (_, prNumber: number) => {
+    return getPRChecks(currentProjectPath, prNumber)
   })
 }

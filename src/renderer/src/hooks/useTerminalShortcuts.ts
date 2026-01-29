@@ -8,6 +8,10 @@ import { useTikiStore } from '../stores/tiki-store'
  * - Ctrl+Shift+T: Create new terminal
  * - Ctrl+W: Close active terminal (auto-creates new if last one closed)
  * - Ctrl+1-9: Switch to terminal by index
+ * - Ctrl+\: Split terminal horizontally
+ * - Ctrl+Shift+\: Split terminal vertically
+ * - Ctrl+Alt+Arrow: Move focus between panes
+ * - Ctrl+Shift+W: Close current split pane
  */
 export function useTerminalShortcuts() {
   const createTab = useTikiStore((state) => state.createTab)
@@ -15,6 +19,12 @@ export function useTerminalShortcuts() {
   const setActiveTerminalTab = useTikiStore((state) => state.setActiveTerminalTab)
   const activeTerminal = useTikiStore((state) => state.activeTerminal)
   const getTabByIndex = useTikiStore((state) => state.getTabByIndex)
+
+  // Split terminal shortcuts
+  const splitTerminal = useTikiStore((state) => state.splitTerminal)
+  const closeSplit = useTikiStore((state) => state.closeSplit)
+  const moveFocusBetweenPanes = useTikiStore((state) => state.moveFocusBetweenPanes)
+  const focusedPaneId = useTikiStore((state) => state.focusedPaneId)
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
@@ -25,12 +35,40 @@ export function useTerminalShortcuts() {
         return
       }
 
+      // Ctrl+Shift+W - Close current split pane
+      if (event.ctrlKey && event.shiftKey && event.key.toUpperCase() === 'W') {
+        event.preventDefault()
+        if (focusedPaneId) {
+          closeSplit(focusedPaneId)
+        }
+        return
+      }
+
       // Ctrl+W - Close active terminal
       if (event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 'w') {
         event.preventDefault()
         if (activeTerminal) {
           closeTab(activeTerminal)
         }
+        return
+      }
+
+      // Ctrl+\ or Ctrl+Shift+\ - Split terminal
+      if (event.ctrlKey && event.key === '\\') {
+        event.preventDefault()
+        if (event.shiftKey) {
+          splitTerminal('vertical')
+        } else {
+          splitTerminal('horizontal')
+        }
+        return
+      }
+
+      // Ctrl+Alt+Arrow - Move focus between panes
+      if (event.ctrlKey && event.altKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+        event.preventDefault()
+        const direction = event.key.replace('Arrow', '').toLowerCase() as 'left' | 'right' | 'up' | 'down'
+        moveFocusBetweenPanes(direction)
         return
       }
 
@@ -45,7 +83,7 @@ export function useTerminalShortcuts() {
         return
       }
     },
-    [createTab, closeTab, setActiveTerminalTab, activeTerminal, getTabByIndex]
+    [createTab, closeTab, setActiveTerminalTab, activeTerminal, getTabByIndex, splitTerminal, closeSplit, moveFocusBetweenPanes, focusedPaneId]
   )
 
   useEffect(() => {

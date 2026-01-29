@@ -1,0 +1,86 @@
+{
+  "version": "v0.7.0",
+  "createdAt": "2026-01-28T22:45:00.000Z",
+  "status": "active",
+  "requirementsEnabled": true,
+  "githubMilestone": null,
+  "issues": [
+    {
+      "number": 23,
+      "title": "feat: Add terminal session persistence across app restarts",
+      "status": "completed",
+      "requirements": ["CORE-05"],
+      "currentPhase": 6,
+      "totalPhases": 6,
+      "completedAt": "2026-01-28T19:30:00.000Z"
+    },
+    {
+      "number": 24,
+      "title": "feat: Add split terminal view for side-by-side terminals",
+      "status": "completed",
+      "requirements": ["CORE-05", "UI-01"],
+      "currentPhase": 5,
+      "totalPhases": 5,
+      "completedAt": "2026-01-28T20:00:00.000Z"
+    },
+    {
+      "number": 25,
+      "title": "feat: Add timeline view for phase progression history",
+      "status": "completed",
+      "requirements": ["CORE-06", "UI-03"],
+      "currentPhase": 3,
+      "totalPhases": 3,
+      "completedAt": "2026-01-28T19:30:00.000Z"
+    },
+    {
+      "number": 27,
+      "title": "feat: Add activity log for Tiki events",
+      "status": "completed",
+      "requirements": ["UI-03"],
+      "currentPhase": 4,
+      "totalPhases": 4,
+      "completedAt": "2026-01-28T19:00:00.000Z"
+    },
+    {
+      "number": 28,
+      "title": "feat: Add issue dependency graph visualization",
+      "status": "completed",
+      "requirements": ["GITHUB-04", "CORE-06"],
+      "currentPhase": 3,
+      "totalPhases": 3,
+      "completedAt": "2026-01-28T20:00:00.000Z"
+    },
+    {
+      "number": 29,
+      "title": "feat: Add phase diff view showing file changes",
+      "status": "completed",
+      "requirements": ["CORE-06", "UI-03"],
+      "currentPhase": 4,
+      "totalPhases": 4,
+      "completedAt": "2026-01-28T18:40:00.000Z"
+    },
+    {
+      "number": 33,
+      "title": "feat: Add PR preview in issue detail",
+      "status": "completed",
+      "requirements": ["GITHUB-03"],
+      "currentPhase": 5,
+      "totalPhases": 5,
+      "completedAt": "2026-01-28T18:40:00.000Z"
+    },
+    {
+      "number": 35,
+      "title": "feat: Add Claude API usage and cost tracking",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": 5,
+      "totalPhases": 5,
+      "completedAt": "2026-01-28T19:00:00.000Z"
+    }
+  ],
+  "requirements": {
+    "total": 6,
+    "implemented": 6,
+    "verified": 0
+  }
+}

@@ -12,6 +12,8 @@ export function IssueList({ onRefresh }: IssueListProps) {
   const setSelectedIssue = useTikiStore((state) => state.setSelectedIssue)
   const setSelectedNode = useTikiStore((state) => state.setSelectedNode)
   const tikiState = useTikiStore((state) => state.tikiState)
+  const branchAssociations = useTikiStore((state) => state.branchAssociations)
+  const currentBranch = useTikiStore((state) => state.currentBranch)
 
   const handleSelectIssue = (issueNumber: number) => {
     // Clear workflow node selection when selecting an issue from sidebar
@@ -93,15 +95,21 @@ export function IssueList({ onRefresh }: IssueListProps) {
           <RefreshButton />
         </div>
       )}
-      {issues.map((issue) => (
-        <IssueItem
-          key={issue.number}
-          issue={issue}
-          isSelected={selectedIssue === issue.number}
-          isActive={tikiState?.activeIssue === issue.number}
-          onClick={() => handleSelectIssue(issue.number)}
-        />
-      ))}
+      {issues.map((issue) => {
+        const branchInfo = branchAssociations[issue.number]
+        const isCurrentBranch = branchInfo && currentBranch?.name === branchInfo.branchName
+        return (
+          <IssueItem
+            key={issue.number}
+            issue={issue}
+            isSelected={selectedIssue === issue.number}
+            isActive={tikiState?.activeIssue === issue.number}
+            branchName={branchInfo?.branchName}
+            isCurrentBranch={isCurrentBranch}
+            onClick={() => handleSelectIssue(issue.number)}
+          />
+        )
+      })}
     </div>
   )
 }
@@ -110,10 +118,18 @@ interface IssueItemProps {
   issue: GitHubIssue
   isSelected: boolean
   isActive: boolean
+  branchName?: string
+  isCurrentBranch?: boolean
   onClick: () => void
 }
 
-function IssueItem({ issue, isSelected, isActive, onClick }: IssueItemProps) {
+// Helper to truncate branch name with ellipsis
+function truncateBranchName(name: string, maxLength: number = 10): string {
+  if (name.length <= maxLength) return name
+  return name.slice(0, maxLength - 1) + '\u2026'
+}
+
+function IssueItem({ issue, isSelected, isActive, branchName, isCurrentBranch, onClick }: IssueItemProps) {
   return (
     <button
       onClick={onClick}
@@ -146,6 +162,26 @@ function IssueItem({ issue, isSelected, isActive, onClick }: IssueItemProps) {
                 title="Has Tiki plan"
               >
                 Plan
+              </span>
+            )}
+            {branchName && (
+              <span
+                className={`text-[10px] px-1 py-0.5 rounded flex items-center gap-0.5 ${
+                  isCurrentBranch
+                    ? 'bg-green-500/30 text-green-300 ring-1 ring-green-500/50'
+                    : 'bg-slate-500/20 text-slate-400'
+                }`}
+                title={branchName}
+              >
+                {/* Git branch icon */}
+                <svg
+                  className="w-2.5 h-2.5"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                >
+                  <path d="M9.5 3.25a2.25 2.25 0 1 1 3 2.122V6A2.5 2.5 0 0 1 10 8.5H6a1 1 0 0 0-1 1v1.128a2.251 2.251 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.5 0v1.836A2.493 2.493 0 0 1 6 7h4a1 1 0 0 0 1-1v-.628A2.25 2.25 0 0 1 9.5 3.25Zm-6 0a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Zm8.25-.75a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5ZM4.25 12a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z" />
+                </svg>
+                {truncateBranchName(branchName)}
               </span>
             )}
           </div>

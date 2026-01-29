@@ -100,7 +100,14 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       const handler = (_: unknown, { id, status }: { id: string; status: 'idle' | 'running' }) => callback(id, status)
       ipcRenderer.on('terminal:status-changed', handler)
       return () => ipcRenderer.removeListener('terminal:status-changed', handler)
-    }
+    },
+    // Session persistence
+    getPersistedState: () => ipcRenderer.invoke('terminal:get-persisted-state'),
+    restoreSession: () => ipcRenderer.invoke('terminal:restore-session'),
+    clearPersistedState: () => ipcRenderer.invoke('terminal:clear-persisted-state'),
+    isRestored: (id: string) => ipcRenderer.invoke('terminal:is-restored', { id }),
+    setPersistenceEnabled: (enabled: boolean) =>
+      ipcRenderer.invoke('terminal:set-persistence-enabled', { enabled })
   },
 
   // Tiki state API
@@ -127,10 +134,16 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.on('tiki:release-changed', handler)
       return () => ipcRenderer.removeListener('tiki:release-changed', handler)
     },
+    onBranchesChange: (callback: (branches: unknown) => void) => {
+      const handler = (_: unknown, branches: unknown) => callback(branches)
+      ipcRenderer.on('tiki:branches-changed', handler)
+      return () => ipcRenderer.removeListener('tiki:branches-changed', handler)
+    },
     getState: () => ipcRenderer.invoke('tiki:get-state'),
     getPlan: (issueNumber: number) => ipcRenderer.invoke('tiki:get-plan', issueNumber),
     getQueue: () => ipcRenderer.invoke('tiki:get-queue'),
     getReleases: () => ipcRenderer.invoke('tiki:get-releases'),
+    getBranches: () => ipcRenderer.invoke('tiki:get-branches'),
     getCommands: (cwd?: string) => ipcRenderer.invoke('tiki:get-commands', { cwd }),
     // Notification click handler
     onNotificationClick: (
@@ -160,6 +173,41 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
     }
   },
 
+  // Git API (for diff viewing)
+  git: {
+    getFileDiff: (cwd: string, filePath: string, fromRef?: string, toRef?: string) =>
+      ipcRenderer.invoke('git:get-file-diff', { cwd, filePath, fromRef, toRef }),
+    getChangedFiles: (cwd: string, fromRef?: string, toRef?: string) =>
+      ipcRenderer.invoke('git:get-changed-files', { cwd, fromRef, toRef }),
+    getDiffStats: (cwd: string, fromRef?: string, toRef?: string) =>
+      ipcRenderer.invoke('git:get-diff-stats', { cwd, fromRef, toRef })
+  },
+
+  // Branch API (for branch management)
+  branch: {
+    list: (cwd: string) => ipcRenderer.invoke('branch:list', { cwd }),
+    current: (cwd: string) => ipcRenderer.invoke('branch:current', { cwd }),
+    create: (cwd: string, options: { name: string; checkout?: boolean; baseBranch?: string }) =>
+      ipcRenderer.invoke('branch:create', { cwd, options }),
+    switch: (
+      cwd: string,
+      branchName: string,
+      options?: { stash?: boolean; discard?: boolean }
+    ) => ipcRenderer.invoke('branch:switch', { cwd, branchName, options }),
+    delete: (cwd: string, branchName: string, force?: boolean) =>
+      ipcRenderer.invoke('branch:delete', { cwd, branchName, force }),
+    push: (cwd: string, branchName: string) =>
+      ipcRenderer.invoke('branch:push', { cwd, branchName }),
+    workingTreeStatus: (cwd: string) =>
+      ipcRenderer.invoke('branch:working-tree-status', { cwd }),
+    associateIssue: (cwd: string, branchName: string, issueNumber: number) =>
+      ipcRenderer.invoke('branch:associate-issue', { cwd, branchName, issueNumber }),
+    getForIssue: (cwd: string, issueNumber: number) =>
+      ipcRenderer.invoke('branch:get-for-issue', { cwd, issueNumber }),
+    generateName: (issue: { number: number; title: string; type?: string }, pattern?: string) =>
+      ipcRenderer.invoke('branch:generate-name', { issue, pattern })
+  },
+
   // GitHub API
   github: {
     checkCli: () => ipcRenderer.invoke('github:check-cli'),
@@ -170,6 +218,10 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
     refresh: (cwd?: string) => ipcRenderer.invoke('github:refresh', { cwd }),
     openInBrowser: (number: number, cwd?: string) =>
       ipcRenderer.invoke('github:open-in-browser', { number, cwd }),
+    getPRForIssue: (issueNumber: number) =>
+      ipcRenderer.invoke('github:get-pr-for-issue', issueNumber),
+    getPRChecks: (prNumber: number) =>
+      ipcRenderer.invoke('github:get-pr-checks', prNumber),
     onIssuesUpdated: (callback: (issues: unknown[]) => void) => {
       const handler = (_: unknown, issues: unknown[]) => callback(issues)
       ipcRenderer.on('github:issues-updated', handler)
@@ -180,6 +232,11 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.on('github:error', handler)
       return () => ipcRenderer.removeListener('github:error', handler)
     }
+  },
+
+  // Shell API for opening external URLs
+  shell: {
+    openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url)
   },
 
   // Settings API
@@ -205,6 +262,25 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.invoke('config:write', { projectPath, config }),
     validate: (config: unknown) => ipcRenderer.invoke('config:validate', { config }),
     reset: (projectPath: string) => ipcRenderer.invoke('config:reset', { projectPath })
+  },
+
+  // Usage API (for API cost tracking)
+  usage: {
+    addRecord: (record: {
+      inputTokens: number
+      outputTokens: number
+      model: string
+      sessionId: string
+      issueNumber?: number
+    }) => ipcRenderer.invoke('usage:add-record', record),
+    getSummary: (since?: string) => ipcRenderer.invoke('usage:get-summary', since),
+    getRecords: (since?: string) => ipcRenderer.invoke('usage:get-records', since),
+    clear: () => ipcRenderer.invoke('usage:clear'),
+    getIssueUsage: (issueNumber: number) =>
+      ipcRenderer.invoke('usage:get-issue-usage', issueNumber),
+    getSessionUsage: (sessionId: string) =>
+      ipcRenderer.invoke('usage:get-session-usage', sessionId),
+    getDailyUsage: (days?: number) => ipcRenderer.invoke('usage:get-daily-usage', days)
   },
 
   // Knowledge API (for .tiki/knowledge/)
@@ -265,6 +341,12 @@ declare global {
         onData: (callback: (id: string, data: string) => void) => () => void
         onExit: (callback: (id: string, code: number) => void) => () => void
         onStatusChange: (callback: (id: string, status: 'idle' | 'running') => void) => () => void
+        // Session persistence
+        getPersistedState: () => Promise<PersistedTerminalState | null>
+        restoreSession: () => Promise<RestoreSessionResult>
+        clearPersistedState: () => Promise<{ success: boolean }>
+        isRestored: (id: string) => Promise<boolean>
+        setPersistenceEnabled: (enabled: boolean) => Promise<{ success: boolean }>
       }
       tiki: {
         watch: (path: string) => Promise<boolean>
@@ -273,10 +355,12 @@ declare global {
         onPlanChange: (callback: (data: { filename: string; plan: unknown }) => void) => () => void
         onQueueChange: (callback: (queue: unknown) => void) => () => void
         onReleaseChange: (callback: (data: { filename: string; release: unknown }) => void) => () => void
+        onBranchesChange: (callback: (branches: unknown) => void) => () => void
         getState: () => Promise<unknown>
         getPlan: (issueNumber: number) => Promise<unknown>
         getQueue: () => Promise<unknown>
         getReleases: () => Promise<unknown[]>
+        getBranches: () => Promise<Record<number, { branchName: string; createdAt: string }> | null>
         getCommands: (cwd?: string) => Promise<Array<{
           name: string
           displayName: string
@@ -296,14 +380,83 @@ declare global {
         switchProject: (path: string) => Promise<{ success: boolean; error?: string }>
         onSwitched: (callback: (data: { path: string }) => void) => () => void
       }
+      git: {
+        getFileDiff: (
+          cwd: string,
+          filePath: string,
+          fromRef?: string,
+          toRef?: string
+        ) => Promise<string>
+        getChangedFiles: (
+          cwd: string,
+          fromRef?: string,
+          toRef?: string
+        ) => Promise<
+          Array<{
+            path: string
+            status: 'added' | 'modified' | 'deleted'
+            additions: number
+            deletions: number
+          }>
+        >
+        getDiffStats: (
+          cwd: string,
+          fromRef?: string,
+          toRef?: string
+        ) => Promise<{
+          files: Array<{
+            path: string
+            status: 'added' | 'modified' | 'deleted'
+            additions: number
+            deletions: number
+          }>
+          totalAdditions: number
+          totalDeletions: number
+          totalFiles: number
+        }>
+      }
+      branch: {
+        list: (cwd: string) => Promise<BranchInfo[]>
+        current: (cwd: string) => Promise<BranchInfo>
+        create: (
+          cwd: string,
+          options: { name: string; checkout?: boolean; baseBranch?: string }
+        ) => Promise<GitOperationResult>
+        switch: (
+          cwd: string,
+          branchName: string,
+          options?: { stash?: boolean; discard?: boolean }
+        ) => Promise<GitOperationResult>
+        delete: (cwd: string, branchName: string, force?: boolean) => Promise<GitOperationResult>
+        push: (cwd: string, branchName: string) => Promise<GitOperationResult>
+        workingTreeStatus: (cwd: string) => Promise<WorkingTreeStatus>
+        associateIssue: (
+          cwd: string,
+          branchName: string,
+          issueNumber: number
+        ) => Promise<{ success: boolean; error?: string }>
+        getForIssue: (
+          cwd: string,
+          issueNumber: number
+        ) => Promise<{ branchName: string; createdAt: string } | null>
+        generateName: (
+          issue: { number: number; title: string; type?: string },
+          pattern?: string
+        ) => Promise<string>
+      }
       github: {
         checkCli: () => Promise<{ available: boolean; authenticated: boolean; error?: string }>
         getIssues: (state?: 'open' | 'closed' | 'all', cwd?: string) => Promise<unknown[]>
         getIssue: (number: number, cwd?: string) => Promise<unknown>
         refresh: (cwd?: string) => Promise<void>
         openInBrowser: (number: number, cwd?: string) => Promise<void>
+        getPRForIssue: (issueNumber: number) => Promise<PullRequest | null>
+        getPRChecks: (prNumber: number) => Promise<CheckStatus[]>
         onIssuesUpdated: (callback: (issues: unknown[]) => void) => () => void
         onError: (callback: (error: { error: string }) => void) => () => void
+      }
+      shell: {
+        openExternal: (url: string) => Promise<void>
       }
       settings: {
         get: {
@@ -336,6 +489,21 @@ declare global {
           config: TikiConfig
           error?: string
         }>
+      }
+      usage: {
+        addRecord: (record: {
+          inputTokens: number
+          outputTokens: number
+          model: string
+          sessionId: string
+          issueNumber?: number
+        }) => Promise<void>
+        getSummary: (since?: string) => Promise<UsageSummary>
+        getRecords: (since?: string) => Promise<UsageRecord[]>
+        clear: () => Promise<void>
+        getIssueUsage: (issueNumber: number) => Promise<UsageSummary>
+        getSessionUsage: (sessionId: string) => Promise<UsageSummary>
+        getDailyUsage: (days?: number) => Promise<DailyUsage[]>
       }
       knowledge: {
         list: (
@@ -371,6 +539,55 @@ declare global {
   }
 }
 
+// Usage types (mirrors main process)
+interface UsageRecord {
+  id: string
+  timestamp: string
+  inputTokens: number
+  outputTokens: number
+  model: string
+  issueNumber?: number
+  sessionId: string
+}
+
+interface UsageSummary {
+  totalInputTokens: number
+  totalOutputTokens: number
+  estimatedCost: number
+  recordCount: number
+}
+
+interface DailyUsage {
+  date: string
+  totalInputTokens: number
+  totalOutputTokens: number
+  estimatedCost: number
+  recordCount: number
+}
+
+// PR types (mirrors main process)
+interface PullRequest {
+  number: number
+  title: string
+  state: 'OPEN' | 'CLOSED' | 'MERGED'
+  isDraft: boolean
+  headRefName: string
+  baseRefName: string
+  url: string
+  mergeable: string
+  reviewDecision: string | null
+  statusCheckRollup: {
+    state: string
+    contexts: { name: string; state: string; conclusion: string }[]
+  } | null
+}
+
+interface CheckStatus {
+  name: string
+  state: string
+  conclusion: string
+}
+
 // Knowledge entry type (mirrors main process)
 interface KnowledgeEntry {
   id: string
@@ -401,5 +618,63 @@ interface TikiConfig {
     autoCapture: boolean
     maxEntries: number
   }
+}
+
+// Branch types (mirrors main process)
+interface BranchInfo {
+  name: string
+  current: boolean
+  remote: string | undefined
+  ahead: number
+  behind: number
+  lastCommit: string | undefined
+  associatedIssue: number | undefined
+}
+
+interface WorkingTreeStatus {
+  isDirty: boolean
+  hasUntracked: boolean
+  hasStaged: boolean
+  hasUnstaged: boolean
+  files: Array<{ path: string; status: string }>
+}
+
+interface GitOperationResult<T = void> {
+  success: boolean
+  data?: T
+  error?: string
+  errorCode?: GitErrorCode
+  recoveryOptions?: string[]
+}
+
+type GitErrorCode =
+  | 'UNCOMMITTED_CHANGES'
+  | 'MERGE_CONFLICT'
+  | 'BRANCH_EXISTS'
+  | 'BRANCH_NOT_FOUND'
+  | 'UNMERGED_BRANCH'
+  | 'NETWORK_ERROR'
+  | 'PERMISSION_DENIED'
+  | 'UNKNOWN_ERROR'
+
+// Terminal persistence types
+interface PersistedTerminal {
+  id: string
+  name: string
+  cwd: string
+  scrollback?: string[]
+}
+
+interface PersistedTerminalState {
+  terminals: PersistedTerminal[]
+  activeTerminal: string | null
+  savedAt: string
+}
+
+interface RestoreSessionResult {
+  success: boolean
+  restoredCount: number
+  idMap: Record<string, string>
+  newActiveTerminal: string | null
 }
 

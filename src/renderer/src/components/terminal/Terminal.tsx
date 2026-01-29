@@ -5,9 +5,15 @@ import { WebLinksAddon } from 'xterm-addon-web-links'
 import 'xterm/css/xterm.css'
 import { useSettingsCategory, TerminalSettings } from '../../hooks/useSettings'
 
+interface RestoredTerminalInfo {
+  id: string
+  savedAt: string
+}
+
 interface TerminalProps {
   terminalId: string | null
   onReady?: () => void
+  restoredInfo?: RestoredTerminalInfo
 }
 
 // Default terminal settings used when settings haven't loaded yet
@@ -21,11 +27,12 @@ const DEFAULT_TERMINAL_SETTINGS: TerminalSettings = {
   shell: ''
 }
 
-export function Terminal({ terminalId, onReady }: TerminalProps) {
+export function Terminal({ terminalId, onReady, restoredInfo }: TerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const terminalRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const cleanupRef = useRef<(() => void)[]>([])
+  const restoredMessageShownRef = useRef(false)
 
   // Get terminal settings from the settings store
   const { settings: terminalSettings } = useSettingsCategory('terminal')
@@ -210,6 +217,26 @@ export function Terminal({ terminalId, onReady }: TerminalProps) {
     window.addEventListener('terminal:focus', handleFocus)
     return () => window.removeEventListener('terminal:focus', handleFocus)
   }, [terminalId])
+
+  // Show "Session restored" message for restored terminals
+  useEffect(() => {
+    if (
+      restoredInfo &&
+      terminalRef.current &&
+      terminalId &&
+      !restoredMessageShownRef.current
+    ) {
+      restoredMessageShownRef.current = true
+
+      // Format the timestamp
+      const savedDate = new Date(restoredInfo.savedAt)
+      const formattedDate = savedDate.toLocaleString()
+
+      // Write the session restored message to the terminal
+      const message = `\r\n\x1b[36m[Session restored from ${formattedDate}]\x1b[0m\r\n\r\n`
+      terminalRef.current.write(message)
+    }
+  }, [restoredInfo, terminalId])
 
   return (
     <div

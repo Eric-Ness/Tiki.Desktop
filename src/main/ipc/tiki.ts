@@ -5,7 +5,8 @@ import {
   getCurrentState,
   getPlan,
   getQueue,
-  getReleases
+  getReleases,
+  getBranches
 } from '../services/file-watcher'
 import { loadTikiCommands } from '../services/command-loader'
 
@@ -40,6 +41,11 @@ export function registerTikiHandlers(): void {
   // Get all releases
   ipcMain.handle('tiki:get-releases', async () => {
     return getReleases()
+  })
+
+  // Get branch associations
+  ipcMain.handle('tiki:get-branches', async () => {
+    return getBranches()
   })
 
   // Get Tiki commands from .claude/commands/tiki/*.md

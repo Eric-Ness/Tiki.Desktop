@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Terminal } from './Terminal'
-import { useTikiStore } from '../../stores/tiki-store'
+import { TerminalSplitContainer } from './TerminalSplitContainer'
+import { useTikiStore, TerminalTab } from '../../stores/tiki-store'
 import { useTerminalShortcuts } from '../../hooks/useTerminalShortcuts'
 
 interface TerminalTabsProps {
   cwd: string
+}
+
+interface RestoredTerminalInfo {
+  id: string
+  savedAt: string
 }
 
 export function TerminalTabs({ cwd }: TerminalTabsProps) {
@@ -15,6 +21,10 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
   const setActiveTerminalTab = useTikiStore((state) => state.setActiveTerminalTab)
   const renameTab = useTikiStore((state) => state.renameTab)
   const setTabStatus = useTikiStore((state) => state.setTabStatus)
+  const terminalLayout = useTikiStore((state) => state.terminalLayout)
+
+  // Check if we have an active split
+  const hasSplit = terminalLayout.direction !== 'none' && terminalLayout.panes.length > 1
 
   // Edit mode state
   const [editingTabId, setEditingTabId] = useState<string | null>(null)
@@ -23,6 +33,11 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
 
   // Track whether we've initialized a terminal for this cwd
   const initializedRef = useRef(false)
+
+  // Track restored terminals for showing "Session restored" message
+  const [restoredTerminals, setRestoredTerminals] = useState<Map<string, RestoredTerminalInfo>>(
+    new Map()
+  )
 
   // Register keyboard shortcuts
   useTerminalShortcuts()
@@ -56,7 +71,7 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
         renameTab(editingTabId, trimmedValue)
       } else {
         // Revert to default name for empty input
-        const index = terminals.findIndex(t => t.id === editingTabId)
+        const index = terminals.findIndex((t) => t.id === editingTabId)
         renameTab(editingTabId, `Terminal ${index + 1}`)
       }
       setEditingTabId(null)
@@ -71,21 +86,112 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
   }, [])
 
   // Handle input key events
-  const handleEditKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      saveEdit()
-    } else if (e.key === 'Escape') {
-      e.preventDefault()
-      cancelEdit()
-    }
-  }, [saveEdit, cancelEdit])
+  const handleEditKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        saveEdit()
+      } else if (e.key === 'Escape') {
+        e.preventDefault()
+        cancelEdit()
+      }
+    },
+    [saveEdit, cancelEdit]
+  )
 
-  // Create initial terminal on mount
+  // Create a new terminal (defined first so it can be used by restoreSessionOrCreateTerminal)
+  const createTerminal = useCallback(async () => {
+    if (!cwd) return
+
+    try {
+      const ptyId = await window.tikiDesktop.terminal.create(cwd)
+      const tabName = `Terminal ${terminals.length + 1}`
+      // Create a tab in the store with the PTY ID
+      // Note: We need to use the PTY ID as the tab ID so the Terminal component can connect
+      useTikiStore.setState((state) => {
+        const isFirstTerminal = state.terminals.length === 0
+
+        return {
+          terminals: [...state.terminals, { id: ptyId, name: tabName, status: 'active' as const }],
+          activeTerminal: ptyId,
+          // Initialize layout with the first terminal
+          ...(isFirstTerminal
+            ? {
+                terminalLayout: {
+                  direction: 'none' as const,
+                  panes: [{ id: 'pane-default', terminalId: ptyId, size: 100 }]
+                },
+                focusedPaneId: 'pane-default'
+              }
+            : {})
+        }
+      })
+    } catch (error) {
+      console.error('Failed to create terminal:', error)
+    }
+  }, [cwd, terminals.length])
+
+  // Restore session from persisted state or create a new terminal
+  const restoreSessionOrCreateTerminal = useCallback(async () => {
+    if (!cwd) return
+
+    try {
+      // Try to restore from persisted state
+      const result = await window.tikiDesktop.terminal.restoreSession()
+
+      if (result.success && result.restoredCount > 0) {
+        // Get the persisted state to access savedAt timestamp
+        const persistedState = await window.tikiDesktop.terminal.getPersistedState()
+        const savedAt = persistedState?.savedAt || new Date().toISOString()
+
+        // Build terminal tabs from restored terminals
+        const restoredTabs: TerminalTab[] = []
+        const restoredInfo = new Map<string, RestoredTerminalInfo>()
+
+        for (const [oldId, newId] of Object.entries(result.idMap)) {
+          // Find the original terminal info from persisted state
+          const persistedTerminal = persistedState?.terminals.find((t) => t.id === oldId)
+          if (persistedTerminal) {
+            restoredTabs.push({
+              id: newId,
+              name: persistedTerminal.name,
+              status: 'active' as const
+            })
+            restoredInfo.set(newId, { id: newId, savedAt })
+          }
+        }
+
+        // Update store with restored terminals and initialize layout
+        const firstTerminalId = result.newActiveTerminal || restoredTabs[0]?.id || null
+        useTikiStore.setState({
+          terminals: restoredTabs,
+          activeTerminal: firstTerminalId,
+          // Initialize layout with the first terminal
+          terminalLayout: {
+            direction: 'none' as const,
+            panes: [{ id: 'pane-default', terminalId: firstTerminalId || '', size: 100 }]
+          },
+          focusedPaneId: 'pane-default'
+        })
+
+        // Track restored terminals for showing message
+        setRestoredTerminals(restoredInfo)
+
+        return
+      }
+    } catch (error) {
+      console.error('Failed to restore terminal session:', error)
+    }
+
+    // If restoration failed or no persisted state, create a new terminal
+    createTerminal()
+  }, [cwd, createTerminal])
+
+  // Try to restore session on mount, or create initial terminal
   useEffect(() => {
     if (terminals.length === 0 && cwd && !initializedRef.current) {
       initializedRef.current = true
-      createTerminal()
+      restoreSessionOrCreateTerminal()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cwd])
@@ -95,54 +201,40 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
     initializedRef.current = false
   }, [cwd])
 
-  const createTerminal = useCallback(async () => {
-    if (!cwd) return
+  const closeTerminal = useCallback(
+    async (tabId: string) => {
+      try {
+        await window.tikiDesktop.terminal.kill(tabId)
+      } catch (error) {
+        console.error('Failed to kill terminal:', error)
+      }
 
-    try {
-      const ptyId = await window.tikiDesktop.terminal.create(cwd)
-      const tabName = `Terminal ${terminals.length + 1}`
-      // Create a tab in the store with the PTY ID
-      // Note: We need to use the PTY ID as the tab ID so the Terminal component can connect
-      useTikiStore.setState((state) => ({
-        terminals: [...state.terminals, { id: ptyId, name: tabName, status: 'active' as const }],
-        activeTerminal: ptyId
-      }))
-    } catch (error) {
-      console.error('Failed to create terminal:', error)
-    }
-  }, [cwd, terminals.length])
+      // Get current state to check if this is the last terminal
+      const currentTerminals = useTikiStore.getState().terminals
+      const remainingTerminals = currentTerminals.filter((t) => t.id !== tabId)
 
-  const closeTerminal = useCallback(async (tabId: string) => {
-    try {
-      await window.tikiDesktop.terminal.kill(tabId)
-    } catch (error) {
-      console.error('Failed to kill terminal:', error)
-    }
-
-    // Get current state to check if this is the last terminal
-    const currentTerminals = useTikiStore.getState().terminals
-    const remainingTerminals = currentTerminals.filter((t) => t.id !== tabId)
-
-    if (remainingTerminals.length === 0 && cwd) {
-      // If closing the last terminal, create a new one
-      closeTab(tabId)
-      // The store's closeTab will auto-create a new tab, but we need to create a PTY for it
-      setTimeout(async () => {
-        try {
-          const ptyId = await window.tikiDesktop.terminal.create(cwd)
-          useTikiStore.setState({
-            terminals: [{ id: ptyId, name: 'Terminal 1', status: 'active' as const }],
-            activeTerminal: ptyId
-          })
-        } catch (error) {
-          console.error('Failed to create replacement terminal:', error)
-        }
-      }, 0)
-    } else {
-      // Just close the tab normally
-      closeTab(tabId)
-    }
-  }, [cwd, closeTab])
+      if (remainingTerminals.length === 0 && cwd) {
+        // If closing the last terminal, create a new one
+        closeTab(tabId)
+        // The store's closeTab will auto-create a new tab, but we need to create a PTY for it
+        setTimeout(async () => {
+          try {
+            const ptyId = await window.tikiDesktop.terminal.create(cwd)
+            useTikiStore.setState({
+              terminals: [{ id: ptyId, name: 'Terminal 1', status: 'active' as const }],
+              activeTerminal: ptyId
+            })
+          } catch (error) {
+            console.error('Failed to create replacement terminal:', error)
+          }
+        }, 0)
+      } else {
+        // Just close the tab normally
+        closeTab(tabId)
+      }
+    },
+    [cwd, closeTab]
+  )
 
   if (!cwd) {
     return (
@@ -161,9 +253,10 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
             key={tab.id}
             className={`
               group flex items-center gap-1 px-2 py-1 rounded text-xs cursor-pointer
-              ${activeTerminal === tab.id
-                ? 'bg-background text-white'
-                : 'text-slate-400 hover:text-white hover:bg-background/50'
+              ${
+                activeTerminal === tab.id
+                  ? 'bg-background text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-background/50'
               }
             `}
             onClick={() => setActiveTerminalTab(tab.id)}
@@ -209,7 +302,14 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
                   className="w-4 h-4 flex items-center justify-center rounded hover:bg-slate-600/50 opacity-0 group-hover:opacity-100 transition-opacity"
                   title="Rename terminal"
                 >
-                  <svg data-testid="edit-icon" className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    data-testid="edit-icon"
+                    className="w-3 h-3"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                   </svg>
@@ -224,7 +324,13 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
               className="w-4 h-4 flex items-center justify-center rounded hover:bg-red-500/20 opacity-0 group-hover:opacity-100 transition-opacity"
               title="Close terminal (Ctrl+W)"
             >
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                className="w-3 h-3"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <path d="M18 6L6 18M6 6l12 12" />
               </svg>
             </button>
@@ -237,7 +343,13 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
           className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-white hover:bg-background/50"
           title="New Terminal (Ctrl+Shift+T)"
         >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            className="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <path d="M12 5v14M5 12h14" />
           </svg>
         </button>
@@ -245,20 +357,33 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
 
       {/* Terminal content */}
       <div className="flex-1 overflow-hidden relative">
-        {terminals.map((tab) => (
-          <div
-            key={tab.id}
-            className={`absolute inset-0 ${activeTerminal === tab.id ? 'visible' : 'invisible'}`}
-          >
-            <Terminal terminalId={tab.id} />
-          </div>
-        ))}
+        {/* Use split container when splits are active */}
+        {hasSplit ? (
+          <TerminalSplitContainer cwd={cwd} />
+        ) : (
+          <>
+            {terminals.map((tab) => (
+              <div
+                key={tab.id}
+                className={`absolute inset-0 ${activeTerminal === tab.id ? 'visible' : 'invisible'}`}
+              >
+                <Terminal terminalId={tab.id} restoredInfo={restoredTerminals.get(tab.id)} />
+              </div>
+            ))}
+          </>
+        )}
 
         {terminals.length === 0 && (
           <div className="h-full flex items-center justify-center text-slate-500">
             <div className="text-center px-6 max-w-[280px]">
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-background-tertiary/50 flex items-center justify-center">
-                <svg className="w-8 h-8 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <svg
+                  className="w-8 h-8 text-slate-600"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
                   <polyline points="4 17 10 11 4 5" />
                   <line x1="12" y1="19" x2="20" y2="19" />
                 </svg>

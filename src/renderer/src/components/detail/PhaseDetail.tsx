@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { PhaseChanges } from '../diff'
+
 export type PhaseStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'skipped'
 
 export interface PhaseData {
@@ -8,6 +11,9 @@ export interface PhaseData {
   verification: string[]
   summary?: string
   error?: string
+  // Git refs for diff viewing (optional - set when phase completes)
+  startCommit?: string
+  endCommit?: string
 }
 
 interface PhaseDetailProps {
@@ -53,11 +59,15 @@ function FileIcon() {
 }
 
 export function PhaseDetail({ phase }: PhaseDetailProps) {
-  const { number, title, status, files, verification, summary, error } = phase
+  const { number, title, status, files, verification, summary, error, startCommit, endCommit } = phase
   const isCompleted = status === 'completed'
   const isFailed = status === 'failed'
   const showSummary = isCompleted && summary && summary.trim() !== ''
   const showError = isFailed && error && error.trim() !== ''
+  const hasChanges = (isCompleted || isFailed) && startCommit && endCommit
+
+  // Track whether changes section is expanded
+  const [showChanges, setShowChanges] = useState(false)
 
   return (
     <div className="p-4 space-y-6">
@@ -153,6 +163,41 @@ export function PhaseDetail({ phase }: PhaseDetailProps) {
           >
             <p className="text-sm text-red-300">{error}</p>
           </div>
+        </div>
+      )}
+
+      {/* Changes section (only shown when phase has commit refs) */}
+      {hasChanges && (
+        <div>
+          <button
+            onClick={() => setShowChanges(!showChanges)}
+            className="flex items-center gap-2 text-sm font-semibold text-slate-300 mb-2 hover:text-white transition-colors"
+          >
+            <svg
+              className={`w-4 h-4 transition-transform ${showChanges ? 'rotate-90' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+            Changes
+          </button>
+
+          {showChanges && (
+            <div
+              data-testid="changes-section"
+              className="bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700"
+              style={{ height: '400px' }}
+            >
+              <PhaseChanges fromRef={startCommit} toRef={endCommit} />
+            </div>
+          )}
         </div>
       )}
     </div>
