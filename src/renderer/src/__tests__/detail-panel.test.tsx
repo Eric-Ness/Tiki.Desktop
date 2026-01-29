@@ -1,8 +1,14 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
 import { DetailPanel } from '../components/layout/DetailPanel'
 import { useTikiStore } from '../stores/tiki-store'
 import type { ExecutionPlan } from '../stores/tiki-store'
+import { LearningProvider } from '../contexts/LearningContext'
+
+// Wrapper function to provide LearningProvider context
+function renderWithProviders(ui: React.ReactElement) {
+  return render(<LearningProvider>{ui}</LearningProvider>)
+}
 
 // Helper to create a mock execution plan
 function createMockPlan(overrides: Partial<ExecutionPlan> = {}): ExecutionPlan {
@@ -42,16 +48,24 @@ function createMockPlan(overrides: Partial<ExecutionPlan> = {}): ExecutionPlan {
 
 describe('DetailPanel Integration', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     // Reset store state before each test
     useTikiStore.setState({
       selectedNode: null,
       currentPlan: null
     })
+    // Mock learning API with learning mode disabled by default for tests
+    vi.mocked(window.tikiDesktop.learning.getProgress).mockResolvedValue({
+      learningModeEnabled: false,
+      expertModeEnabled: false,
+      conceptsSeen: [],
+      totalExecutions: 0
+    })
   })
 
   describe('Empty state', () => {
     it('shows empty state when no selection', () => {
-      render(<DetailPanel />)
+      renderWithProviders(<DetailPanel />)
 
       expect(screen.getByText('No Selection')).toBeInTheDocument()
       expect(
@@ -65,7 +79,7 @@ describe('DetailPanel Integration', () => {
         currentPlan: createMockPlan()
       })
 
-      render(<DetailPanel />)
+      renderWithProviders(<DetailPanel />)
 
       expect(screen.getByText('No Selection')).toBeInTheDocument()
     })
@@ -76,7 +90,7 @@ describe('DetailPanel Integration', () => {
         currentPlan: createMockPlan()
       })
 
-      render(<DetailPanel />)
+      renderWithProviders(<DetailPanel />)
 
       expect(screen.getByText('No Selection')).toBeInTheDocument()
     })
@@ -89,7 +103,7 @@ describe('DetailPanel Integration', () => {
         currentPlan: createMockPlan()
       })
 
-      render(<DetailPanel />)
+      renderWithProviders(<DetailPanel />)
 
       expect(screen.getByTestId('phase-detail-number')).toHaveTextContent('1')
       expect(screen.getByTestId('phase-detail-title')).toHaveTextContent('Phase One')
@@ -102,7 +116,7 @@ describe('DetailPanel Integration', () => {
         currentPlan: createMockPlan()
       })
 
-      render(<DetailPanel />)
+      renderWithProviders(<DetailPanel />)
 
       expect(screen.getByTestId('phase-detail-number')).toHaveTextContent('2')
       expect(screen.getByTestId('phase-detail-title')).toHaveTextContent('Phase Two')
@@ -117,7 +131,7 @@ describe('DetailPanel Integration', () => {
         currentPlan: createMockPlan()
       })
 
-      render(<DetailPanel />)
+      renderWithProviders(<DetailPanel />)
 
       expect(screen.getByText('No Selection')).toBeInTheDocument()
     })
@@ -128,7 +142,7 @@ describe('DetailPanel Integration', () => {
         currentPlan: null
       })
 
-      render(<DetailPanel />)
+      renderWithProviders(<DetailPanel />)
 
       expect(screen.getByText('No Selection')).toBeInTheDocument()
     })
@@ -141,7 +155,7 @@ describe('DetailPanel Integration', () => {
         currentPlan: createMockPlan()
       })
 
-      render(<DetailPanel />)
+      renderWithProviders(<DetailPanel />)
 
       expect(screen.getByTestId('issue-number')).toHaveTextContent('#42')
       expect(screen.getByTestId('issue-title')).toHaveTextContent('Test Issue Title')
@@ -154,7 +168,7 @@ describe('DetailPanel Integration', () => {
         currentPlan: null
       })
 
-      render(<DetailPanel />)
+      renderWithProviders(<DetailPanel />)
 
       expect(screen.getByText('No Selection')).toBeInTheDocument()
     })
@@ -167,7 +181,7 @@ describe('DetailPanel Integration', () => {
         currentPlan: createMockPlan()
       })
 
-      render(<DetailPanel />)
+      renderWithProviders(<DetailPanel />)
 
       expect(screen.getByTestId('ship-status')).toHaveTextContent('Phases in progress...')
       expect(screen.getByTestId('status-text')).toHaveTextContent('In Progress')
@@ -198,7 +212,7 @@ describe('DetailPanel Integration', () => {
         currentPlan: completePlan
       })
 
-      render(<DetailPanel />)
+      renderWithProviders(<DetailPanel />)
 
       expect(screen.getByTestId('ship-status')).toHaveTextContent('All phases complete - ready to ship!')
       expect(screen.getByTestId('status-text')).toHaveTextContent('Complete')
@@ -210,7 +224,7 @@ describe('DetailPanel Integration', () => {
         currentPlan: null
       })
 
-      render(<DetailPanel />)
+      renderWithProviders(<DetailPanel />)
 
       expect(screen.getByText('No Selection')).toBeInTheDocument()
     })
@@ -223,7 +237,7 @@ describe('DetailPanel Integration', () => {
         currentPlan: createMockPlan()
       })
 
-      const { rerender } = render(<DetailPanel />)
+      const { rerender } = renderWithProviders(<DetailPanel />)
 
       // Initially shows phase
       expect(screen.getByTestId('phase-detail-title')).toHaveTextContent('Phase One')
@@ -232,7 +246,7 @@ describe('DetailPanel Integration', () => {
       act(() => {
         useTikiStore.setState({ selectedNode: 'issue-node' })
       })
-      rerender(<DetailPanel />)
+      rerender(<LearningProvider><DetailPanel /></LearningProvider>)
 
       // Now shows issue
       expect(screen.getByTestId('issue-number')).toHaveTextContent('#42')
@@ -245,7 +259,7 @@ describe('DetailPanel Integration', () => {
         currentPlan: createMockPlan()
       })
 
-      const { rerender } = render(<DetailPanel />)
+      const { rerender } = renderWithProviders(<DetailPanel />)
 
       // Initially shows issue
       expect(screen.getByTestId('issue-number')).toBeInTheDocument()
@@ -254,7 +268,7 @@ describe('DetailPanel Integration', () => {
       act(() => {
         useTikiStore.setState({ selectedNode: 'ship-node' })
       })
-      rerender(<DetailPanel />)
+      rerender(<LearningProvider><DetailPanel /></LearningProvider>)
 
       // Now shows ship
       expect(screen.getByTestId('ship-status')).toBeInTheDocument()
@@ -267,7 +281,7 @@ describe('DetailPanel Integration', () => {
         currentPlan: createMockPlan()
       })
 
-      const { rerender } = render(<DetailPanel />)
+      const { rerender } = renderWithProviders(<DetailPanel />)
 
       // Initially shows phase
       expect(screen.getByTestId('phase-detail-title')).toBeInTheDocument()
@@ -276,7 +290,7 @@ describe('DetailPanel Integration', () => {
       act(() => {
         useTikiStore.setState({ selectedNode: null })
       })
-      rerender(<DetailPanel />)
+      rerender(<LearningProvider><DetailPanel /></LearningProvider>)
 
       // Now shows empty state
       expect(screen.getByText('No Selection')).toBeInTheDocument()
@@ -289,7 +303,7 @@ describe('DetailPanel Integration', () => {
         currentPlan: createMockPlan()
       })
 
-      const { rerender } = render(<DetailPanel />)
+      const { rerender } = renderWithProviders(<DetailPanel />)
 
       // Initially shows phase 1
       expect(screen.getByTestId('phase-detail-number')).toHaveTextContent('1')
@@ -299,7 +313,7 @@ describe('DetailPanel Integration', () => {
       act(() => {
         useTikiStore.setState({ selectedNode: 'phase-2' })
       })
-      rerender(<DetailPanel />)
+      rerender(<LearningProvider><DetailPanel /></LearningProvider>)
 
       // Now shows phase 2
       expect(screen.getByTestId('phase-detail-number')).toHaveTextContent('2')
@@ -309,7 +323,7 @@ describe('DetailPanel Integration', () => {
 
   describe('Header', () => {
     it('always shows Details header', () => {
-      render(<DetailPanel />)
+      renderWithProviders(<DetailPanel />)
 
       expect(screen.getByText('Details')).toBeInTheDocument()
     })
@@ -320,7 +334,7 @@ describe('DetailPanel Integration', () => {
         currentPlan: createMockPlan()
       })
 
-      render(<DetailPanel />)
+      renderWithProviders(<DetailPanel />)
 
       expect(screen.getByText('Details')).toBeInTheDocument()
     })

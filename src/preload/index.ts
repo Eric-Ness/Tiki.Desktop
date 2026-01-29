@@ -746,6 +746,28 @@ export interface WorkspaceStorageInfo {
 
 export type WorkspaceSnapshotInput = Omit<WorkspaceSnapshot, 'id' | 'createdAt' | 'updatedAt' | 'size'>
 
+// Learning type definitions (mirrored from main process for type safety)
+export interface LearningProgress {
+  learningModeEnabled: boolean
+  expertModeEnabled: boolean
+  conceptsSeen: string[]
+  totalExecutions: number
+}
+
+export interface LearningConceptExplanation {
+  id: string
+  title: string
+  shortDescription: string
+  fullExplanation: string
+  relatedConcepts: string[]
+}
+
+export interface LearningPhaseExplanation {
+  whyThisPhase: string
+  whatHappens: string[]
+  conceptsInvolved: string[]
+}
+
 // Heatmap type definitions (mirrored from main process for type safety)
 export type HeatMetricPreload = 'modifications' | 'bugs' | 'churn' | 'complexity'
 export type TimePeriodPreload = '7days' | '30days' | '90days' | 'all'
@@ -1336,6 +1358,23 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.invoke('workspace:rename', { id, name }),
     getStorage: () =>
       ipcRenderer.invoke('workspace:get-storage')
+  },
+
+  // Learning API (for guided/learning mode for new users)
+  learning: {
+    getProgress: () => ipcRenderer.invoke('learning:get-progress'),
+    markConceptSeen: (conceptId: string) =>
+      ipcRenderer.invoke('learning:mark-concept-seen', { conceptId }),
+    setLearningMode: (enabled: boolean) =>
+      ipcRenderer.invoke('learning:set-learning-mode', { enabled }),
+    setExpertMode: (enabled: boolean) =>
+      ipcRenderer.invoke('learning:set-expert-mode', { enabled }),
+    getExplanation: (conceptId: string) =>
+      ipcRenderer.invoke('learning:get-explanation', { conceptId }),
+    getPhaseExplanation: (phase: { title: string; files: string[] }) =>
+      ipcRenderer.invoke('learning:get-phase-explanation', { phase }),
+    shouldShow: (conceptId: string) =>
+      ipcRenderer.invoke('learning:should-show', { conceptId })
   }
 })
 
@@ -1802,6 +1841,15 @@ declare global {
         delete: (id: string) => Promise<boolean>
         rename: (id: string, name: string) => Promise<WorkspaceSnapshot | null>
         getStorage: () => Promise<WorkspaceStorageInfo>
+      }
+      learning: {
+        getProgress: () => Promise<LearningProgress>
+        markConceptSeen: (conceptId: string) => Promise<void>
+        setLearningMode: (enabled: boolean) => Promise<void>
+        setExpertMode: (enabled: boolean) => Promise<void>
+        getExplanation: (conceptId: string) => Promise<LearningConceptExplanation | null>
+        getPhaseExplanation: (phase: { title: string; files: string[] }) => Promise<LearningPhaseExplanation>
+        shouldShow: (conceptId: string) => Promise<boolean>
       }
     }
   }

@@ -3,6 +3,7 @@ import { UsageWidget } from '../usage/UsageWidget'
 import { BranchStatus } from '../git/BranchStatus'
 import { LayoutPresetSelector } from './LayoutPresetSelector'
 import { CIStatusIndicator } from './CIStatusIndicator'
+import { LearningModeToggle } from '../learning'
 
 interface StatusBarProps {
   version: string
@@ -64,6 +65,12 @@ export function StatusBar({ version, cwd, onOpenWorkflowDashboard }: StatusBarPr
 
       {/* Right side - Info */}
       <div className="flex items-center gap-4">
+        {/* Learning Mode Toggle */}
+        <LearningModeToggle compact />
+
+        {/* Separator */}
+        <div className="w-px h-4 bg-slate-700" />
+
         {/* Layout Preset Selector */}
         <LayoutPresetSelector />
 

@@ -252,6 +252,30 @@ if (isBrowserEnv) {
         delete: vi.fn().mockResolvedValue(true),
         rename: vi.fn().mockResolvedValue(null),
         getStorage: vi.fn().mockResolvedValue({ used: 0, limit: 52428800, snapshots: 0 })
+      },
+      learning: {
+        getProgress: vi.fn().mockResolvedValue({
+          learningModeEnabled: true,
+          expertModeEnabled: false,
+          conceptsSeen: [],
+          totalExecutions: 0
+        }),
+        markConceptSeen: vi.fn().mockResolvedValue(undefined),
+        setLearningMode: vi.fn().mockResolvedValue(undefined),
+        setExpertMode: vi.fn().mockResolvedValue(undefined),
+        getExplanation: vi.fn().mockResolvedValue({
+          id: 'phases',
+          title: 'Phases',
+          shortDescription: 'Individual steps',
+          fullExplanation: 'Phases break down complex tasks...',
+          relatedConcepts: ['execution']
+        }),
+        getPhaseExplanation: vi.fn().mockResolvedValue({
+          whyThisPhase: 'This phase sets up the foundation',
+          whatHappens: ['Create files', 'Add tests'],
+          conceptsInvolved: ['phases', 'testing']
+        }),
+        shouldShow: vi.fn().mockResolvedValue(true)
       }
     },
     writable: true,

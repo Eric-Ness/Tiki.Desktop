@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { PhaseDetail, type PhaseData } from '../components/detail/PhaseDetail'
+import { LearningProvider } from '../contexts/LearningContext'
 
-// Helper to render PhaseDetail with default props
+// Helper to render PhaseDetail with default props and LearningProvider wrapper
 function renderPhaseDetail(overrides: Partial<PhaseData> = {}) {
   const defaultPhase: PhaseData = {
     number: 1,
@@ -12,8 +13,23 @@ function renderPhaseDetail(overrides: Partial<PhaseData> = {}) {
     verification: []
   }
 
-  return render(<PhaseDetail phase={{ ...defaultPhase, ...overrides }} />)
+  return render(
+    <LearningProvider>
+      <PhaseDetail phase={{ ...defaultPhase, ...overrides }} />
+    </LearningProvider>
+  )
 }
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  // Mock learning API with learning mode disabled by default for tests
+  vi.mocked(window.tikiDesktop.learning.getProgress).mockResolvedValue({
+    learningModeEnabled: false,
+    expertModeEnabled: false,
+    conceptsSeen: [],
+    totalExecutions: 0
+  })
+})
 
 describe('PhaseDetail', () => {
   describe('Basic rendering', () => {
@@ -243,7 +259,13 @@ describe('PhaseDetail', () => {
         verification: ['Tests pass']
       }
 
-      expect(() => render(<PhaseDetail phase={phase} />)).not.toThrow()
+      expect(() =>
+        render(
+          <LearningProvider>
+            <PhaseDetail phase={phase} />
+          </LearningProvider>
+        )
+      ).not.toThrow()
       expect(screen.getByTestId('phase-detail-title')).toHaveTextContent('Test Phase')
     })
 
@@ -256,7 +278,13 @@ describe('PhaseDetail', () => {
         verification: []
       }
 
-      expect(() => render(<PhaseDetail phase={phase} />)).not.toThrow()
+      expect(() =>
+        render(
+          <LearningProvider>
+            <PhaseDetail phase={phase} />
+          </LearningProvider>
+        )
+      ).not.toThrow()
       expect(screen.getByTestId('phase-detail-title')).toHaveTextContent('Test Phase')
     })
   })

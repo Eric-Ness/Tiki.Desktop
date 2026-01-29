@@ -10,6 +10,7 @@ import { CommandPalette } from './components/command-palette'
 import { GlobalSearch } from './components/search'
 import { SettingsModal } from './components/settings'
 import { SettingsProvider } from './contexts/SettingsContext'
+import { LearningProvider } from './contexts/LearningContext'
 import { useTikiSync } from './hooks/useTikiSync'
 import { useGitHubSync } from './hooks/useGitHubSync'
 import { useSidebarShortcuts } from './hooks/useSidebarShortcuts'
@@ -231,7 +232,8 @@ function App() {
 
   return (
     <SettingsProvider>
-      <div className="h-screen flex flex-col bg-background text-slate-100">
+      <LearningProvider>
+        <div className="h-screen flex flex-col bg-background text-slate-100">
         {/* Command Palette */}
         <CommandPalette
           isOpen={commandPaletteOpen}
@@ -301,7 +303,8 @@ function App() {
             onDismiss={handleDismissUpdate}
           />
         )}
-      </div>
+        </div>
+      </LearningProvider>
     </SettingsProvider>
   )
 }

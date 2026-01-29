@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTikiStore } from '../../stores/tiki-store'
+import { useLearning, type PhaseExplanation as PhaseExplanationData } from '../../contexts/LearningContext'
 import { PhaseChanges } from '../diff'
 import { RollbackDialog } from '../rollback'
 import { FailureAnalysis } from './FailureAnalysis'
 import { StrategySelector } from './StrategySelector'
 import { RetryControls } from './RetryControls'
 import { FilePreviewList } from '../code'
+import { PhaseExplanation } from '../learning'
 import type {
   FailureAnalysis as FailureAnalysisType,
   RetryStrategy,
@@ -79,6 +81,10 @@ export function PhaseDetail({ phase }: PhaseDetailProps) {
   // Project cwd for file preview
   const [projectCwd, setProjectCwd] = useState<string>('')
 
+  // Learning mode state
+  const { learningModeEnabled, getPhaseExplanation, markConceptSeen } = useLearning()
+  const [phaseExplanation, setPhaseExplanation] = useState<PhaseExplanationData | null>(null)
+
   useEffect(() => {
     const getCwd = async () => {
       // Try to get from active project, fallback to app cwd
@@ -91,6 +97,16 @@ export function PhaseDetail({ phase }: PhaseDetailProps) {
     }
     getCwd()
   }, [activeProject?.path])
+
+  // Load phase explanation when learning mode is enabled
+  useEffect(() => {
+    if (learningModeEnabled && title) {
+      getPhaseExplanation({ title, files })
+        .then(setPhaseExplanation)
+    } else {
+      setPhaseExplanation(null)
+    }
+  }, [learningModeEnabled, title, files, getPhaseExplanation])
 
   // Check if the phase has tracked commits for rollback
   useEffect(() => {
@@ -267,6 +283,17 @@ export function PhaseDetail({ phase }: PhaseDetailProps) {
 
   return (
     <div className="p-4 space-y-6">
+      {/* Phase explanation for learning mode */}
+      {learningModeEnabled && phaseExplanation && (
+        <PhaseExplanation
+          explanation={phaseExplanation}
+          onConceptClick={(conceptId) => {
+            markConceptSeen(conceptId)
+            // Could show concept card here in future enhancement
+          }}
+        />
+      )}
+
       {/* Header section */}
       <div className="flex items-center gap-3">
         {/* Phase number circle */}
