@@ -1,0 +1,32 @@
+{
+  "version": "v0.9.4",
+  "createdAt": "2026-01-29T14:10:26.506Z",
+  "status": "active",
+  "requirementsEnabled": false,
+  "githubMilestone": null,
+  "issues": [
+    {
+      "number": 55,
+      "title": "The Start Claude Code button is not working",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": 1,
+      "totalPhases": 1,
+      "completedAt": "2026-01-29T14:30:00.000Z"
+    },
+    {
+      "number": 54,
+      "title": "The Update to TIki.Desktop is not working",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": 2,
+      "totalPhases": 2,
+      "completedAt": "2026-01-29T14:30:00.000Z"
+    }
+  ],
+  "requirements": {
+    "total": 0,
+    "implemented": 0,
+    "verified": 0
+  }
+}

@@ -75,16 +75,25 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
       useTikiStore.getState().addTerminal({
         id: terminalId,
         name: 'Claude',
-        status: 'active'
+        status: 'active',
+        projectPath: cwd
       })
 
-      // Switch to the terminal tab
-      useTikiStore.setState({ activeTerminal: terminalId })
+      // Set the active terminal
+      useTikiStore.getState().setActiveTerminal(terminalId)
+
+      // Switch to the terminal tab in the main UI
+      useTikiStore.getState().setActiveTab('terminal')
 
       // Small delay to ensure PTY is fully initialized before writing
       // This prevents crashes on Windows where node-pty may not be ready immediately
       setTimeout(() => {
-        window.tikiDesktop.terminal.write(terminalId, 'claude --dangerously-skip-permissions\r')
+        window.tikiDesktop.terminal.write(terminalId, 'claude --dangerously-skip-permissions\n')
+
+        // Focus the terminal
+        window.dispatchEvent(
+          new CustomEvent('terminal:focus', { detail: { id: terminalId } })
+        )
       }, 100)
     } catch (error) {
       console.error('Failed to start Claude Code:', error)
@@ -102,15 +111,24 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
       useTikiStore.getState().addTerminal({
         id: terminalId,
         name: 'Update Tiki',
-        status: 'active'
+        status: 'active',
+        projectPath: cwd
       })
 
-      // Switch to the terminal tab
-      useTikiStore.setState({ activeTerminal: terminalId })
+      // Set the active terminal
+      useTikiStore.getState().setActiveTerminal(terminalId)
+
+      // Switch to the terminal tab in the main UI
+      useTikiStore.getState().setActiveTab('terminal')
 
       // Small delay to ensure PTY is fully initialized before writing
       setTimeout(() => {
-        window.tikiDesktop.terminal.write(terminalId, 'claude --dangerously-skip-permissions /tiki:update-tiki\r')
+        window.tikiDesktop.terminal.write(terminalId, 'claude --dangerously-skip-permissions /tiki:update-tiki\n')
+
+        // Focus the terminal
+        window.dispatchEvent(
+          new CustomEvent('terminal:focus', { detail: { id: terminalId } })
+        )
       }, 100)
     } catch (error) {
       console.error('Failed to start Tiki update:', error)

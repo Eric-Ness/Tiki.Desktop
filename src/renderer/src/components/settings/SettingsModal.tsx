@@ -6,6 +6,7 @@ import { NotificationsSection } from './sections/NotificationsSection'
 import { KeyboardShortcutsSection } from './sections/KeyboardShortcutsSection'
 import { GitHubSection } from './sections/GitHubSection'
 import { DataPrivacySection } from './sections/DataPrivacySection'
+import { AboutSection } from './sections/AboutSection'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -51,6 +52,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         return <GitHubSection />
       case 'dataPrivacy':
         return <DataPrivacySection />
+      case 'about':
+        return <AboutSection />
       default:
         return null
     }
