@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTikiStore } from '../../stores/tiki-store'
 import { BranchSelector } from './BranchSelector'
 import { CreateBranchDialog } from './CreateBranchDialog'
+import { CheckpointManager } from '../rollback/CheckpointManager'
 
 interface WorkingTreeStatus {
   isDirty: boolean
@@ -11,7 +12,7 @@ interface WorkingTreeStatus {
   files: Array<{ path: string; status: string }>
 }
 
-type DialogType = 'none' | 'selector' | 'create'
+type DialogType = 'none' | 'selector' | 'create' | 'checkpoints'
 
 interface BranchStatusProps {
   cwd: string
@@ -126,6 +127,30 @@ export function BranchStatus({ cwd }: BranchStatusProps) {
     setIsOpen(false)
     // TODO: Open delete branch confirmation
     console.log('Delete branch - TODO: implement delete branch confirmation')
+  }
+
+  const [creatingCheckpoint, setCreatingCheckpoint] = useState(false)
+
+  const handleCreateCheckpoint = async () => {
+    if (!cwd || creatingCheckpoint) return
+
+    setCreatingCheckpoint(true)
+    try {
+      // Create a quick checkpoint with auto-generated name
+      const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ')
+      const name = `Checkpoint ${timestamp}`
+      await window.tikiDesktop.rollback.createCheckpoint(cwd, name)
+      setIsOpen(false)
+    } catch (error) {
+      console.error('Failed to create checkpoint:', error)
+    } finally {
+      setCreatingCheckpoint(false)
+    }
+  }
+
+  const handleManageCheckpoints = () => {
+    setIsOpen(false)
+    setActiveDialog('checkpoints')
   }
 
   // Find associated issue for current branch
@@ -273,6 +298,39 @@ export function BranchStatus({ cwd }: BranchStatusProps) {
               Push{ahead > 0 && ` (${ahead})`}
             </button>
 
+            {/* Checkpoint Actions */}
+            <button
+              onClick={handleCreateCheckpoint}
+              disabled={branchOperationInProgress || creatingCheckpoint}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-teal-400 hover:bg-teal-500/10 rounded transition-colors disabled:opacity-50"
+            >
+              {creatingCheckpoint ? (
+                <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              {creatingCheckpoint ? 'Creating...' : 'Create Checkpoint'}
+            </button>
+
+            <button
+              onClick={handleManageCheckpoints}
+              disabled={branchOperationInProgress}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-background-tertiary rounded transition-colors disabled:opacity-50"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+              Manage Checkpoints
+            </button>
+
             <button
               onClick={handleDeleteBranch}
               disabled={branchOperationInProgress || currentBranch.name === 'main' || currentBranch.name === 'master'}
@@ -325,6 +383,12 @@ export function BranchStatus({ cwd }: BranchStatusProps) {
         onCreated={handleBranchCreated}
         defaultBaseBranch={currentBranch?.name}
         cwd={cwd}
+      />
+
+      {/* Checkpoint Manager Dialog */}
+      <CheckpointManager
+        isOpen={activeDialog === 'checkpoints'}
+        onClose={() => setActiveDialog('none')}
       />
     </div>
   )

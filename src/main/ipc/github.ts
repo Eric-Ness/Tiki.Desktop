@@ -4,7 +4,10 @@ import {
   getIssue,
   refreshIssues,
   openIssueInBrowser,
-  checkGhCli
+  checkGhCli,
+  createIssue,
+  getLabels,
+  CreateIssueInput
 } from '../services/github-bridge'
 import { getPRForIssue, getPRChecks } from '../services/pr-service'
 
@@ -52,5 +55,18 @@ export function registerGitHubHandlers(): void {
   // Get PR checks
   ipcMain.handle('github:get-pr-checks', async (_, prNumber: number) => {
     return getPRChecks(currentProjectPath, prNumber)
+  })
+
+  // Create new issue
+  ipcMain.handle(
+    'github:create-issue',
+    async (_, { input, cwd }: { input: CreateIssueInput; cwd?: string }) => {
+      return createIssue(input, cwd || currentProjectPath)
+    }
+  )
+
+  // Get repository labels
+  ipcMain.handle('github:get-labels', async (_, { cwd }: { cwd?: string }) => {
+    return getLabels(cwd || currentProjectPath)
   })
 }

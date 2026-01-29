@@ -190,7 +190,7 @@ export async function refreshIssues(cwd?: string): Promise<void> {
   // Clear cache to force fresh fetch
   issueCache.clear()
   lastFetchTime = 0
-  await getIssues('open', cwd)
+  await getIssues('all', cwd)
 }
 
 /**
@@ -210,4 +210,92 @@ export async function openIssueInBrowser(number: number, cwd?: string): Promise<
     cwd: workDir,
     timeout: 10000
   })
+}
+
+/**
+ * Input for creating a new issue
+ */
+export interface CreateIssueInput {
+  title: string
+  body?: string
+  labels?: string[]
+  assignees?: string[]
+  milestone?: string
+}
+
+/**
+ * Create a new GitHub issue
+ */
+export async function createIssue(
+  input: CreateIssueInput,
+  cwd?: string
+): Promise<GitHubIssue> {
+  const workDir = cwd || process.cwd()
+
+  const args = ['issue', 'create', '--title', input.title]
+
+  if (input.body) {
+    args.push('--body', input.body)
+  }
+
+  if (input.labels && input.labels.length > 0) {
+    args.push('--label', input.labels.join(','))
+  }
+
+  if (input.assignees && input.assignees.length > 0) {
+    args.push('--assignee', input.assignees.join(','))
+  }
+
+  if (input.milestone) {
+    args.push('--milestone', input.milestone)
+  }
+
+  try {
+    // Create the issue and get its URL
+    const { stdout } = await execFileAsync('gh', args, {
+      cwd: workDir,
+      timeout: 30000
+    })
+
+    // Extract issue number from the URL returned
+    const urlMatch = stdout.trim().match(/\/issues\/(\d+)/)
+    if (!urlMatch) {
+      throw new Error('Failed to parse issue number from response')
+    }
+
+    const issueNumber = parseInt(urlMatch[1], 10)
+
+    // Invalidate cache and fetch the new issue
+    invalidateCache()
+    const issue = await getIssue(issueNumber, workDir)
+
+    // Notify renderer of updated issues
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('github:issue-created', issue)
+    }
+
+    return issue
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    throw new Error(`Failed to create issue: ${errorMessage}`)
+  }
+}
+
+/**
+ * Get available labels for the repository
+ */
+export async function getLabels(cwd?: string): Promise<Array<{ name: string; color: string }>> {
+  const workDir = cwd || process.cwd()
+
+  try {
+    const { stdout } = await execFileAsync(
+      'gh',
+      ['label', 'list', '--json', 'name,color', '--limit', '100'],
+      { cwd: workDir, timeout: 10000 }
+    )
+
+    return JSON.parse(stdout)
+  } catch {
+    return []
+  }
 }

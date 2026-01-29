@@ -15,6 +15,9 @@ import { registerSettingsHandlers } from './ipc/settings'
 import { registerConfigHandlers } from './ipc/config'
 import { registerKnowledgeHandlers } from './ipc/knowledge'
 import { registerUsageHandlers } from './ipc/usage'
+import { registerRollbackHandlers } from './ipc/rollback'
+import { registerFailureHandlers } from './ipc/failure'
+import { registerTemplateHandlers } from './ipc/templates'
 import { setMainWindow as setSettingsWindow } from './services/settings-store'
 import { setMainWindow as setNotificationWindow } from './services/notification-service'
 
@@ -74,6 +77,9 @@ app.whenReady().then(() => {
   registerConfigHandlers()
   registerKnowledgeHandlers()
   registerUsageHandlers()
+  registerRollbackHandlers()
+  registerFailureHandlers()
+  registerTemplateHandlers()
 
   createWindow()
 

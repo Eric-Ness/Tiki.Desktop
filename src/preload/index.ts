@@ -63,6 +63,285 @@ export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P]
 }
 
+// Rollback type definitions (mirrored from main process for type safety)
+export type RollbackScope = 'phase' | 'issue' | 'checkpoint'
+
+export interface RollbackTarget {
+  issueNumber?: number
+  phaseNumber?: number
+  checkpointId?: string
+}
+
+export interface FileChange {
+  path: string
+  status: 'modified' | 'added' | 'deleted' | 'renamed'
+  willBe: 'restored' | 'deleted' | 'modified'
+  previewAvailable: boolean
+}
+
+export interface RollbackWarning {
+  type: 'pushed' | 'conflicts' | 'external_commits' | 'merge_commit' | 'dirty_working_tree'
+  message: string
+  severity: 'low' | 'medium' | 'high'
+}
+
+export interface CommitInfo {
+  hash: string
+  message: string
+  timestamp: number
+  author?: string
+}
+
+export interface RollbackPreview {
+  scope: RollbackScope
+  targetIssue?: number
+  targetPhase?: number
+  targetCheckpoint?: string
+  commits: CommitInfo[]
+  filesAffected: FileChange[]
+  linesChanged: { added: number; removed: number }
+  warnings: RollbackWarning[]
+  canRollback: boolean
+  blockingReasons: string[]
+}
+
+export interface RollbackOptions {
+  method: 'revert' | 'reset'
+  updateIssueStatus?: boolean
+  pushAfter?: boolean
+}
+
+export interface RollbackResult {
+  success: boolean
+  revertCommits?: string[]
+  backupBranch?: string
+  error?: string
+}
+
+export interface RollbackProgress {
+  stage: 'preparing' | 'reverting' | 'resetting' | 'completing'
+  current: number
+  total: number
+  message: string
+}
+
+export interface Checkpoint {
+  id: string
+  name: string
+  commitHash: string
+  issueNumber?: number
+  createdAt: number
+  description?: string
+}
+
+export type CommitSource = 'tiki' | 'external' | 'unknown'
+
+// Failure analysis type definitions (mirrored from main process for type safety)
+export type ErrorCategory =
+  | 'syntax'
+  | 'test'
+  | 'dependency'
+  | 'timeout'
+  | 'permission'
+  | 'network'
+  | 'resource'
+  | 'unknown'
+
+export interface ErrorClassification {
+  patternId: string
+  category: ErrorCategory
+  confidence: number
+  matchedText: string
+  context: {
+    line?: number
+    file?: string
+  }
+}
+
+export type RetryAction = 'redo' | 'redo-with-context' | 'skip' | 'rollback-and-redo' | 'manual'
+
+export interface RetryStrategy {
+  id: string
+  name: string
+  description: string
+  confidence: number
+  applicableTo: string[]
+  action: RetryAction
+  contextHints?: string[]
+}
+
+export interface FailureContext {
+  files: string[]
+  lastCommand?: string
+  terminalOutput?: string
+}
+
+export interface FailureAnalysis {
+  phaseNumber: number
+  issueNumber: number
+  timestamp: number
+  errorText: string
+  classifications: ErrorClassification[]
+  primaryClassification: ErrorClassification | null
+  suggestedStrategies: RetryStrategy[]
+  context: FailureContext
+}
+
+export interface GeneratedCommand {
+  command: string
+  sequence: number
+  description: string
+}
+
+export type ExecutionOutcome = 'pending' | 'success' | 'failure' | 'cancelled'
+
+export interface StrategyExecution {
+  id: string
+  strategyId: string
+  issueNumber: number
+  phaseNumber: number
+  startedAt: number
+  completedAt: number | null
+  outcome: ExecutionOutcome
+  resultPhaseStatus?: string
+  notes?: string
+  commands?: GeneratedCommand[]
+}
+
+export interface LearningStats {
+  totalRecords: number
+  successRate: number
+  topStrategies: Array<{
+    strategyId: string
+    successCount: number
+    totalCount: number
+    successRate: number
+  }>
+}
+
+export interface RecordContext {
+  projectPath: string
+  issueNumber: number
+  phaseNumber: number
+  errorSignature: string
+}
+
+// Template type definitions (mirrored from main process for type safety)
+export type VariableType = 'string' | 'file' | 'component' | 'number'
+export type TemplateCategory = 'issue_type' | 'component' | 'workflow' | 'custom'
+
+export interface TemplateVariable {
+  name: string
+  description: string
+  type: VariableType
+  defaultValue?: string
+  required: boolean
+}
+
+export interface PhaseTemplate {
+  title: string
+  content: string
+  filePatterns: string[]
+  verification: string[]
+}
+
+export interface MatchCriteria {
+  keywords: string[]
+  labels: string[]
+  filePatterns: string[]
+}
+
+export interface PlanTemplate {
+  id: string
+  name: string
+  description: string
+  category: TemplateCategory
+  tags: string[]
+  phases: PhaseTemplate[]
+  variables: TemplateVariable[]
+  matchCriteria: MatchCriteria
+  sourceIssue?: number
+  successCount: number
+  failureCount: number
+  lastUsed?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TemplateFilter {
+  category?: TemplateCategory
+  tags?: string[]
+}
+
+export interface CreateTemplateInput {
+  name: string
+  description: string
+  category: TemplateCategory
+  tags: string[]
+  phases: PhaseTemplate[]
+  variables: TemplateVariable[]
+  matchCriteria: MatchCriteria
+  sourceIssue?: number
+}
+
+export interface UpdateTemplateInput {
+  name?: string
+  description?: string
+  category?: TemplateCategory
+  tags?: string[]
+  phases?: PhaseTemplate[]
+  variables?: TemplateVariable[]
+  matchCriteria?: MatchCriteria
+  sourceIssue?: number | null
+}
+
+export interface TemplateSuggestion {
+  template: PlanTemplate
+  matchScore: number
+  matchReasons: string[]
+}
+
+export interface AppliedTemplate {
+  issueNumber: number
+  phases: Array<{
+    number: number
+    title: string
+    content: string
+    filePatterns: string[]
+    verification: string[]
+  }>
+  sourceTemplateId: string
+  variablesUsed: Record<string, string>
+}
+
+export interface ExecutionPlanForTemplate {
+  issue: {
+    number: number
+    title: string
+  }
+  status: string
+  phases: Array<{
+    number: number
+    title: string
+    status: string
+    files: string[]
+    verification: string[]
+    summary?: string
+    error?: string
+  }>
+}
+
+export interface CommitTracking {
+  commitHash: string
+  issueNumber: number
+  phaseNumber?: number
+  timestamp: number
+  message: string
+  source: CommitSource
+  parentHashes: string[]
+  isMergeCommit: boolean
+}
+
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('tikiDesktop', {
@@ -231,6 +510,16 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       const handler = (_: unknown, error: { error: string }) => callback(error)
       ipcRenderer.on('github:error', handler)
       return () => ipcRenderer.removeListener('github:error', handler)
+    },
+    createIssue: (
+      input: { title: string; body?: string; labels?: string[]; assignees?: string[]; milestone?: string },
+      cwd?: string
+    ) => ipcRenderer.invoke('github:create-issue', { input, cwd }),
+    getLabels: (cwd?: string) => ipcRenderer.invoke('github:get-labels', { cwd }),
+    onIssueCreated: (callback: (issue: unknown) => void) => {
+      const handler = (_: unknown, issue: unknown) => callback(issue)
+      ipcRenderer.on('github:issue-created', handler)
+      return () => ipcRenderer.removeListener('github:issue-created', handler)
     }
   },
 
@@ -321,6 +610,137 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.invoke('knowledge:delete', { projectPath, id }),
     tags: (projectPath: string) =>
       ipcRenderer.invoke('knowledge:tags', { projectPath })
+  },
+
+  // Rollback API (for smart rollback with preview)
+  rollback: {
+    preview: (
+      cwd: string,
+      scope: RollbackScope,
+      target: RollbackTarget
+    ) => ipcRenderer.invoke('rollback:preview', { scope, target, cwd }),
+    execute: (
+      cwd: string,
+      scope: RollbackScope,
+      target: RollbackTarget,
+      options: RollbackOptions
+    ) => ipcRenderer.invoke('rollback:execute', { scope, target, options, cwd }),
+    getIssueCommits: (cwd: string, issueNumber: number) =>
+      ipcRenderer.invoke('rollback:get-issue-commits', { cwd, issueNumber }),
+    getPhaseCommits: (cwd: string, issueNumber: number, phaseNumber: number) =>
+      ipcRenderer.invoke('rollback:get-phase-commits', { cwd, issueNumber, phaseNumber }),
+    onProgress: (
+      callback: (data: RollbackProgress) => void
+    ) => {
+      const handler = (_: unknown, data: RollbackProgress) => callback(data)
+      ipcRenderer.on('rollback:progress', handler)
+      return () => ipcRenderer.removeListener('rollback:progress', handler)
+    },
+    // Checkpoint methods
+    createCheckpoint: (
+      cwd: string,
+      name: string,
+      issueNumber?: number,
+      description?: string
+    ) =>
+      ipcRenderer.invoke('rollback:create-checkpoint', { name, issueNumber, cwd, description }),
+    listCheckpoints: (cwd: string) =>
+      ipcRenderer.invoke('rollback:list-checkpoints', { cwd }),
+    deleteCheckpoint: (cwd: string, id: string) =>
+      ipcRenderer.invoke('rollback:delete-checkpoint', { id, cwd }),
+    toCheckpoint: (cwd: string, id: string, options: RollbackOptions) =>
+      ipcRenderer.invoke('rollback:to-checkpoint', { id, options, cwd }),
+    onCheckpointsChange: (callback: (checkpoints: Checkpoint[]) => void) => {
+      const handler = (_: unknown, data: { checkpoints: Checkpoint[] }) =>
+        callback(data?.checkpoints || [])
+      ipcRenderer.on('tiki:checkpoints-changed', handler)
+      return () => ipcRenderer.removeListener('tiki:checkpoints-changed', handler)
+    }
+  },
+
+  // Templates API (for reusable plan templates)
+  templates: {
+    list: (projectPath: string, filter?: TemplateFilter) =>
+      ipcRenderer.invoke('templates:list', { projectPath, filter }),
+    get: (projectPath: string, id: string) =>
+      ipcRenderer.invoke('templates:get', { projectPath, id }),
+    create: (projectPath: string, input: CreateTemplateInput) =>
+      ipcRenderer.invoke('templates:create', { projectPath, input }),
+    createFromPlan: (
+      projectPath: string,
+      plan: ExecutionPlanForTemplate,
+      name: string,
+      description: string,
+      category: TemplateCategory,
+      tags: string[]
+    ) =>
+      ipcRenderer.invoke('templates:create-from-plan', {
+        projectPath,
+        plan,
+        name,
+        description,
+        category,
+        tags
+      }),
+    update: (projectPath: string, id: string, updates: UpdateTemplateInput) =>
+      ipcRenderer.invoke('templates:update', { projectPath, id, updates }),
+    delete: (projectPath: string, id: string) =>
+      ipcRenderer.invoke('templates:delete', { projectPath, id }),
+    apply: (
+      projectPath: string,
+      templateId: string,
+      variables: Record<string, string>,
+      issueNumber: number
+    ) =>
+      ipcRenderer.invoke('templates:apply', { projectPath, templateId, variables, issueNumber }),
+    suggest: (
+      projectPath: string,
+      issueTitle: string,
+      issueBody?: string,
+      issueLabels?: string[]
+    ) =>
+      ipcRenderer.invoke('templates:suggest', { projectPath, issueTitle, issueBody, issueLabels }),
+    recordUsage: (projectPath: string, id: string, success: boolean) =>
+      ipcRenderer.invoke('templates:record-usage', { projectPath, id, success }),
+    export: (projectPath: string, id: string) =>
+      ipcRenderer.invoke('templates:export', { projectPath, id }),
+    import: (projectPath: string, json: string) =>
+      ipcRenderer.invoke('templates:import', { projectPath, json }),
+    extractVariables: (plan: ExecutionPlanForTemplate) =>
+      ipcRenderer.invoke('templates:extract-variables', { plan })
+  },
+
+  // Failure Analysis API (for smart retry strategies)
+  failure: {
+    analyze: (
+      issueNumber: number,
+      phaseNumber: number,
+      errorText: string,
+      context: FailureContext
+    ) =>
+      ipcRenderer.invoke('failure:analyze', { issueNumber, phaseNumber, errorText, context }),
+    getStrategies: (classification: ErrorClassification) =>
+      ipcRenderer.invoke('failure:get-strategies', { classification }),
+    executeStrategy: (
+      strategy: RetryStrategy,
+      issueNumber: number,
+      phaseNumber: number,
+      cwd: string
+    ) =>
+      ipcRenderer.invoke('failure:execute-strategy', { strategy, issueNumber, phaseNumber, cwd }),
+    getExecutionStatus: (executionId: string) =>
+      ipcRenderer.invoke('failure:get-execution-status', { executionId }),
+    cancelExecution: (executionId: string) =>
+      ipcRenderer.invoke('failure:cancel-execution', { executionId }),
+    recordOutcome: (
+      patternId: string,
+      strategyId: string,
+      outcome: 'success' | 'failure',
+      context: RecordContext
+    ) =>
+      ipcRenderer.invoke('failure:record-outcome', { patternId, strategyId, outcome, context }),
+    getLearningStats: (projectPath: string) =>
+      ipcRenderer.invoke('failure:get-learning-stats', { projectPath })
   }
 })
 
@@ -454,6 +874,12 @@ declare global {
         getPRChecks: (prNumber: number) => Promise<CheckStatus[]>
         onIssuesUpdated: (callback: (issues: unknown[]) => void) => () => void
         onError: (callback: (error: { error: string }) => void) => () => void
+        createIssue: (
+          input: { title: string; body?: string; labels?: string[]; assignees?: string[]; milestone?: string },
+          cwd?: string
+        ) => Promise<unknown>
+        getLabels: (cwd?: string) => Promise<Array<{ name: string; color: string }>>
+        onIssueCreated: (callback: (issue: unknown) => void) => () => void
       }
       shell: {
         openExternal: (url: string) => Promise<void>
@@ -534,6 +960,102 @@ declare global {
         ) => Promise<KnowledgeEntry | null>
         delete: (projectPath: string, id: string) => Promise<boolean>
         tags: (projectPath: string) => Promise<string[]>
+      }
+      rollback: {
+        preview: (
+          cwd: string,
+          scope: RollbackScope,
+          target: RollbackTarget
+        ) => Promise<RollbackPreview>
+        execute: (
+          cwd: string,
+          scope: RollbackScope,
+          target: RollbackTarget,
+          options: RollbackOptions
+        ) => Promise<RollbackResult>
+        getIssueCommits: (cwd: string, issueNumber: number) => Promise<CommitTracking[]>
+        getPhaseCommits: (
+          cwd: string,
+          issueNumber: number,
+          phaseNumber: number
+        ) => Promise<CommitTracking[]>
+        onProgress: (callback: (data: RollbackProgress) => void) => () => void
+        // Checkpoint methods
+        createCheckpoint: (
+          cwd: string,
+          name: string,
+          issueNumber?: number,
+          description?: string
+        ) => Promise<Checkpoint>
+        listCheckpoints: (cwd: string) => Promise<Checkpoint[]>
+        deleteCheckpoint: (cwd: string, id: string) => Promise<boolean>
+        toCheckpoint: (cwd: string, id: string, options: RollbackOptions) => Promise<RollbackResult>
+        onCheckpointsChange: (callback: (checkpoints: Checkpoint[]) => void) => () => void
+      }
+      failure: {
+        analyze: (
+          issueNumber: number,
+          phaseNumber: number,
+          errorText: string,
+          context: FailureContext
+        ) => Promise<FailureAnalysis>
+        getStrategies: (classification: ErrorClassification) => Promise<RetryStrategy[]>
+        executeStrategy: (
+          strategy: RetryStrategy,
+          issueNumber: number,
+          phaseNumber: number,
+          cwd: string
+        ) => Promise<StrategyExecution>
+        getExecutionStatus: (executionId: string) => Promise<StrategyExecution | null>
+        cancelExecution: (executionId: string) => Promise<boolean>
+        recordOutcome: (
+          patternId: string,
+          strategyId: string,
+          outcome: 'success' | 'failure',
+          context: RecordContext
+        ) => Promise<void>
+        getLearningStats: (projectPath: string) => Promise<LearningStats>
+      }
+      templates: {
+        list: (projectPath: string, filter?: TemplateFilter) => Promise<PlanTemplate[]>
+        get: (projectPath: string, id: string) => Promise<PlanTemplate | null>
+        create: (projectPath: string, input: CreateTemplateInput) => Promise<PlanTemplate>
+        createFromPlan: (
+          projectPath: string,
+          plan: ExecutionPlanForTemplate,
+          name: string,
+          description: string,
+          category: TemplateCategory,
+          tags: string[]
+        ) => Promise<PlanTemplate>
+        update: (
+          projectPath: string,
+          id: string,
+          updates: UpdateTemplateInput
+        ) => Promise<PlanTemplate | null>
+        delete: (projectPath: string, id: string) => Promise<boolean>
+        apply: (
+          projectPath: string,
+          templateId: string,
+          variables: Record<string, string>,
+          issueNumber: number
+        ) => Promise<AppliedTemplate | null>
+        suggest: (
+          projectPath: string,
+          issueTitle: string,
+          issueBody?: string,
+          issueLabels?: string[]
+        ) => Promise<TemplateSuggestion[]>
+        recordUsage: (projectPath: string, id: string, success: boolean) => Promise<void>
+        export: (
+          projectPath: string,
+          id: string
+        ) => Promise<{ json: string; template: PlanTemplate } | null>
+        import: (
+          projectPath: string,
+          json: string
+        ) => Promise<{ success: boolean; template?: PlanTemplate; error?: string }>
+        extractVariables: (plan: ExecutionPlanForTemplate) => Promise<TemplateVariable[]>
       }
     }
   }

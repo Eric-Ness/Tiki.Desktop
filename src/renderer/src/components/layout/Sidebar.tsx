@@ -5,6 +5,43 @@ import { ReleaseList } from '../sidebar/ReleaseList'
 import { ProjectList } from '../sidebar/ProjectList'
 import { KnowledgeList } from '../knowledge/KnowledgeList'
 import { KnowledgeEditor } from '../knowledge/KnowledgeEditor'
+import { TemplateList } from '../templates/TemplateList'
+import { TemplateDetail } from '../templates/TemplateDetail'
+import { CreateTemplateDialog } from '../templates/CreateTemplateDialog'
+
+type TemplateCategory = 'issue_type' | 'component' | 'workflow' | 'custom'
+
+interface PlanTemplate {
+  id: string
+  name: string
+  description: string
+  category: TemplateCategory
+  tags: string[]
+  phases: Array<{
+    title: string
+    content: string
+    filePatterns: string[]
+    verification: string[]
+  }>
+  variables: Array<{
+    name: string
+    description: string
+    type: 'string' | 'file' | 'component' | 'number'
+    defaultValue?: string
+    required: boolean
+  }>
+  matchCriteria: {
+    keywords: string[]
+    labels: string[]
+    filePatterns: string[]
+  }
+  sourceIssue?: number
+  successCount: number
+  failureCount: number
+  lastUsed?: string
+  createdAt: string
+  updatedAt: string
+}
 
 interface SidebarProps {
   cwd: string
@@ -14,12 +51,16 @@ interface SidebarProps {
 export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
   const tikiState = useTikiStore((state) => state.tikiState)
   const currentPlan = useTikiStore((state) => state.currentPlan)
+  const activeProject = useTikiStore((state) => state.activeProject)
   const setGithubLoading = useTikiStore((state) => state.setGithubLoading)
   const setGithubError = useTikiStore((state) => state.setGithubError)
   const setIssues = useTikiStore((state) => state.setIssues)
 
   const [showKnowledgeEditor, setShowKnowledgeEditor] = useState(false)
   const [knowledgeKey, setKnowledgeKey] = useState(0)
+  const [selectedTemplate, setSelectedTemplate] = useState<PlanTemplate | null>(null)
+  const [showCreateTemplateDialog, setShowCreateTemplateDialog] = useState(false)
+  const [templateKey, setTemplateKey] = useState(0)
 
   const handleRefreshIssues = useCallback(async () => {
     if (!cwd) return
@@ -65,94 +106,106 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
 
   return (
     <div className="h-full bg-background-secondary border-r border-border flex flex-col shadow-sm">
-      {/* Projects Section */}
-      <SidebarSection title="Projects" defaultOpen>
-        <ProjectList onProjectSwitch={onProjectSwitch} />
-      </SidebarSection>
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+        {/* Projects Section */}
+        <SidebarSection title="Projects" defaultOpen>
+          <ProjectList onProjectSwitch={onProjectSwitch} />
+        </SidebarSection>
 
-      {/* State Section */}
-      <SidebarSection title="State" defaultOpen>
-        <div className="px-2 py-1 text-sm">
-          <div className="flex items-center gap-2 text-slate-400">
-            <span className={`w-2 h-2 rounded-full ${getStatusColor(tikiState?.status)}`} />
-            <span>{getStatusLabel(tikiState?.status)}</span>
-          </div>
-          {tikiState?.activeIssue ? (
-            <div className="mt-2 space-y-2">
-              <div className="text-xs text-slate-500">
-                <span className="flex items-center gap-1">
-                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="8" x2="12" y2="12" />
-                    <line x1="12" y1="16" x2="12.01" y2="16" />
-                  </svg>
-                  Issue #{tikiState.activeIssue}
-                </span>
-                {currentPlan?.issue?.title && (
-                  <span className="block truncate text-slate-400 mt-0.5 pl-4">{currentPlan.issue.title}</span>
+        {/* State Section */}
+        <SidebarSection title="State" defaultOpen>
+          <div className="px-2 py-1 text-sm">
+            <div className="flex items-center gap-2 text-slate-400">
+              <span className={`w-2 h-2 rounded-full ${getStatusColor(tikiState?.status)}`} />
+              <span>{getStatusLabel(tikiState?.status)}</span>
+            </div>
+            {tikiState?.activeIssue ? (
+              <div className="mt-2 space-y-2">
+                <div className="text-xs text-slate-500">
+                  <span className="flex items-center gap-1">
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    Issue #{tikiState.activeIssue}
+                  </span>
+                  {currentPlan?.issue?.title && (
+                    <span className="block truncate text-slate-400 mt-0.5 pl-4">{currentPlan.issue.title}</span>
+                  )}
+                </div>
+                {currentPlan?.phases && currentPlan.phases.length > 0 && (
+                  <div className="text-xs">
+                    <div className="flex items-center justify-between text-slate-500 mb-1">
+                      <span>Progress</span>
+                      <span>
+                        {tikiState.completedPhases?.length || 0} / {currentPlan.phases.length}
+                      </span>
+                    </div>
+                    <div className="flex gap-1">
+                      {currentPlan.phases.map((phase) => {
+                        const isCompleted = tikiState.completedPhases?.includes(phase.number)
+                        const isCurrent = phase.number === tikiState.currentPhase
+                        const isFailed = phase.status === 'failed'
+                        return (
+                          <div
+                            key={phase.number}
+                            className={`h-1.5 flex-1 rounded-full transition-colors ${
+                              isCompleted
+                                ? 'bg-status-completed'
+                                : isCurrent
+                                  ? 'bg-status-running animate-pulse'
+                                  : isFailed
+                                    ? 'bg-status-failed'
+                                    : 'bg-slate-600'
+                            }`}
+                            title={`Phase ${phase.number}: ${phase.title} (${phase.status})`}
+                          />
+                        )
+                      })}
+                    </div>
+                  </div>
                 )}
               </div>
-              {currentPlan?.phases && currentPlan.phases.length > 0 && (
-                <div className="text-xs">
-                  <div className="flex items-center justify-between text-slate-500 mb-1">
-                    <span>Progress</span>
-                    <span>
-                      {tikiState.completedPhases?.length || 0} / {currentPlan.phases.length}
-                    </span>
-                  </div>
-                  <div className="flex gap-1">
-                    {currentPlan.phases.map((phase) => {
-                      const isCompleted = tikiState.completedPhases?.includes(phase.number)
-                      const isCurrent = phase.number === tikiState.currentPhase
-                      const isFailed = phase.status === 'failed'
-                      return (
-                        <div
-                          key={phase.number}
-                          className={`h-1.5 flex-1 rounded-full transition-colors ${
-                            isCompleted
-                              ? 'bg-status-completed'
-                              : isCurrent
-                                ? 'bg-status-running animate-pulse'
-                                : isFailed
-                                  ? 'bg-status-failed'
-                                  : 'bg-slate-600'
-                          }`}
-                          title={`Phase ${phase.number}: ${phase.title} (${phase.status})`}
-                        />
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="mt-2 text-xs text-slate-500 flex items-center gap-1">
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-              </svg>
-              No active execution
-            </div>
-          )}
-        </div>
-      </SidebarSection>
+            ) : (
+              <div className="mt-2 text-xs text-slate-500 flex items-center gap-1">
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                </svg>
+                No active execution
+              </div>
+            )}
+          </div>
+        </SidebarSection>
 
-      {/* Issues Section */}
-      <SidebarSection title="Issues" defaultOpen>
-        <IssueList onRefresh={handleRefreshIssues} />
-      </SidebarSection>
+        {/* Issues Section */}
+        <SidebarSection title="Issues" defaultOpen>
+          <IssueList onRefresh={handleRefreshIssues} />
+        </SidebarSection>
 
-      {/* Releases Section */}
-      <SidebarSection title="Releases" defaultOpen>
-        <ReleaseList />
-      </SidebarSection>
+        {/* Releases Section */}
+        <SidebarSection title="Releases" defaultOpen>
+          <ReleaseList />
+        </SidebarSection>
 
-      {/* Knowledge Section */}
-      <SidebarSection title="Knowledge">
-        <KnowledgeList
-          key={knowledgeKey}
-          onCreateEntry={() => setShowKnowledgeEditor(true)}
-        />
-      </SidebarSection>
+        {/* Knowledge Section */}
+        <SidebarSection title="Knowledge">
+          <KnowledgeList
+            key={knowledgeKey}
+            onCreateEntry={() => setShowKnowledgeEditor(true)}
+          />
+        </SidebarSection>
+
+        {/* Templates Section */}
+        <SidebarSection title="Templates">
+          <TemplateList
+            key={templateKey}
+            onSelect={setSelectedTemplate}
+            onCreateNew={() => setShowCreateTemplateDialog(true)}
+          />
+        </SidebarSection>
+      </div>
 
       {/* Knowledge Editor Modal */}
       {showKnowledgeEditor && (
@@ -162,8 +215,56 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
         />
       )}
 
-      {/* Spacer */}
-      <div className="flex-1" />
+      {/* Template Detail Modal */}
+      {selectedTemplate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background-secondary border border-border rounded-lg shadow-xl w-[500px] max-h-[80vh] overflow-hidden">
+            <TemplateDetail
+              template={selectedTemplate}
+              onClose={() => setSelectedTemplate(null)}
+              onDelete={async () => {
+                if (activeProject?.path) {
+                  await window.tikiDesktop.templates.delete(activeProject.path, selectedTemplate.id)
+                  setSelectedTemplate(null)
+                  setTemplateKey((k) => k + 1)
+                }
+              }}
+              onExport={async () => {
+                if (activeProject?.path) {
+                  const result = await window.tikiDesktop.templates.export(
+                    activeProject.path,
+                    selectedTemplate.id
+                  )
+                  if (result?.json) {
+                    // Create a blob and download
+                    const blob = new Blob([result.json], { type: 'application/json' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `template-${selectedTemplate.name.toLowerCase().replace(/\s+/g, '-')}.json`
+                    document.body.appendChild(a)
+                    a.click()
+                    document.body.removeChild(a)
+                    URL.revokeObjectURL(url)
+                  }
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Create Template Dialog */}
+      {showCreateTemplateDialog && (
+        <CreateTemplateDialog
+          isOpen={showCreateTemplateDialog}
+          onClose={() => setShowCreateTemplateDialog(false)}
+          onCreated={() => {
+            setShowCreateTemplateDialog(false)
+            setTemplateKey((k) => k + 1)
+          }}
+        />
+      )}
 
       {/* Footer */}
       <div className="p-2 border-t border-border">

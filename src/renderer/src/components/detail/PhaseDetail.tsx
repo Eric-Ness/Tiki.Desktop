@@ -1,5 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useTikiStore } from '../../stores/tiki-store'
 import { PhaseChanges } from '../diff'
+import { RollbackDialog } from '../rollback'
+import { FailureAnalysis } from './FailureAnalysis'
+import { StrategySelector } from './StrategySelector'
+import { RetryControls } from './RetryControls'
+import type {
+  FailureAnalysis as FailureAnalysisType,
+  RetryStrategy,
+  StrategyExecution
+} from '../../../../preload/index'
 
 export type PhaseStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'skipped'
 
@@ -69,6 +79,195 @@ export function PhaseDetail({ phase }: PhaseDetailProps) {
   // Track whether changes section is expanded
   const [showChanges, setShowChanges] = useState(false)
 
+  // Rollback state
+  const [showRollbackDialog, setShowRollbackDialog] = useState(false)
+  const [hasTrackedCommits, setHasTrackedCommits] = useState(false)
+
+  // Failure analysis state
+  const [failureAnalysis, setFailureAnalysis] = useState<FailureAnalysisType | null>(null)
+  const [selectedStrategy, setSelectedStrategy] = useState<RetryStrategy | null>(null)
+  const [execution, setExecution] = useState<StrategyExecution | null>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
+
+  // Get issue number from current plan and project path
+  const activeProject = useTikiStore((state) => state.activeProject)
+  const currentPlan = useTikiStore((state) => state.currentPlan)
+  const issueNumber = currentPlan?.issue?.number
+
+  // Check if the phase has tracked commits for rollback
+  useEffect(() => {
+    const checkCommits = async () => {
+      if (!activeProject?.path || !issueNumber || !number) {
+        setHasTrackedCommits(false)
+        return
+      }
+      try {
+        const commits = await window.tikiDesktop.rollback.getPhaseCommits(
+          activeProject.path,
+          issueNumber,
+          number
+        )
+        setHasTrackedCommits(commits.length > 0)
+      } catch (err) {
+        console.error('Failed to check phase commits:', err)
+        setHasTrackedCommits(false)
+      }
+    }
+    checkCommits()
+  }, [activeProject?.path, issueNumber, number])
+
+  // Auto-analyze failure when phase fails and has an error
+  useEffect(() => {
+    const autoAnalyze = async () => {
+      if (!isFailed || !error || !issueNumber || !number) {
+        return
+      }
+
+      // Don't re-analyze if we already have an analysis for this phase
+      if (failureAnalysis && failureAnalysis.phaseNumber === number) {
+        return
+      }
+
+      setIsAnalyzing(true)
+      setAnalysisError(null)
+
+      try {
+        const analysis = await window.tikiDesktop.failure.analyze(
+          issueNumber,
+          number,
+          error,
+          { files }
+        )
+        setFailureAnalysis(analysis)
+      } catch (err) {
+        console.error('Failed to analyze failure:', err)
+        setAnalysisError(err instanceof Error ? err.message : 'Failed to analyze failure')
+      } finally {
+        setIsAnalyzing(false)
+      }
+    }
+
+    autoAnalyze()
+  }, [isFailed, error, issueNumber, number, files, failureAnalysis])
+
+  // Handler to manually trigger analysis
+  const handleAnalyze = useCallback(async () => {
+    if (!error || !issueNumber || !number) {
+      return
+    }
+
+    setIsAnalyzing(true)
+    setAnalysisError(null)
+    setFailureAnalysis(null)
+
+    try {
+      const analysis = await window.tikiDesktop.failure.analyze(
+        issueNumber,
+        number,
+        error,
+        { files }
+      )
+      setFailureAnalysis(analysis)
+    } catch (err) {
+      console.error('Failed to analyze failure:', err)
+      setAnalysisError(err instanceof Error ? err.message : 'Failed to analyze failure')
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }, [error, issueNumber, number, files])
+
+  // Handler for strategy selection
+  const handleStrategySelect = useCallback((strategy: RetryStrategy) => {
+    setSelectedStrategy(strategy)
+  }, [])
+
+  // Handler to execute selected strategy
+  const handleExecute = useCallback(async (strategy: RetryStrategy) => {
+    if (!activeProject?.path || !issueNumber || !number) {
+      return
+    }
+
+    // Use provided strategy or fall back to selected strategy
+    const strategyToExecute = strategy.id ? strategy : selectedStrategy
+    if (!strategyToExecute) {
+      return
+    }
+
+    try {
+      const result = await window.tikiDesktop.failure.executeStrategy(
+        strategyToExecute,
+        issueNumber,
+        number,
+        activeProject.path
+      )
+      setExecution(result)
+
+      // Poll for execution status if pending
+      if (result.outcome === 'pending') {
+        const pollInterval = setInterval(async () => {
+          try {
+            const status = await window.tikiDesktop.failure.getExecutionStatus(result.id)
+            if (status) {
+              setExecution(status)
+              if (status.outcome !== 'pending') {
+                clearInterval(pollInterval)
+                // Record outcome for learning
+                if (failureAnalysis?.primaryClassification) {
+                  await window.tikiDesktop.failure.recordOutcome(
+                    failureAnalysis.primaryClassification.patternId,
+                    strategyToExecute.id,
+                    status.outcome === 'success' ? 'success' : 'failure',
+                    {
+                      projectPath: activeProject.path,
+                      issueNumber,
+                      phaseNumber: number,
+                      errorSignature: error || ''
+                    }
+                  )
+                }
+              }
+            }
+          } catch (err) {
+            console.error('Failed to get execution status:', err)
+            clearInterval(pollInterval)
+          }
+        }, 1000)
+
+        // Clean up after 5 minutes max
+        setTimeout(() => clearInterval(pollInterval), 300000)
+      }
+    } catch (err) {
+      console.error('Failed to execute strategy:', err)
+      setExecution({
+        id: `error-${Date.now()}`,
+        strategyId: strategyToExecute.id,
+        issueNumber,
+        phaseNumber: number,
+        startedAt: Date.now(),
+        completedAt: Date.now(),
+        outcome: 'failure',
+        notes: err instanceof Error ? err.message : 'Execution failed'
+      })
+    }
+  }, [activeProject?.path, issueNumber, number, selectedStrategy, error, failureAnalysis])
+
+  // Handler to cancel execution
+  const handleCancel = useCallback(async () => {
+    if (!execution) {
+      return
+    }
+
+    try {
+      await window.tikiDesktop.failure.cancelExecution(execution.id)
+      setExecution((prev) =>
+        prev ? { ...prev, outcome: 'cancelled', completedAt: Date.now() } : null
+      )
+    } catch (err) {
+      console.error('Failed to cancel execution:', err)
+    }
+  }, [execution])
+
   return (
     <div className="p-4 space-y-6">
       {/* Header section */}
@@ -103,6 +302,21 @@ export function PhaseDetail({ phase }: PhaseDetailProps) {
           </span>
         </div>
       </div>
+
+      {/* Rollback button - only visible when phase is completed and has tracked commits */}
+      {isCompleted && hasTrackedCommits && issueNumber && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowRollbackDialog(true)}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-amber-600 hover:bg-amber-500 active:bg-amber-600 text-white rounded transition-colors"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+            </svg>
+            Rollback Phase
+          </button>
+        </div>
+      )}
 
       {/* Files section */}
       <div>
@@ -166,6 +380,117 @@ export function PhaseDetail({ phase }: PhaseDetailProps) {
         </div>
       )}
 
+      {/* Failure Analysis Section (only shown when failed) */}
+      {isFailed && issueNumber && (
+        <div className="space-y-4" data-testid="failure-analysis-section">
+          {/* Analyzing indicator */}
+          {isAnalyzing && (
+            <div className="flex items-center gap-3 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+              <svg
+                className="w-5 h-5 text-cyan-400 animate-spin"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              <span className="text-sm text-slate-300">Analyzing failure...</span>
+            </div>
+          )}
+
+          {/* Analysis error */}
+          {analysisError && !isAnalyzing && (
+            <div className="p-4 bg-red-900/30 rounded-lg border border-red-700">
+              <div className="flex items-start gap-3">
+                <svg
+                  className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+                <div className="flex-1">
+                  <p className="text-sm text-red-300">{analysisError}</p>
+                  <button
+                    onClick={handleAnalyze}
+                    className="mt-2 text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+                  >
+                    Try again
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Failure Analysis display */}
+          {failureAnalysis && !isAnalyzing && (
+            <FailureAnalysis
+              analysis={failureAnalysis}
+              onStrategySelect={handleStrategySelect}
+            />
+          )}
+
+          {/* Strategy Selector */}
+          {failureAnalysis && failureAnalysis.suggestedStrategies.length > 0 && !isAnalyzing && (
+            <StrategySelector
+              strategies={failureAnalysis.suggestedStrategies}
+              onSelect={handleStrategySelect}
+              disabled={execution?.outcome === 'pending'}
+            />
+          )}
+
+          {/* Retry Controls */}
+          {(selectedStrategy || execution) && !isAnalyzing && (
+            <RetryControls
+              issueNumber={issueNumber}
+              phaseNumber={number}
+              execution={execution}
+              onExecute={handleExecute}
+              onCancel={handleCancel}
+            />
+          )}
+
+          {/* Execute button when strategy is selected but no execution */}
+          {selectedStrategy && !execution && !isAnalyzing && (
+            <button
+              onClick={() => handleExecute(selectedStrategy)}
+              className="w-full px-4 py-2 text-sm font-medium bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-600 text-white rounded-lg transition-colors"
+              data-testid="execute-strategy-button"
+            >
+              Execute: {selectedStrategy.name}
+            </button>
+          )}
+
+          {/* Re-analyze button (when analysis exists but user wants to refresh) */}
+          {failureAnalysis && !isAnalyzing && (
+            <button
+              onClick={handleAnalyze}
+              className="text-xs text-slate-400 hover:text-slate-300 transition-colors"
+              data-testid="reanalyze-button"
+            >
+              Re-analyze failure
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Changes section (only shown when phase has commit refs) */}
       {hasChanges && (
         <div>
@@ -199,6 +524,18 @@ export function PhaseDetail({ phase }: PhaseDetailProps) {
             </div>
           )}
         </div>
+      )}
+
+      {/* Rollback Dialog */}
+      {issueNumber && (
+        <RollbackDialog
+          isOpen={showRollbackDialog}
+          onClose={() => setShowRollbackDialog(false)}
+          scope="phase"
+          target={{ issueNumber, phaseNumber: number }}
+          issueNumber={issueNumber}
+          phaseNumber={number}
+        />
       )}
     </div>
   )

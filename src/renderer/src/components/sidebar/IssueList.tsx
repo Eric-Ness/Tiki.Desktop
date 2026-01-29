@@ -1,25 +1,61 @@
+import { useState } from 'react'
 import { useTikiStore, GitHubIssue } from '../../stores/tiki-store'
+import { CreateIssueDialog } from './CreateIssueDialog'
+
+type IssueFilter = 'open' | 'closed' | 'all'
 
 interface IssueListProps {
   onRefresh?: () => void
 }
 
 export function IssueList({ onRefresh }: IssueListProps) {
+  const [filter, setFilter] = useState<IssueFilter>('open')
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
   const issues = useTikiStore((state) => state.issues)
   const githubLoading = useTikiStore((state) => state.githubLoading)
   const githubError = useTikiStore((state) => state.githubError)
   const selectedIssue = useTikiStore((state) => state.selectedIssue)
   const setSelectedIssue = useTikiStore((state) => state.setSelectedIssue)
   const setSelectedNode = useTikiStore((state) => state.setSelectedNode)
+  const setSelectedRelease = useTikiStore((state) => state.setSelectedRelease)
+  const setSelectedKnowledge = useTikiStore((state) => state.setSelectedKnowledge)
   const tikiState = useTikiStore((state) => state.tikiState)
   const branchAssociations = useTikiStore((state) => state.branchAssociations)
   const currentBranch = useTikiStore((state) => state.currentBranch)
 
   const handleSelectIssue = (issueNumber: number) => {
-    // Clear workflow node selection when selecting an issue from sidebar
+    // Clear other selections when selecting an issue from sidebar
     setSelectedNode(null)
+    setSelectedRelease(null)
+    setSelectedKnowledge(null)
     setSelectedIssue(issueNumber)
   }
+
+  const handleIssueCreated = (issueNumber: number) => {
+    // Refresh issues and select the new one
+    onRefresh?.()
+    handleSelectIssue(issueNumber)
+  }
+
+  // Add Issue button component
+  const AddIssueButton = () => (
+    <button
+      onClick={() => setShowCreateDialog(true)}
+      className="p-1 hover:bg-background-tertiary rounded transition-colors"
+      title="Create new issue"
+    >
+      <svg
+        className="w-3.5 h-3.5 text-slate-400"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+    </button>
+  )
 
   // Refresh button component
   const RefreshButton = () => (
@@ -76,11 +112,19 @@ export function IssueList({ onRefresh }: IssueListProps) {
     )
   }
 
+  // Filter issues based on selected filter
+  const filteredIssues = issues.filter((issue) => {
+    if (filter === 'all') return true
+    if (filter === 'open') return issue.state === 'OPEN'
+    if (filter === 'closed') return issue.state === 'CLOSED'
+    return true
+  })
+
   if (issues.length === 0) {
     return (
       <div className="px-2 py-1">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-slate-500 italic">No open issues</span>
+          <span className="text-sm text-slate-500 italic">No issues</span>
           {onRefresh && <RefreshButton />}
         </div>
       </div>
@@ -89,28 +133,76 @@ export function IssueList({ onRefresh }: IssueListProps) {
 
   return (
     <div className="space-y-0.5">
-      {/* Header with refresh button */}
-      {onRefresh && (
-        <div className="px-2 pb-1 flex justify-end">
-          <RefreshButton />
+      {/* Header with filter buttons and refresh */}
+      <div className="px-2 pb-1 flex items-center justify-between">
+        <div className="flex gap-1">
+          <FilterButton active={filter === 'open'} onClick={() => setFilter('open')}>
+            Open
+          </FilterButton>
+          <FilterButton active={filter === 'closed'} onClick={() => setFilter('closed')}>
+            Closed
+          </FilterButton>
+          <FilterButton active={filter === 'all'} onClick={() => setFilter('all')}>
+            All
+          </FilterButton>
         </div>
+        <div className="flex items-center gap-0.5">
+          <AddIssueButton />
+          {onRefresh && <RefreshButton />}
+        </div>
+      </div>
+      {filteredIssues.length === 0 ? (
+        <div className="px-2 py-2 text-sm text-slate-500 italic">
+          No {filter === 'all' ? '' : filter} issues
+        </div>
+      ) : (
+        filteredIssues.map((issue) => {
+          const branchInfo = branchAssociations[issue.number]
+          const isCurrentBranch = branchInfo && currentBranch?.name === branchInfo.branchName
+          return (
+            <IssueItem
+              key={issue.number}
+              issue={issue}
+              isSelected={selectedIssue === issue.number}
+              isActive={tikiState?.activeIssue === issue.number}
+              branchName={branchInfo?.branchName}
+              isCurrentBranch={isCurrentBranch}
+              onClick={() => handleSelectIssue(issue.number)}
+            />
+          )
+        })
       )}
-      {issues.map((issue) => {
-        const branchInfo = branchAssociations[issue.number]
-        const isCurrentBranch = branchInfo && currentBranch?.name === branchInfo.branchName
-        return (
-          <IssueItem
-            key={issue.number}
-            issue={issue}
-            isSelected={selectedIssue === issue.number}
-            isActive={tikiState?.activeIssue === issue.number}
-            branchName={branchInfo?.branchName}
-            isCurrentBranch={isCurrentBranch}
-            onClick={() => handleSelectIssue(issue.number)}
-          />
-        )
-      })}
+
+      {/* Create Issue Dialog */}
+      <CreateIssueDialog
+        isOpen={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        onCreated={handleIssueCreated}
+      />
     </div>
+  )
+}
+
+function FilterButton({
+  active,
+  onClick,
+  children
+}: {
+  active: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-1.5 py-0.5 text-[10px] rounded transition-colors ${
+        active
+          ? 'bg-amber-600 text-white'
+          : 'bg-background-tertiary text-slate-400 hover:text-slate-200'
+      }`}
+    >
+      {children}
+    </button>
   )
 }
 
