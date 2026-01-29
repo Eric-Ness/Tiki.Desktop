@@ -6,9 +6,11 @@ import {
   getPlan,
   getQueue,
   getReleases,
-  getBranches
+  getBranches,
+  createRelease
 } from '../services/file-watcher'
 import { loadTikiCommands } from '../services/command-loader'
+import { recommendIssuesForRelease } from '../services/llm-service'
 
 export function registerTikiHandlers(): void {
   // Start watching a project directory
@@ -52,4 +54,32 @@ export function registerTikiHandlers(): void {
   ipcMain.handle('tiki:get-commands', async (_, { cwd }: { cwd?: string }) => {
     return loadTikiCommands(cwd)
   })
+
+  // Create a new release
+  ipcMain.handle(
+    'tiki:create-release',
+    async (
+      _,
+      data: {
+        version: string
+        issues: Array<{ number: number; title: string }>
+      }
+    ) => {
+      return createRelease(data.version, data.issues)
+    }
+  )
+
+  // Get LLM recommendations for release issues
+  ipcMain.handle(
+    'tiki:recommend-release-issues',
+    async (
+      _,
+      data: {
+        issues: Array<{ number: number; title: string; body?: string; labels?: string[] }>
+        version: string
+      }
+    ) => {
+      return recommendIssuesForRelease(data.issues, data.version)
+    }
+  )
 }

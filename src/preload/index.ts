@@ -424,6 +424,12 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
     getReleases: () => ipcRenderer.invoke('tiki:get-releases'),
     getBranches: () => ipcRenderer.invoke('tiki:get-branches'),
     getCommands: (cwd?: string) => ipcRenderer.invoke('tiki:get-commands', { cwd }),
+    createRelease: (data: { version: string; issues: Array<{ number: number; title: string }> }) =>
+      ipcRenderer.invoke('tiki:create-release', data),
+    recommendReleaseIssues: (data: {
+      issues: Array<{ number: number; title: string; body?: string; labels?: string[] }>
+      version: string
+    }) => ipcRenderer.invoke('tiki:recommend-release-issues', data),
     // Notification click handler
     onNotificationClick: (
       callback: (data: {
@@ -787,6 +793,25 @@ declare global {
           description: string
           argumentHint?: string
         }>>
+        createRelease: (data: {
+          version: string
+          issues: Array<{ number: number; title: string }>
+        }) => Promise<{ success: boolean; error?: string }>
+        recommendReleaseIssues: (data: {
+          issues: Array<{ number: number; title: string; body?: string; labels?: string[] }>
+          version: string
+        }) => Promise<
+          | {
+              recommendations: Array<{
+                number: number
+                title: string
+                reasoning: string
+                includeInRelease: boolean
+              }>
+              summary: string
+            }
+          | { error: string }
+        >
         onNotificationClick: (
           callback: (data: {
             event: string

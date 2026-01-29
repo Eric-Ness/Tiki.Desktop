@@ -1,6 +1,6 @@
 import * as chokidar from 'chokidar'
 import { BrowserWindow } from 'electron'
-import { readFile, readdir } from 'fs/promises'
+import { readFile, readdir, mkdir, writeFile } from 'fs/promises'
 import { join, basename } from 'path'
 import { existsSync } from 'fs'
 import {
@@ -351,5 +351,70 @@ export async function getReleases(): Promise<unknown[]> {
   } catch (error) {
     console.error('Error reading releases:', error)
     return []
+  }
+}
+
+export interface CreateReleaseInput {
+  version: string
+  issues: Array<{ number: number; title: string }>
+}
+
+export interface CreateReleaseResult {
+  success: boolean
+  error?: string
+}
+
+export async function createRelease(
+  version: string,
+  issues: Array<{ number: number; title: string }>
+): Promise<CreateReleaseResult> {
+  if (!projectPath) {
+    return { success: false, error: 'No project path' }
+  }
+
+  const releasesPath = join(projectPath, '.tiki', 'releases')
+
+  // Ensure the releases directory exists
+  await mkdir(releasesPath, { recursive: true })
+
+  const releaseFile = join(releasesPath, `${version}.json`)
+
+  // Check if release already exists
+  if (existsSync(releaseFile)) {
+    return { success: false, error: 'Release already exists' }
+  }
+
+  // Create the release structure matching existing releases
+  const release = {
+    version,
+    createdAt: new Date().toISOString(),
+    status: 'active',
+    requirementsEnabled: false,
+    githubMilestone: null,
+    issues: issues.map((i) => ({
+      number: i.number,
+      title: i.title,
+      status: 'not_planned',
+      requirements: [],
+      currentPhase: null,
+      totalPhases: null,
+      completedAt: null
+    })),
+    requirements: {
+      total: 0,
+      implemented: 0,
+      verified: 0
+    }
+  }
+
+  try {
+    await writeFile(releaseFile, JSON.stringify(release, null, 2))
+    return { success: true }
+  } catch (error) {
+    console.error('Error creating release:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create release'
+    }
   }
 }
