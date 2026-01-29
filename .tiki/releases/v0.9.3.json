@@ -1,0 +1,24 @@
+{
+  "version": "v0.9.3",
+  "createdAt": "2026-01-29T13:42:08.530Z",
+  "status": "shipped",
+  "shippedAt": "2026-01-29T14:00:00.000Z",
+  "requirementsEnabled": false,
+  "githubMilestone": null,
+  "issues": [
+    {
+      "number": 53,
+      "title": "Install/Update Tiki Button",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": 2,
+      "totalPhases": 2,
+      "completedAt": "2026-01-29T14:00:00.000Z"
+    }
+  ],
+  "requirements": {
+    "total": 0,
+    "implemented": 0,
+    "verified": 0
+  }
+}
