@@ -1,13 +1,17 @@
 import * as React from 'react'
 import * as ResizablePrimitive from 'react-resizable-panels'
 
+interface ResizablePanelGroupProps extends React.ComponentPropsWithoutRef<typeof ResizablePrimitive.PanelGroup> {
+  enableTransition?: boolean
+}
+
 const ResizablePanelGroup = React.forwardRef<
   React.ElementRef<typeof ResizablePrimitive.PanelGroup>,
-  React.ComponentPropsWithoutRef<typeof ResizablePrimitive.PanelGroup>
->(({ className, ...props }, ref) => (
+  ResizablePanelGroupProps
+>(({ className, enableTransition, ...props }, ref) => (
   <ResizablePrimitive.PanelGroup
     ref={ref}
-    className={`flex h-full w-full ${className || ''}`}
+    className={`flex h-full w-full ${enableTransition ? 'panel-transition' : ''} ${className || ''}`}
     {...props}
   />
 ))

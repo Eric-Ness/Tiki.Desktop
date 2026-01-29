@@ -60,3 +60,57 @@
 ::selection {
   @apply bg-amber-500/30;
 }
+
+/* Panel resize transitions - applied when switching presets */
+.panel-transition [data-panel] {
+  transition: flex-basis 200ms ease-out;
+}
+
+/* Layout preset dropdown animations */
+.preset-dropdown-enter {
+  animation: dropdown-slide-in 150ms ease-out forwards;
+}
+
+@keyframes dropdown-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Preset applied highlight animation */
+.preset-applied-highlight {
+  animation: preset-highlight 400ms ease-out;
+}
+
+@keyframes preset-highlight {
+  0% {
+    background-color: rgba(245, 158, 11, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+/* Active preset indicator pulse */
+.preset-active-pulse {
+  animation: active-pulse 300ms ease-out;
+}
+
+@keyframes active-pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

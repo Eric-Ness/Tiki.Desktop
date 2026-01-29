@@ -1,6 +1,7 @@
 import { useTikiStore } from '../../stores/tiki-store'
 import { UsageWidget } from '../usage/UsageWidget'
 import { BranchStatus } from '../git/BranchStatus'
+import { LayoutPresetSelector } from './LayoutPresetSelector'
 
 interface StatusBarProps {
   version: string
@@ -61,6 +62,12 @@ export function StatusBar({ version, cwd }: StatusBarProps) {
 
       {/* Right side - Info */}
       <div className="flex items-center gap-4">
+        {/* Layout Preset Selector */}
+        <LayoutPresetSelector />
+
+        {/* Separator */}
+        <div className="w-px h-4 bg-slate-700" />
+
         {/* Usage Widget */}
         <UsageWidget />
 

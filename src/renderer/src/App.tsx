@@ -14,6 +14,7 @@ import { useTikiSync } from './hooks/useTikiSync'
 import { useGitHubSync } from './hooks/useGitHubSync'
 import { useSidebarShortcuts } from './hooks/useSidebarShortcuts'
 import { useDetailPanelShortcuts } from './hooks/useDetailPanelShortcuts'
+import { useLayoutPresetShortcuts } from './hooks/useLayoutPresetShortcuts'
 import { useCommandPaletteShortcut } from './hooks/useCommandPaletteShortcut'
 import { useTikiCommands } from './hooks/useTikiCommands'
 import { useCommandExecution } from './hooks/useCommandExecution'
@@ -22,6 +23,7 @@ import { useSearchShortcut } from './hooks/useSearchShortcut'
 import { useSearchIndexSync } from './hooks/useSearchIndexSync'
 import { useActivityLogger } from './hooks/useActivityLogger'
 import { useTikiStore, type Project } from './stores/tiki-store'
+import { useLayoutPresetsStore, builtInPresets } from './stores/layout-presets'
 import { UpdateToast, type UpdateStatus } from './components/UpdateToast'
 
 function App() {
@@ -29,10 +31,14 @@ function App() {
   const [cwd, setCwd] = useState<string>('')
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
   const [updateDismissed, setUpdateDismissed] = useState(false)
+  const [enablePanelTransition, setEnablePanelTransition] = useState(false)
   const sidebarPanelRef = useRef<ImperativePanelHandle>(null)
   const detailPanelRef = useRef<ImperativePanelHandle>(null)
   const sidebarCollapsed = useTikiStore((state) => state.sidebarCollapsed)
   const detailPanelCollapsed = useTikiStore((state) => state.detailPanelCollapsed)
+  const updatePanelSizes = useLayoutPresetsStore((state) => state.updatePanelSizes)
+  const activePresetId = useLayoutPresetsStore((state) => state.activePresetId)
+  const presets = useLayoutPresetsStore((state) => state.presets)
 
   // Sync file watcher with Zustand store
   useTikiSync()
@@ -46,6 +52,7 @@ function App() {
   // Register keyboard shortcuts
   useSidebarShortcuts()
   useDetailPanelShortcuts()
+  useLayoutPresetShortcuts()
 
   // Log activity events
   useActivityLogger()
@@ -117,6 +124,55 @@ function App() {
       }
     }
   }, [detailPanelCollapsed])
+
+  // Track previous preset ID to detect changes
+  const prevPresetIdRef = useRef<string | null>(activePresetId)
+
+  // Apply preset when activePresetId changes
+  useEffect(() => {
+    // Skip if it's the same preset (e.g., initial render)
+    if (prevPresetIdRef.current === activePresetId) {
+      return
+    }
+    prevPresetIdRef.current = activePresetId
+
+    if (!activePresetId) return
+
+    // Find the preset (check built-in first, then user presets)
+    const preset = builtInPresets.find((p) => p.id === activePresetId) || presets.find((p) => p.id === activePresetId)
+    if (!preset) return
+
+    // Enable transition for smooth animation
+    setEnablePanelTransition(true)
+
+    // Apply panel sizes using imperative handles
+    const { sidebarSize, detailPanelSize, sidebarCollapsed: shouldCollapseSidebar, detailPanelCollapsed: shouldCollapseDetail } = preset.layout
+
+    if (sidebarPanelRef.current) {
+      if (shouldCollapseSidebar || sidebarSize === 0) {
+        sidebarPanelRef.current.collapse()
+      } else {
+        sidebarPanelRef.current.expand()
+        sidebarPanelRef.current.resize(sidebarSize)
+      }
+    }
+
+    if (detailPanelRef.current) {
+      if (shouldCollapseDetail || detailPanelSize === 0) {
+        detailPanelRef.current.collapse()
+      } else {
+        detailPanelRef.current.expand()
+        detailPanelRef.current.resize(detailPanelSize)
+      }
+    }
+
+    // Disable transition after animation completes to avoid affecting manual resizes
+    const timer = setTimeout(() => {
+      setEnablePanelTransition(false)
+    }, 250)
+
+    return () => clearTimeout(timer)
+  }, [activePresetId, presets])
 
   useEffect(() => {
     // Get app info on mount
@@ -197,7 +253,7 @@ function App() {
 
         {/* Main Content Area */}
         <div className="flex-1 overflow-hidden">
-          <ResizablePanelGroup direction="horizontal">
+          <ResizablePanelGroup direction="horizontal" onLayout={(sizes) => updatePanelSizes(sizes)} enableTransition={enablePanelTransition}>
             {/* Sidebar */}
             <ResizablePanel
               ref={sidebarPanelRef}
