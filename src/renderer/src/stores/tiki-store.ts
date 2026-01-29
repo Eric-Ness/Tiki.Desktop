@@ -95,6 +95,7 @@ export interface TerminalTab {
   id: string
   name: string
   status: TerminalTabStatus
+  projectPath: string
 }
 
 // Terminal Split Layout Types

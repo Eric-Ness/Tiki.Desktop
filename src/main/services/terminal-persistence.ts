@@ -6,6 +6,7 @@ export interface PersistedTerminal {
   id: string
   name: string
   cwd: string
+  projectPath: string
   scrollback?: string[]
 }
 

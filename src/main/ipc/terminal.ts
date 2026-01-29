@@ -14,9 +14,12 @@ import {
 
 export function registerTerminalHandlers(): void {
   // Create a new terminal
-  ipcMain.handle('terminal:create', (_, { cwd, name }: { cwd: string; name?: string }) => {
-    return createTerminal(cwd, name)
-  })
+  ipcMain.handle(
+    'terminal:create',
+    (_, { cwd, name, projectPath }: { cwd: string; name?: string; projectPath?: string }) => {
+      return createTerminal(cwd, name, projectPath)
+    }
+  )
 
   // Write data to terminal
   ipcMain.on('terminal:write', (_, { id, data }: { id: string; data: string }) => {

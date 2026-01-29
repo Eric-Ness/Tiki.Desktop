@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { Terminal } from './Terminal'
 import { TerminalSplitContainer } from './TerminalSplitContainer'
 import { useTikiStore, TerminalTab } from '../../stores/tiki-store'
@@ -15,7 +15,7 @@ interface RestoredTerminalInfo {
 
 export function TerminalTabs({ cwd }: TerminalTabsProps) {
   // Get terminal state and actions from the store
-  const terminals = useTikiStore((state) => state.terminals)
+  const allTerminals = useTikiStore((state) => state.terminals)
   const activeTerminal = useTikiStore((state) => state.activeTerminal)
   const closeTab = useTikiStore((state) => state.closeTab)
   const setActiveTerminalTab = useTikiStore((state) => state.setActiveTerminalTab)
@@ -23,8 +23,18 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
   const setTabStatus = useTikiStore((state) => state.setTabStatus)
   const terminalLayout = useTikiStore((state) => state.terminalLayout)
 
-  // Check if we have an active split
-  const hasSplit = terminalLayout.direction !== 'none' && terminalLayout.panes.length > 1
+  // Filter terminals by current project
+  const terminals = useMemo(
+    () => allTerminals.filter((t) => t.projectPath === cwd),
+    [allTerminals, cwd]
+  )
+
+  // Check if we have an active split (only count panes for current project)
+  const projectPanes = useMemo(
+    () => terminalLayout.panes.filter((p) => terminals.some((t) => t.id === p.terminalId)),
+    [terminalLayout.panes, terminals]
+  )
+  const hasSplit = terminalLayout.direction !== 'none' && projectPanes.length > 1
 
   // Edit mode state
   const [editingTabId, setEditingTabId] = useState<string | null>(null)
@@ -106,7 +116,8 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
     if (!cwd) return
 
     try {
-      const ptyId = await window.tikiDesktop.terminal.create(cwd)
+      // Pass cwd as both the working directory and the project path
+      const ptyId = await window.tikiDesktop.terminal.create(cwd, undefined, cwd)
       const tabName = `Terminal ${terminals.length + 1}`
       // Create a tab in the store with the PTY ID
       // Note: We need to use the PTY ID as the tab ID so the Terminal component can connect
@@ -114,7 +125,10 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
         const isFirstTerminal = state.terminals.length === 0
 
         return {
-          terminals: [...state.terminals, { id: ptyId, name: tabName, status: 'active' as const }],
+          terminals: [
+            ...state.terminals,
+            { id: ptyId, name: tabName, status: 'active' as const, projectPath: cwd }
+          ],
           activeTerminal: ptyId,
           // Initialize layout with the first terminal
           ...(isFirstTerminal
@@ -163,7 +177,8 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
             restoredTabs.push({
               id: newId,
               name: persistedTerminal.name,
-              status: 'active' as const
+              status: 'active' as const,
+              projectPath: persistedTerminal.projectPath || persistedTerminal.cwd
             })
             restoredInfo.set(newId, { id: newId, savedAt })
           }
@@ -206,6 +221,25 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cwd])
 
+  // When switching projects, auto-create a terminal if the new project has none
+  // and switch activeTerminal to one belonging to this project
+  useEffect(() => {
+    if (!cwd) return
+
+    // Check if the current activeTerminal belongs to this project
+    const allTerms = useTikiStore.getState().terminals
+    const projectTerminals = allTerms.filter((t) => t.projectPath === cwd)
+    const currentActive = useTikiStore.getState().activeTerminal
+
+    if (projectTerminals.length === 0) {
+      // No terminals for this project, create one
+      createTerminal()
+    } else if (currentActive && !projectTerminals.some((t) => t.id === currentActive)) {
+      // Active terminal is from another project, switch to this project's first terminal
+      setActiveTerminalTab(projectTerminals[0].id)
+    }
+  }, [cwd, createTerminal, setActiveTerminalTab])
+
   const closeTerminal = useCallback(
     async (tabId: string) => {
       try {
@@ -218,17 +252,23 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
       const currentTerminals = useTikiStore.getState().terminals
       const remainingTerminals = currentTerminals.filter((t) => t.id !== tabId)
 
-      if (remainingTerminals.length === 0 && cwd) {
-        // If closing the last terminal, create a new one
+      // Check if this is the last terminal for the current project
+      const remainingProjectTerminals = remainingTerminals.filter((t) => t.projectPath === cwd)
+
+      if (remainingProjectTerminals.length === 0 && cwd) {
+        // If closing the last terminal for this project, create a new one
         closeTab(tabId)
         // The store's closeTab will auto-create a new tab, but we need to create a PTY for it
         setTimeout(async () => {
           try {
-            const ptyId = await window.tikiDesktop.terminal.create(cwd)
-            useTikiStore.setState({
-              terminals: [{ id: ptyId, name: 'Terminal 1', status: 'active' as const }],
+            const ptyId = await window.tikiDesktop.terminal.create(cwd, undefined, cwd)
+            useTikiStore.setState((state) => ({
+              terminals: [
+                ...state.terminals.filter((t) => t.projectPath !== cwd),
+                { id: ptyId, name: 'Terminal 1', status: 'active' as const, projectPath: cwd }
+              ],
               activeTerminal: ptyId
-            })
+            }))
           } catch (error) {
             console.error('Failed to create replacement terminal:', error)
           }

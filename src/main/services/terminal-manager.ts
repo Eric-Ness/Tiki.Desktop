@@ -13,6 +13,7 @@ export interface TerminalInstance {
   id: string
   name: string
   cwd: string
+  projectPath: string
   process: pty.IPty
   cols: number
   rows: number
@@ -36,7 +37,7 @@ export function setMainWindow(window: BrowserWindow): void {
   mainWindow = window
 }
 
-export function createTerminal(cwd: string, name?: string): string {
+export function createTerminal(cwd: string, name?: string, projectPath?: string): string {
   const id = `terminal-${++terminalCounter}`
   const shell = platform() === 'win32' ? 'powershell.exe' : process.env.SHELL || '/bin/bash'
 
@@ -52,6 +53,7 @@ export function createTerminal(cwd: string, name?: string): string {
     id,
     name: name || `Terminal ${terminalCounter}`,
     cwd,
+    projectPath: projectPath || cwd,
     process: ptyProcess,
     cols: 80,
     rows: 24,
@@ -191,7 +193,8 @@ export function getPersistedState(): PersistedTerminalState {
     (terminal) => ({
       id: terminal.id,
       name: terminal.name,
-      cwd: terminal.cwd
+      cwd: terminal.cwd,
+      projectPath: terminal.projectPath
     })
   )
 
@@ -214,7 +217,9 @@ export function restoreFromState(state: PersistedTerminalState): {
   const idMap: Record<string, string> = {}
 
   for (const persistedTerminal of state.terminals) {
-    const newId = createTerminal(persistedTerminal.cwd, persistedTerminal.name)
+    // Use projectPath if available, fall back to cwd for backwards compatibility
+    const projectPath = persistedTerminal.projectPath || persistedTerminal.cwd
+    const newId = createTerminal(persistedTerminal.cwd, persistedTerminal.name, projectPath)
     idMap[persistedTerminal.id] = newId
 
     // Mark terminal as restored

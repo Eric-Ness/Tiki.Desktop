@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { useTikiStore } from '../../stores/tiki-store'
 import { Terminal } from './Terminal'
@@ -7,14 +7,26 @@ interface TerminalSplitContainerProps {
   cwd: string
 }
 
-export function TerminalSplitContainer({ cwd: _cwd }: TerminalSplitContainerProps) {
+export function TerminalSplitContainer({ cwd }: TerminalSplitContainerProps) {
   const layout = useTikiStore((s) => s.terminalLayout)
-  const terminals = useTikiStore((s) => s.terminals)
+  const allTerminals = useTikiStore((s) => s.terminals)
   const focusedPaneId = useTikiStore((s) => s.focusedPaneId)
   const setFocusedPane = useTikiStore((s) => s.setFocusedPane)
   const closeSplit = useTikiStore((s) => s.closeSplit)
   const splitTerminal = useTikiStore((s) => s.splitTerminal)
   const updatePaneTerminal = useTikiStore((s) => s.updatePaneTerminal)
+
+  // Filter terminals by current project
+  const terminals = useMemo(
+    () => allTerminals.filter((t) => t.projectPath === cwd),
+    [allTerminals, cwd]
+  )
+
+  // Filter panes to only show those with terminals from this project
+  const projectPanes = useMemo(
+    () => layout.panes.filter((p) => terminals.some((t) => t.id === p.terminalId)),
+    [layout.panes, terminals]
+  )
 
   // Get terminal name by ID
   const getTerminalName = (terminalId: string) => {
@@ -23,8 +35,8 @@ export function TerminalSplitContainer({ cwd: _cwd }: TerminalSplitContainerProp
   }
 
   // Single pane - render simplified view
-  if (layout.direction === 'none' || layout.panes.length <= 1) {
-    const pane = layout.panes[0]
+  if (layout.direction === 'none' || projectPanes.length <= 1) {
+    const pane = projectPanes[0]
     return (
       <div className="h-full flex flex-col">
         {/* Toolbar */}
@@ -95,7 +107,7 @@ export function TerminalSplitContainer({ cwd: _cwd }: TerminalSplitContainerProp
       {/* Split panes */}
       <div className="flex-1">
         <PanelGroup direction={direction} className="h-full">
-          {layout.panes.map((pane, index) => (
+          {projectPanes.map((pane, index) => (
             <React.Fragment key={pane.id}>
               {index > 0 && (
                 <PanelResizeHandle
@@ -115,7 +127,7 @@ export function TerminalSplitContainer({ cwd: _cwd }: TerminalSplitContainerProp
                   onClose={() => closeSplit(pane.id)}
                   onTerminalChange={(terminalId) => updatePaneTerminal(pane.id, terminalId)}
                   terminals={terminals}
-                  showCloseButton={layout.panes.length > 1}
+                  showCloseButton={projectPanes.length > 1}
                 />
               </Panel>
             </React.Fragment>

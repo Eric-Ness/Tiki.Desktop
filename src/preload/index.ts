@@ -376,8 +376,8 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
 
   // Terminal API (to be implemented in #2)
   terminal: {
-    create: (cwd: string, name?: string) =>
-      ipcRenderer.invoke('terminal:create', { cwd, name }),
+    create: (cwd: string, name?: string, projectPath?: string) =>
+      ipcRenderer.invoke('terminal:create', { cwd, name, projectPath }),
     write: (id: string, data: string) =>
       ipcRenderer.send('terminal:write', { id, data }),
     resize: (id: string, cols: number, rows: number) =>
@@ -795,7 +795,7 @@ declare global {
         onStatus: (callback: (status: UpdateStatusType) => void) => () => void
       }
       terminal: {
-        create: (cwd: string, name?: string) => Promise<string>
+        create: (cwd: string, name?: string, projectPath?: string) => Promise<string>
         write: (id: string, data: string) => void
         resize: (id: string, cols: number, rows: number) => void
         kill: (id: string) => Promise<void>
@@ -1245,6 +1245,7 @@ interface PersistedTerminal {
   id: string
   name: string
   cwd: string
+  projectPath: string
   scrollback?: string[]
 }
 
