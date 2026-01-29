@@ -1,6 +1,6 @@
 import * as chokidar from 'chokidar'
 import { BrowserWindow } from 'electron'
-import { readFile, readdir, mkdir, writeFile } from 'fs/promises'
+import { readFile, readdir, mkdir, writeFile, unlink } from 'fs/promises'
 import { join, basename } from 'path'
 import { existsSync } from 'fs'
 import {
@@ -364,6 +364,17 @@ export interface CreateReleaseResult {
   error?: string
 }
 
+export interface UpdateReleaseResult {
+  success: boolean
+  error?: string
+}
+
+export interface UpdateReleaseInput {
+  version: string
+  status?: 'active' | 'shipped' | 'completed' | 'not_planned'
+  requirementsEnabled?: boolean
+}
+
 export async function createRelease(
   version: string,
   issues: Array<{ number: number; title: string }>
@@ -415,6 +426,64 @@ export async function createRelease(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create release'
+    }
+  }
+}
+
+export async function updateRelease(
+  currentVersion: string,
+  updates: UpdateReleaseInput
+): Promise<UpdateReleaseResult> {
+  if (!projectPath) {
+    return { success: false, error: 'No project path' }
+  }
+
+  const releasesPath = join(projectPath, '.tiki', 'releases')
+  const currentFile = join(releasesPath, `${currentVersion}.json`)
+
+  // Check if release exists
+  if (!existsSync(currentFile)) {
+    return { success: false, error: 'Release not found' }
+  }
+
+  try {
+    // Read current release
+    const content = await readFile(currentFile, 'utf-8')
+    const release = JSON.parse(content)
+
+    // Apply updates
+    if (updates.status !== undefined) {
+      release.status = updates.status
+    }
+    if (updates.requirementsEnabled !== undefined) {
+      release.requirementsEnabled = updates.requirementsEnabled
+    }
+
+    // Handle version rename
+    if (updates.version && updates.version !== currentVersion) {
+      const newFile = join(releasesPath, `${updates.version}.json`)
+
+      // Check if new version already exists
+      if (existsSync(newFile)) {
+        return { success: false, error: 'A release with that version already exists' }
+      }
+
+      release.version = updates.version
+
+      // Write to new file and delete old
+      await writeFile(newFile, JSON.stringify(release, null, 2))
+      await unlink(currentFile)
+    } else {
+      // Just update in place
+      await writeFile(currentFile, JSON.stringify(release, null, 2))
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating release:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update release'
     }
   }
 }

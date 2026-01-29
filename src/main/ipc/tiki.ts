@@ -7,7 +7,9 @@ import {
   getQueue,
   getReleases,
   getBranches,
-  createRelease
+  createRelease,
+  updateRelease,
+  UpdateReleaseInput
 } from '../services/file-watcher'
 import { loadTikiCommands } from '../services/command-loader'
 import { recommendIssuesForRelease } from '../services/llm-service'
@@ -80,6 +82,20 @@ export function registerTikiHandlers(): void {
       }
     ) => {
       return recommendIssuesForRelease(data.issues, data.version)
+    }
+  )
+
+  // Update an existing release
+  ipcMain.handle(
+    'tiki:update-release',
+    async (
+      _,
+      data: {
+        currentVersion: string
+        updates: UpdateReleaseInput
+      }
+    ) => {
+      return updateRelease(data.currentVersion, data.updates)
     }
   )
 }

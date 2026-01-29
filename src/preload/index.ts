@@ -912,6 +912,14 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
     getCommands: (cwd?: string) => ipcRenderer.invoke('tiki:get-commands', { cwd }),
     createRelease: (data: { version: string; issues: Array<{ number: number; title: string }> }) =>
       ipcRenderer.invoke('tiki:create-release', data),
+    updateRelease: (data: {
+      currentVersion: string
+      updates: {
+        version?: string
+        status?: 'active' | 'shipped' | 'completed' | 'not_planned'
+        requirementsEnabled?: boolean
+      }
+    }) => ipcRenderer.invoke('tiki:update-release', data),
     recommendReleaseIssues: (data: {
       issues: Array<{ number: number; title: string; body?: string; labels?: string[] }>
       version: string
@@ -1449,6 +1457,14 @@ declare global {
         createRelease: (data: {
           version: string
           issues: Array<{ number: number; title: string }>
+        }) => Promise<{ success: boolean; error?: string }>
+        updateRelease: (data: {
+          currentVersion: string
+          updates: {
+            version?: string
+            status?: 'active' | 'shipped' | 'completed' | 'not_planned'
+            requirementsEnabled?: boolean
+          }
         }) => Promise<{ success: boolean; error?: string }>
         recommendReleaseIssues: (data: {
           issues: Array<{ number: number; title: string; body?: string; labels?: string[] }>

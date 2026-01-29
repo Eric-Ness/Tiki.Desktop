@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { Release, ReleaseIssue, useTikiStore } from '../../stores/tiki-store'
+import { EditReleaseDialog } from '../releases/EditReleaseDialog'
 
 interface ReleaseDetailProps {
   release: Release
@@ -25,6 +26,7 @@ export function ReleaseDetail({ release }: ReleaseDetailProps) {
   const activeProject = useTikiStore((state) => state.activeProject)
   const setActiveTab = useTikiStore((state) => state.setActiveTab)
   const [executing, setExecuting] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
 
   // Calculate progress
   const completedIssues = issues.filter(
@@ -157,7 +159,28 @@ export function ReleaseDetail({ release }: ReleaseDetailProps) {
             View Milestone
           </button>
         )}
+
+        {/* Edit Release button - only show for non-shipped releases */}
+        {status !== 'shipped' && (
+          <button
+            onClick={() => setEditDialogOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-700 hover:bg-slate-600 active:bg-slate-700 rounded transition-colors"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            Edit Release
+          </button>
+        )}
       </div>
+
+      {/* Edit Release Dialog */}
+      <EditReleaseDialog
+        isOpen={editDialogOpen}
+        release={release}
+        onClose={() => setEditDialogOpen(false)}
+      />
 
       {/* Progress section */}
       <div>
