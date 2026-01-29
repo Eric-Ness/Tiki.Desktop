@@ -1,6 +1,6 @@
 import { join } from 'path'
 import { readFile, writeFile, readdir, unlink, mkdir, access, constants } from 'fs/promises'
-import { v4 as uuidv4 } from 'uuid'
+import { randomUUID } from 'crypto'
 
 export type KnowledgeCategory = 'pattern' | 'gotcha' | 'decision' | 'learning'
 
@@ -16,10 +16,36 @@ export interface KnowledgeEntry {
 }
 
 /**
+ * Normalize category from stored format to UI format
+ * Maps plural/alternative categories to the expected UI categories
+ * Falls back to 'learning' for missing or unknown categories
+ */
+function normalizeCategory(category: string | undefined): KnowledgeCategory {
+  if (!category) {
+    return 'learning' // Default for missing category
+  }
+  const categoryMap: Record<string, KnowledgeCategory> = {
+    patterns: 'pattern',
+    architecture: 'pattern',
+    troubleshooting: 'gotcha'
+  }
+  const normalized = categoryMap[category]
+  if (normalized) {
+    return normalized
+  }
+  // Check if it's already a valid category
+  const validCategories: KnowledgeCategory[] = ['pattern', 'gotcha', 'decision', 'learning']
+  if (validCategories.includes(category as KnowledgeCategory)) {
+    return category as KnowledgeCategory
+  }
+  return 'learning' // Default fallback for unknown categories
+}
+
+/**
  * Get the knowledge directory path
  */
 function getKnowledgePath(projectPath: string): string {
-  return join(projectPath, '.tiki', 'knowledge')
+  return join(projectPath, '.tiki', 'knowledge', 'entries')
 }
 
 /**
@@ -69,9 +95,22 @@ export async function listKnowledgeEntries(
         try {
           const filePath = join(knowledgePath, file)
           const content = await readFile(filePath, 'utf-8')
-          const entry = JSON.parse(content) as KnowledgeEntry
+          const rawEntry = JSON.parse(content)
+          // Normalize the entry to expected format
+          const entry: KnowledgeEntry = {
+            ...rawEntry,
+            category: normalizeCategory(rawEntry.category),
+            // Ensure content is a string (some entries have object content)
+            content: typeof rawEntry.content === 'object'
+              ? JSON.stringify(rawEntry.content, null, 2)
+              : rawEntry.content || '',
+            // Ensure tags is an array
+            tags: Array.isArray(rawEntry.tags) ? rawEntry.tags : [],
+            // Fallback for missing updatedAt
+            updatedAt: rawEntry.updatedAt || rawEntry.createdAt || new Date().toISOString()
+          }
 
-          // Apply category filter
+          // Apply category filter (after normalization)
           if (options?.category && entry.category !== options.category) {
             continue
           }
@@ -117,7 +156,20 @@ export async function getKnowledgeEntry(
 
   try {
     const content = await readFile(filePath, 'utf-8')
-    return JSON.parse(content) as KnowledgeEntry
+    const rawEntry = JSON.parse(content)
+    // Normalize the entry to expected format
+    return {
+      ...rawEntry,
+      category: normalizeCategory(rawEntry.category),
+      // Ensure content is a string (some entries have object content)
+      content: typeof rawEntry.content === 'object'
+        ? JSON.stringify(rawEntry.content, null, 2)
+        : rawEntry.content || '',
+      // Ensure tags is an array
+      tags: Array.isArray(rawEntry.tags) ? rawEntry.tags : [],
+      // Fallback for missing updatedAt
+      updatedAt: rawEntry.updatedAt || rawEntry.createdAt || new Date().toISOString()
+    } as KnowledgeEntry
   } catch {
     return null
   }
@@ -140,7 +192,7 @@ export async function createKnowledgeEntry(
 
   const now = new Date().toISOString()
   const entry: KnowledgeEntry = {
-    id: uuidv4(),
+    id: randomUUID(),
     title: data.title,
     category: data.category,
     content: data.content,

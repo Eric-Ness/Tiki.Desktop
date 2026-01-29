@@ -31,8 +31,10 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
   const [editValue, setEditValue] = useState('')
   const editInputRef = useRef<HTMLInputElement>(null)
 
-  // Track whether we've initialized a terminal for this cwd
+  // Track whether we've initialized terminals (prevents duplicate restoration)
   const initializedRef = useRef(false)
+  // Track if initialization is currently in progress
+  const initializingRef = useRef(false)
 
   // Track restored terminals for showing "Session restored" message
   const [restoredTerminals, setRestoredTerminals] = useState<Map<string, RestoredTerminalInfo>>(
@@ -135,6 +137,12 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
   const restoreSessionOrCreateTerminal = useCallback(async () => {
     if (!cwd) return
 
+    // Prevent duplicate restoration calls
+    if (initializingRef.current) {
+      return
+    }
+    initializingRef.current = true
+
     try {
       // Try to restore from persisted state
       const result = await window.tikiDesktop.terminal.restoreSession()
@@ -179,12 +187,14 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
 
         return
       }
+
+      // If restoration failed or no persisted state, create a new terminal
+      createTerminal()
     } catch (error) {
       console.error('Failed to restore terminal session:', error)
+      // On error, still try to create a terminal
+      createTerminal()
     }
-
-    // If restoration failed or no persisted state, create a new terminal
-    createTerminal()
   }, [cwd, createTerminal])
 
   // Try to restore session on mount, or create initial terminal
@@ -194,11 +204,6 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
       restoreSessionOrCreateTerminal()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cwd])
-
-  // Reset initialization flag when cwd changes
-  useEffect(() => {
-    initializedRef.current = false
   }, [cwd])
 
   const closeTerminal = useCallback(

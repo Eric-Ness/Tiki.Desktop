@@ -33,6 +33,7 @@ export function Terminal({ terminalId, onReady, restoredInfo }: TerminalProps) {
   const fitAddonRef = useRef<FitAddon | null>(null)
   const cleanupRef = useRef<(() => void)[]>([])
   const restoredMessageShownRef = useRef(false)
+  const isTerminalReadyRef = useRef(false)
 
   // Get terminal settings from the settings store
   const { settings: terminalSettings } = useSettingsCategory('terminal')
@@ -45,10 +46,15 @@ export function Terminal({ terminalId, onReady, restoredInfo }: TerminalProps) {
 
   // Handle resize
   const handleResize = useCallback(() => {
-    if (fitAddonRef.current && terminalRef.current && terminalId) {
-      fitAddonRef.current.fit()
-      const { cols, rows } = terminalRef.current
-      window.tikiDesktop.terminal.resize(terminalId, cols, rows)
+    if (fitAddonRef.current && terminalRef.current && terminalId && isTerminalReadyRef.current) {
+      try {
+        fitAddonRef.current.fit()
+        const { cols, rows } = terminalRef.current
+        window.tikiDesktop.terminal.resize(terminalId, cols, rows)
+      } catch (e) {
+        // Terminal may not be fully initialized
+        console.debug('Terminal resize skipped:', e)
+      }
     }
   }, [terminalId])
 
@@ -97,14 +103,25 @@ export function Terminal({ terminalId, onReady, restoredInfo }: TerminalProps) {
     terminal.loadAddon(webLinksAddon)
 
     terminal.open(containerRef.current)
-    fitAddon.fit()
 
     terminalRef.current = terminal
     fitAddonRef.current = fitAddon
 
-    onReady?.()
+    // Delay fit() to ensure terminal is fully initialized
+    // xterm.js needs time to set up its internal renderer before dimensions can be calculated
+    requestAnimationFrame(() => {
+      try {
+        fitAddon.fit()
+        isTerminalReadyRef.current = true
+      } catch (e) {
+        // Terminal may not be fully ready, will be resized on next resize event
+        console.debug('Initial terminal fit skipped:', e)
+      }
+      onReady?.()
+    })
 
     return () => {
+      isTerminalReadyRef.current = false
       terminal.dispose()
       terminalRef.current = null
       fitAddonRef.current = null
@@ -134,14 +151,18 @@ export function Terminal({ terminalId, onReady, restoredInfo }: TerminalProps) {
 
     // After font changes, we need to re-fit the terminal
     // to recalculate dimensions based on new character size
-    if (fitAddon) {
+    if (fitAddon && isTerminalReadyRef.current) {
       // Use requestAnimationFrame to ensure font metrics are calculated
       requestAnimationFrame(() => {
-        fitAddon.fit()
-        // If connected to a PTY, notify it of the new dimensions
-        if (terminalId && terminalRef.current) {
-          const { cols, rows } = terminalRef.current
-          window.tikiDesktop.terminal.resize(terminalId, cols, rows)
+        try {
+          fitAddon.fit()
+          // If connected to a PTY, notify it of the new dimensions
+          if (terminalId && terminalRef.current) {
+            const { cols, rows } = terminalRef.current
+            window.tikiDesktop.terminal.resize(terminalId, cols, rows)
+          }
+        } catch (e) {
+          console.debug('Terminal settings resize skipped:', e)
         }
       })
     }
@@ -154,10 +175,14 @@ export function Terminal({ terminalId, onReady, restoredInfo }: TerminalProps) {
     const terminal = terminalRef.current
 
     // Send initial size
-    if (fitAddonRef.current) {
-      fitAddonRef.current.fit()
-      const { cols, rows } = terminal
-      window.tikiDesktop.terminal.resize(terminalId, cols, rows)
+    if (fitAddonRef.current && isTerminalReadyRef.current) {
+      try {
+        fitAddonRef.current.fit()
+        const { cols, rows } = terminal
+        window.tikiDesktop.terminal.resize(terminalId, cols, rows)
+      } catch (e) {
+        console.debug('Terminal initial size skipped:', e)
+      }
     }
 
     // Handle data from PTY

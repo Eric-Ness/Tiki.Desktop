@@ -1,9 +1,13 @@
 {
   "version": "v0.7.0",
   "createdAt": "2026-01-28T22:45:00.000Z",
-  "status": "active",
+  "status": "shipped",
+  "shippedAt": "2026-01-28T00:00:00.000Z",
   "requirementsEnabled": true,
-  "githubMilestone": null,
+  "githubMilestone": {
+    "number": 8,
+    "url": "https://github.com/Eric-Ness/Tiki.Desktop/milestone/8"
+  },
   "issues": [
     {
       "number": 23,

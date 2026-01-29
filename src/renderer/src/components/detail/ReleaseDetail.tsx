@@ -1,4 +1,5 @@
-import { Release, ReleaseIssue } from '../../stores/tiki-store'
+import { useState, useCallback } from 'react'
+import { Release, ReleaseIssue, useTikiStore } from '../../stores/tiki-store'
 
 interface ReleaseDetailProps {
   release: Release
@@ -21,6 +22,9 @@ const issueStatusColors: Record<string, string> = {
 
 export function ReleaseDetail({ release }: ReleaseDetailProps) {
   const { version, status, issues, requirements, requirementsEnabled, githubMilestone } = release
+  const activeProject = useTikiStore((state) => state.activeProject)
+  const setActiveTab = useTikiStore((state) => state.setActiveTab)
+  const [executing, setExecuting] = useState(false)
 
   // Calculate progress
   const completedIssues = issues.filter(
@@ -29,11 +33,65 @@ export function ReleaseDetail({ release }: ReleaseDetailProps) {
   const totalIssues = issues.length
   const progress = totalIssues > 0 ? (completedIssues / totalIssues) * 100 : 0
 
+  // Check if there are any issues to work on
+  const hasUncompletedIssues = issues.some(
+    (i) => i.status !== 'completed' && i.status !== 'shipped'
+  )
+
   const handleOpenMilestone = () => {
     if (githubMilestone?.url) {
       window.open(githubMilestone.url, '_blank')
     }
   }
+
+  const ensureTerminal = useCallback(async (): Promise<string | null> => {
+    let terminalId = useTikiStore.getState().activeTerminal
+    if (terminalId) return terminalId
+
+    if (!activeProject?.path) return null
+
+    try {
+      terminalId = await window.tikiDesktop.terminal.create(activeProject.path)
+      useTikiStore.getState().addTerminal({
+        id: terminalId,
+        name: 'Terminal 1',
+        status: 'active'
+      })
+      useTikiStore.getState().setActiveTerminal(terminalId)
+      return terminalId
+    } catch {
+      return null
+    }
+  }, [activeProject?.path])
+
+  const handleStartWorking = useCallback(async () => {
+    if (executing) return
+
+    setExecuting(true)
+    try {
+      const terminalId = await ensureTerminal()
+      if (!terminalId) {
+        console.error('No terminal available')
+        return
+      }
+
+      // Send the release-yolo command
+      const command = `/tiki:release-yolo ${version}\n`
+      window.tikiDesktop.terminal.write(terminalId, command)
+
+      // Switch to terminal tab
+      setActiveTab('terminal')
+
+      // Focus the terminal
+      window.dispatchEvent(
+        new CustomEvent('terminal:focus', { detail: { id: terminalId } })
+      )
+    } catch (error) {
+      console.error('Failed to start release:', error)
+    } finally {
+      setTimeout(() => setExecuting(false), 500)
+    }
+  }, [executing, ensureTerminal, version, setActiveTab])
 
   return (
     <div className="p-4 space-y-6">
@@ -63,8 +121,32 @@ export function ReleaseDetail({ release }: ReleaseDetailProps) {
       </div>
 
       {/* Actions */}
-      {githubMilestone?.url && (
-        <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
+        {/* Start Working button - only show for active releases with uncompleted issues */}
+        {status !== 'shipped' && hasUncompletedIssues && (
+          <button
+            onClick={handleStartWorking}
+            disabled={executing}
+            className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded transition-colors ${
+              executing
+                ? 'bg-amber-600 text-white'
+                : 'bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+            title="Work on all issues in this release"
+          >
+            {executing ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            )}
+            Start Working
+          </button>
+        )}
+
+        {/* View Milestone button */}
+        {githubMilestone?.url && (
           <button
             onClick={handleOpenMilestone}
             className="flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-700 hover:bg-slate-600 active:bg-slate-700 rounded transition-colors"
@@ -74,8 +156,8 @@ export function ReleaseDetail({ release }: ReleaseDetailProps) {
             </svg>
             View Milestone
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Progress section */}
       <div>

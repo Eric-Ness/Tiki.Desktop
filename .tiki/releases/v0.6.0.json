@@ -1,0 +1,81 @@
+{
+  "version": "v0.6.0",
+  "createdAt": "2026-01-28T18:30:00.000Z",
+  "status": "shipped",
+  "shippedAt": "2026-01-28T22:46:09.000Z",
+  "requirementsEnabled": true,
+  "githubMilestone": {
+    "number": 6,
+    "url": "https://github.com/Eric-Ness/Tiki.Desktop/milestone/6"
+  },
+  "issues": [
+    {
+      "number": 16,
+      "title": "feat: Add phase execution controls (play/pause/skip)",
+      "status": "completed",
+      "requirements": ["CORE-07"],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": "2026-01-28T23:05:00.000Z"
+    },
+    {
+      "number": 17,
+      "title": "feat: Wire command palette to execute Tiki commands in terminal",
+      "status": "completed",
+      "requirements": ["UI-04"],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": "2026-01-28T22:00:00.000Z"
+    },
+    {
+      "number": 18,
+      "title": "feat: Add desktop notifications for phase completion and failures",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": "2026-01-28T23:00:00.000Z"
+    },
+    {
+      "number": 19,
+      "title": "feat: Implement config editor for .tiki/config.json",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": "2026-01-28T22:30:00.000Z"
+    },
+    {
+      "number": 20,
+      "title": "feat: Implement knowledge management UI",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": "2026-01-28T22:44:28.000Z"
+    },
+    {
+      "number": 22,
+      "title": "feat: Add issue quick actions (start work, create plan)",
+      "status": "completed",
+      "requirements": ["GITHUB-02", "GITHUB-03"],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": "2026-01-28T22:45:00.000Z"
+    },
+    {
+      "number": 26,
+      "title": "feat: Add settings/preferences UI",
+      "status": "completed",
+      "requirements": ["UI-05"],
+      "currentPhase": 6,
+      "totalPhases": 6,
+      "completedAt": "2026-01-28T22:55:00.000Z"
+    }
+  ],
+  "requirements": {
+    "total": 5,
+    "implemented": 5,
+    "verified": 0
+  }
+}

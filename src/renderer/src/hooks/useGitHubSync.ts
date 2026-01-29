@@ -38,8 +38,8 @@ export function useGitHubSync(cwd: string) {
         return
       }
 
-      // Fetch issues
-      const issues = (await window.tikiDesktop.github.getIssues('open', cwd)) as GitHubIssue[]
+      // Fetch all issues (filter in UI)
+      const issues = (await window.tikiDesktop.github.getIssues('all', cwd)) as GitHubIssue[]
       setIssues(issues)
       lastRefreshRef.current = Date.now()
     } catch (error) {

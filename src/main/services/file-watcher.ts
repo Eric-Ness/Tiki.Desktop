@@ -14,6 +14,9 @@ let watcher: chokidar.FSWatcher | null = null
 let mainWindow: BrowserWindow | null = null
 let projectPath: string | null = null
 
+// Flag to skip notifications during initial file scan
+let isInitialScan = true
+
 // State tracking for notifications
 interface PlanState {
   status: string
@@ -77,35 +80,40 @@ async function handleStateChange(filePath: string): Promise<void> {
 
 async function handlePlanChange(filePath: string): Promise<void> {
   const filename = basename(filePath)
+  // Capture the flag now, before debounce delays execution
+  const wasInitialScan = isInitialScan
   debounce(`plan-${filename}`, async () => {
     const data = await safeReadJson(filePath) as PlanState | null
     if (data) {
       // Check for state changes to trigger notifications
       const previousState = previousPlanStates.get(filename)
 
-      if (previousState && data.issue) {
-        // Check for phase completions/failures
-        for (const phase of data.phases || []) {
-          const prevPhase = previousState.phases?.find((p) => p.number === phase.number)
+      // Only send notifications if this wasn't part of the initial scan
+      if (!wasInitialScan) {
+        if (previousState && data.issue) {
+          // Check for phase completions/failures
+          for (const phase of data.phases || []) {
+            const prevPhase = previousState.phases?.find((p) => p.number === phase.number)
 
-          if (prevPhase && prevPhase.status !== phase.status) {
-            if (phase.status === 'completed' && prevPhase.status !== 'completed') {
-              notifyPhaseCompleted(phase.number, phase.title, data.issue.number)
-            } else if (phase.status === 'failed' && prevPhase.status !== 'failed') {
-              notifyPhaseFailed(phase.number, phase.title, data.issue.number)
+            if (prevPhase && prevPhase.status !== phase.status) {
+              if (phase.status === 'completed' && prevPhase.status !== 'completed') {
+                notifyPhaseCompleted(phase.number, phase.title, data.issue.number)
+              } else if (phase.status === 'failed' && prevPhase.status !== 'failed') {
+                notifyPhaseFailed(phase.number, phase.title, data.issue.number)
+              }
             }
           }
-        }
 
-        // Check for plan status changes
-        if (previousState.status !== data.status) {
-          if (data.status === 'shipped') {
-            notifyIssueShipped(data.issue.number, data.issue.title)
+          // Check for plan status changes
+          if (previousState.status !== data.status) {
+            if (data.status === 'shipped') {
+              notifyIssueShipped(data.issue.number, data.issue.title)
+            }
           }
+        } else if (!previousState && data.issue) {
+          // New plan created
+          notifyIssuePlanned(data.issue.number, data.issue.title)
         }
-      } else if (!previousState && data.issue) {
-        // New plan created
-        notifyIssuePlanned(data.issue.number, data.issue.title)
       }
 
       // Store current state for comparison
@@ -154,6 +162,13 @@ async function handleBranchesChange(filePath: string): Promise<void> {
   })
 }
 
+async function handleCheckpointsChange(filePath: string): Promise<void> {
+  debounce('checkpoints', async () => {
+    const data = await safeReadJson(filePath)
+    sendToRenderer('tiki:checkpoints-changed', data)
+  })
+}
+
 function handleFileChange(filePath: string): void {
   // Normalize path separators
   const normalizedPath = filePath.replace(/\\/g, '/')
@@ -168,15 +183,23 @@ function handleFileChange(filePath: string): void {
     handleReleaseChange(filePath)
   } else if (normalizedPath.endsWith('/branches.json')) {
     handleBranchesChange(filePath)
+  } else if (normalizedPath.endsWith('/checkpoints.json')) {
+    handleCheckpointsChange(filePath)
   }
 }
 
 export function startWatching(path: string): void {
+  // If already watching the same path, don't restart
+  if (watcher && projectPath === path) {
+    return
+  }
+
   if (watcher) {
     stopWatching()
   }
 
   projectPath = path
+  isInitialScan = true // Reset for new project
   const tikiPath = join(path, '.tiki')
 
   if (!existsSync(tikiPath)) {
@@ -190,7 +213,9 @@ export function startWatching(path: string): void {
       join(tikiPath, 'plans', '*.json'),
       join(tikiPath, 'queue', '*.json'),
       join(tikiPath, 'releases', '*.json'),
-      join(tikiPath, 'branches.json')
+      join(tikiPath, 'releases', 'archive', '*.json'),
+      join(tikiPath, 'branches.json'),
+      join(tikiPath, 'checkpoints.json')
     ],
     {
       persistent: true,
@@ -215,6 +240,12 @@ export function startWatching(path: string): void {
     console.error('File watcher error:', error)
   })
 
+  // Mark initial scan complete after watcher is ready
+  watcher.on('ready', () => {
+    isInitialScan = false
+    console.log('File watcher ready, notifications enabled')
+  })
+
   console.log('Started watching .tiki directory at', tikiPath)
 }
 
@@ -229,6 +260,9 @@ export function stopWatching(): void {
     clearTimeout(timer)
   }
   debounceTimers.clear()
+
+  // Clear previous plan states so they're fresh on next watch
+  previousPlanStates.clear()
 
   projectPath = null
 }
@@ -257,25 +291,52 @@ export async function getBranches(): Promise<unknown | null> {
   return safeReadJson(branchesPath)
 }
 
+export async function getCheckpoints(): Promise<unknown | null> {
+  if (!projectPath) return null
+  const checkpointsPath = join(projectPath, '.tiki', 'checkpoints.json')
+  return safeReadJson(checkpointsPath)
+}
+
 export async function getReleases(): Promise<unknown[]> {
   if (!projectPath) return []
   const releasesPath = join(projectPath, '.tiki', 'releases')
+  const archivePath = join(releasesPath, 'archive')
 
   if (!existsSync(releasesPath)) return []
 
   try {
-    const files = await readdir(releasesPath)
-    const releases: unknown[] = []
+    // Use a Map to deduplicate by version (archive takes precedence)
+    const releaseMap = new Map<string, unknown>()
 
+    // Read releases from main folder first
+    const files = await readdir(releasesPath)
     for (const file of files) {
       if (file.endsWith('.json') && !file.startsWith('.')) {
         const filePath = join(releasesPath, file)
         const release = await safeReadJson(filePath)
         if (release) {
-          releases.push(release)
+          const version = (release as { version: string }).version
+          releaseMap.set(version, release)
         }
       }
     }
+
+    // Read releases from archive folder (overwrites main folder duplicates)
+    if (existsSync(archivePath)) {
+      const archiveFiles = await readdir(archivePath)
+      for (const file of archiveFiles) {
+        if (file.endsWith('.json') && !file.startsWith('.')) {
+          const filePath = join(archivePath, file)
+          const release = await safeReadJson(filePath)
+          if (release) {
+            const version = (release as { version: string }).version
+            releaseMap.set(version, release)
+          }
+        }
+      }
+    }
+
+    const releases = Array.from(releaseMap.values())
 
     // Sort: active first, then by version descending
     releases.sort((a: unknown, b: unknown) => {

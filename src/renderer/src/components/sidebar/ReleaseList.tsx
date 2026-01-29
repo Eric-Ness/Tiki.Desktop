@@ -6,11 +6,13 @@ export function ReleaseList() {
   const setSelectedRelease = useTikiStore((state) => state.setSelectedRelease)
   const setSelectedNode = useTikiStore((state) => state.setSelectedNode)
   const setSelectedIssue = useTikiStore((state) => state.setSelectedIssue)
+  const setSelectedKnowledge = useTikiStore((state) => state.setSelectedKnowledge)
 
   const handleSelectRelease = (version: string) => {
     // Clear other selections when selecting a release
     setSelectedNode(null)
     setSelectedIssue(null)
+    setSelectedKnowledge(null)
     setSelectedRelease(version)
   }
 

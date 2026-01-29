@@ -47,6 +47,9 @@ export function registerTerminalHandlers(): void {
   ipcMain.handle('terminal:restore-session', () => {
     const state = loadPersistedState()
     if (state && state.terminals.length > 0) {
+      // Clear persisted state immediately after loading to prevent duplicate restoration
+      // The new terminals will be saved as they're created
+      clearPersistedState()
       const result = restoreFromState(state)
       return {
         success: true,

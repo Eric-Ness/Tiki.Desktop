@@ -8,7 +8,7 @@ interface KnowledgeEntry {
   title: string
   category: KnowledgeCategory
   content: string
-  tags: string[]
+  tags?: string[]
   sourceIssue?: number
   createdAt: string
   updatedAt: string
@@ -41,6 +41,9 @@ export function KnowledgeList({ onSelectEntry, onCreateEntry }: KnowledgeListPro
   const [categoryFilter, setCategoryFilter] = useState<KnowledgeCategory | 'all'>('all')
   const selectedKnowledge = useTikiStore((state) => state.selectedKnowledge)
   const setSelectedKnowledge = useTikiStore((state) => state.setSelectedKnowledge)
+  const setSelectedNode = useTikiStore((state) => state.setSelectedNode)
+  const setSelectedIssue = useTikiStore((state) => state.setSelectedIssue)
+  const setSelectedRelease = useTikiStore((state) => state.setSelectedRelease)
 
   // Load entries
   const loadEntries = useCallback(async () => {
@@ -70,6 +73,10 @@ export function KnowledgeList({ onSelectEntry, onCreateEntry }: KnowledgeListPro
   }, [loadEntries])
 
   const handleSelectEntry = (entry: KnowledgeEntry) => {
+    // Clear other selections when selecting a knowledge entry
+    setSelectedNode(null)
+    setSelectedIssue(null)
+    setSelectedRelease(null)
     setSelectedKnowledge(entry.id)
     onSelectEntry?.(entry)
   }
@@ -96,6 +103,7 @@ export function KnowledgeList({ onSelectEntry, onCreateEntry }: KnowledgeListPro
         />
         <div className="flex flex-wrap gap-1">
           <FilterButton
+            key="all"
             active={categoryFilter === 'all'}
             onClick={() => setCategoryFilter('all')}
           >
@@ -159,7 +167,7 @@ export function KnowledgeList({ onSelectEntry, onCreateEntry }: KnowledgeListPro
                     <div className="text-xs font-medium text-slate-200 truncate">
                       {entry.title}
                     </div>
-                    {entry.tags.length > 0 && (
+                    {entry.tags && entry.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
                         {entry.tags.slice(0, 3).map((tag) => (
                           <span

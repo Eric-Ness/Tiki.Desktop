@@ -1,0 +1,130 @@
+{
+  "version": "v0.9.0",
+  "createdAt": "2026-01-28T23:59:00.000Z",
+  "status": "active",
+  "requirementsEnabled": true,
+  "githubMilestone": {
+    "number": 7,
+    "url": "https://github.com/Eric-Ness/Tiki.Desktop/milestone/7"
+  },
+  "issues": [
+    {
+      "number": 21,
+      "title": "feat: Add cross-content search functionality",
+      "status": "not_planned",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    },
+    {
+      "number": 31,
+      "title": "feat: Add data export/import functionality",
+      "status": "not_planned",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    },
+    {
+      "number": 32,
+      "title": "feat: Add custom layout presets",
+      "status": "not_planned",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    },
+    {
+      "number": 34,
+      "title": "feat: Add CI/CD status dashboard",
+      "status": "not_planned",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    },
+    {
+      "number": 37,
+      "title": "feat: Add execution cost prediction before starting issues",
+      "status": "not_planned",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    },
+    {
+      "number": 38,
+      "title": "feat: Add failure pattern recognition and proactive prevention",
+      "status": "not_planned",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    },
+    {
+      "number": 39,
+      "title": "feat: Add codebase heat map visualization",
+      "status": "not_planned",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    },
+    {
+      "number": 40,
+      "title": "feat: Add inline code preview with syntax highlighting in phase detail",
+      "status": "not_planned",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    },
+    {
+      "number": 44,
+      "title": "feat: Add velocity dashboard with productivity metrics and insights",
+      "status": "not_planned",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    },
+    {
+      "number": 45,
+      "title": "feat: Add workspace snapshots for context switching",
+      "status": "not_planned",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    },
+    {
+      "number": 47,
+      "title": "feat: Add guided/learning mode for new users",
+      "status": "not_planned",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    }
+  ],
+  "deferred": [
+    {
+      "number": 46,
+      "title": "feat: Add plugin/extension system for third-party integrations",
+      "reason": "Scope too large for single release; requires stable internal APIs and security review of sandboxing approach (vm2 deprecated). Candidate for v1.0+ after API stabilization.",
+      "deferredAt": "2026-01-28T23:59:00.000Z"
+    },
+    {
+      "number": 30,
+      "title": "feat: Add comprehensive keyboard navigation (vim-style)",
+      "reason": "Large scope (15+ files, 4 warnings). Better suited for dedicated keyboard/accessibility release where it can be properly phased.",
+      "deferredAt": "2026-01-29T01:20:00.000Z"
+    }
+  ],
+  "requirements": {
+    "total": 0,
+    "implemented": 0,
+    "verified": 0
+  }
+}

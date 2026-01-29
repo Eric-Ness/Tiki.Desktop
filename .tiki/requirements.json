@@ -71,8 +71,8 @@
         {
           "id": "CORE-07",
           "text": "Real-time workflow updates during phase execution",
-          "status": "pending",
-          "linkedIssues": [13],
+          "status": "implemented",
+          "linkedIssues": [13, 16],
           "verification": {
             "type": "manual",
             "description": "Workflow diagram updates within 200ms of state change"
@@ -128,8 +128,8 @@
         {
           "id": "UI-04",
           "text": "Command palette for quick Tiki command access",
-          "status": "pending",
-          "linkedIssues": [9],
+          "status": "implemented",
+          "linkedIssues": [9, 17],
           "verification": {
             "type": "manual",
             "description": "Cmd+K opens palette with searchable commands"
@@ -138,8 +138,8 @@
         {
           "id": "UI-05",
           "text": "Dark theme with consistent visual polish",
-          "status": "pending",
-          "linkedIssues": [12],
+          "status": "implemented",
+          "linkedIssues": [12, 26],
           "verification": {
             "type": "manual",
             "description": "App matches reference images with smooth animations"
@@ -175,8 +175,8 @@
         {
           "id": "GITHUB-02",
           "text": "Issue list display with planned/unplanned indicators",
-          "status": "pending",
-          "linkedIssues": [8],
+          "status": "implemented",
+          "linkedIssues": [8, 22],
           "verification": {
             "type": "manual",
             "description": "Issues show in sidebar with plan status indicators"
@@ -185,8 +185,8 @@
         {
           "id": "GITHUB-03",
           "text": "Issue detail view with body, labels, status",
-          "status": "pending",
-          "linkedIssues": [8],
+          "status": "implemented",
+          "linkedIssues": [8, 22],
           "verification": {
             "type": "manual",
             "description": "Clicking issue shows full details in panel"
