@@ -54,11 +54,14 @@ function App() {
     }))
   )
 
-  // Sync file watcher with Zustand store
-  useTikiSync()
+  // Project state - needed early for sync hooks
+  const activeProject = useTikiStore((state) => state.activeProject)
 
-  // Sync GitHub issues
-  useGitHubSync(cwd)
+  // Sync file watcher with Zustand store (only when project is active)
+  useTikiSync(activeProject)
+
+  // Sync GitHub issues (only when project is active)
+  useGitHubSync(cwd, activeProject)
 
   // Sync store data to search index
   useSearchIndexSync()
@@ -82,11 +85,10 @@ function App() {
   // Global search state
   const { isOpen: searchOpen, close: closeSearch } = useSearchShortcut()
 
-  // Project state and actions - consolidated selectors
-  const { recentCommands, activeProject, setActiveProject, setTikiState, setCurrentPlan, setIssues } = useTikiStore(
+  // Project actions - consolidated selectors (activeProject already declared above)
+  const { recentCommands, setActiveProject, setTikiState, setCurrentPlan, setIssues } = useTikiStore(
     useShallow((state) => ({
       recentCommands: state.recentCommands,
-      activeProject: state.activeProject,
       setActiveProject: state.setActiveProject,
       setTikiState: state.setTikiState,
       setCurrentPlan: state.setCurrentPlan,
@@ -193,9 +195,10 @@ function App() {
   }, [activePresetId, presets])
 
   useEffect(() => {
-    // Get app info on mount
+    // Get app version on mount
     window.tikiDesktop.getVersion().then(setVersion)
-    window.tikiDesktop.getCwd().then(setCwd)
+    // Note: cwd is set from activeProject.path in the mount effect above
+    // We don't call getCwd() here to avoid setting cwd when no project is selected
   }, [])
 
   // Listen for update status events

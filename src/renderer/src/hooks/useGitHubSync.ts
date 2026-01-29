@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react'
-import { useTikiStore, GitHubIssue } from '../stores/tiki-store'
+import { useTikiStore, GitHubIssue, Project } from '../stores/tiki-store'
 
 // Minimum time between auto-refreshes (prevent excessive API calls)
 const AUTO_REFRESH_THROTTLE_MS = 30000
@@ -7,8 +7,10 @@ const AUTO_REFRESH_THROTTLE_MS = 30000
 /**
  * Hook that syncs GitHub issues with the Zustand store.
  * Loads issues on mount, listens for updates, and auto-refreshes on window focus.
+ * @param cwd - The current working directory (project path)
+ * @param activeProject - The currently active project, or null if no project is selected
  */
-export function useGitHubSync(cwd: string) {
+export function useGitHubSync(cwd: string, activeProject: Project | null) {
   const setIssues = useTikiStore((state) => state.setIssues)
   const setGithubLoading = useTikiStore((state) => state.setGithubLoading)
   const setGithubError = useTikiStore((state) => state.setGithubError)
@@ -51,6 +53,12 @@ export function useGitHubSync(cwd: string) {
   }, [cwd, setIssues, setGithubLoading, setGithubError])
 
   useEffect(() => {
+    // If no active project, clear issues and don't set up listeners
+    if (!activeProject) {
+      setIssues([])
+      return
+    }
+
     // Load issues on mount (forced)
     loadIssues(true)
 
@@ -75,7 +83,7 @@ export function useGitHubSync(cwd: string) {
       cleanupErrors()
       window.removeEventListener('focus', handleFocus)
     }
-  }, [loadIssues, setIssues, setGithubError])
+  }, [activeProject, loadIssues, setIssues, setGithubError])
 
   // Return refresh function for manual refresh (forced)
   return { refresh: () => loadIssues(true) }

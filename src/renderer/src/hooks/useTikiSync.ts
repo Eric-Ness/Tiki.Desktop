@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
-import { useTikiStore, TikiState, ExecutionPlan, Release } from '../stores/tiki-store'
+import { useTikiStore, TikiState, ExecutionPlan, Release, Project } from '../stores/tiki-store'
 
 /**
  * Hook that syncs file watcher events with the Zustand store.
  * Should be called once at the app root level.
+ * @param activeProject - The currently active project, or null if no project is selected
  */
-export function useTikiSync() {
+export function useTikiSync(activeProject: Project | null) {
   const setTikiState = useTikiStore((state) => state.setTikiState)
   const setPlan = useTikiStore((state) => state.setPlan)
   const setCurrentPlan = useTikiStore((state) => state.setCurrentPlan)
@@ -15,6 +16,14 @@ export function useTikiSync() {
   const tikiState = useTikiStore((state) => state.tikiState)
 
   useEffect(() => {
+    // If no active project, clear state and don't set up listeners
+    if (!activeProject) {
+      setTikiState(null)
+      setReleases([])
+      setQueue([])
+      return
+    }
+
     // Listen for state changes
     const cleanupState = window.tikiDesktop.tiki.onStateChange((state) => {
       setTikiState(state as TikiState | null)
@@ -66,7 +75,7 @@ export function useTikiSync() {
       cleanupQueue()
       cleanupRelease()
     }
-  }, [setTikiState, setPlan, setCurrentPlan, setQueue, setReleases, updateRelease, tikiState?.activeIssue])
+  }, [activeProject, setTikiState, setPlan, setCurrentPlan, setQueue, setReleases, updateRelease, tikiState?.activeIssue])
 
   return null
 }
