@@ -8,12 +8,18 @@ vi.mock('../stores/tiki-store', () => ({
   useTikiStore: vi.fn()
 }))
 
-// Mock window.tikiDesktop.knowledge API
+// Mock window.tikiDesktop API
 const mockKnowledgeList = vi.fn().mockResolvedValue([])
+const mockTerminalCreate = vi.fn().mockResolvedValue('terminal-123')
+const mockTerminalWrite = vi.fn()
 Object.defineProperty(window, 'tikiDesktop', {
   value: {
     knowledge: {
       list: mockKnowledgeList
+    },
+    terminal: {
+      create: mockTerminalCreate,
+      write: mockTerminalWrite
     }
   },
   writable: true
@@ -54,6 +60,8 @@ const createDefaultMockState = (overrides = {}) => ({
 describe('Sidebar', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Reset terminal mocks
+    mockTerminalCreate.mockResolvedValue('terminal-123')
     // Default mock implementation
     mockUseTikiStore.mockImplementation((selector) => {
       const state = createDefaultMockState()
@@ -228,6 +236,33 @@ describe('Sidebar', () => {
       render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
 
       expect(screen.getByRole('button', { name: 'Start Claude Code' })).toBeInTheDocument()
+    })
+
+    it('should create terminal and run claude command when Start Claude Code is clicked', async () => {
+      render(<Sidebar cwd="/test/project" onProjectSwitch={mockOnProjectSwitch} />)
+
+      const button = screen.getByRole('button', { name: 'Start Claude Code' })
+      fireEvent.click(button)
+
+      // Should create a terminal with the project cwd and name "Claude"
+      await waitFor(() => {
+        expect(mockTerminalCreate).toHaveBeenCalledWith('/test/project', 'Claude')
+      })
+
+      // Should write the claude command with Enter (\r) to the terminal
+      await waitFor(() => {
+        expect(mockTerminalWrite).toHaveBeenCalledWith('terminal-123', 'claude --dangerously-skip-permissions\r')
+      })
+    })
+
+    it('should not create terminal when cwd is empty', async () => {
+      render(<Sidebar cwd="" onProjectSwitch={mockOnProjectSwitch} />)
+
+      const button = screen.getByRole('button', { name: 'Start Claude Code' })
+      fireEvent.click(button)
+
+      // Should not attempt to create a terminal
+      expect(mockTerminalCreate).not.toHaveBeenCalled()
     })
   })
 })

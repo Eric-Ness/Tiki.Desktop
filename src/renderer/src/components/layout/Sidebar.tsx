@@ -71,8 +71,21 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
       // Create a new terminal named "Claude" in the project directory
       const terminalId = await window.tikiDesktop.terminal.create(cwd, 'Claude')
 
-      // Write the claude command and press Enter
-      window.tikiDesktop.terminal.write(terminalId, 'claude --dangerously-skip-permissions\r')
+      // Add the terminal to the store so it appears in the UI
+      useTikiStore.getState().addTerminal({
+        id: terminalId,
+        name: 'Claude',
+        status: 'active'
+      })
+
+      // Switch to the terminal tab
+      useTikiStore.setState({ activeTerminal: terminalId })
+
+      // Small delay to ensure PTY is fully initialized before writing
+      // This prevents crashes on Windows where node-pty may not be ready immediately
+      setTimeout(() => {
+        window.tikiDesktop.terminal.write(terminalId, 'claude --dangerously-skip-permissions\r')
+      }, 100)
     } catch (error) {
       console.error('Failed to start Claude Code:', error)
     }

@@ -54,6 +54,12 @@
       "title": "GitHub CLI Integration Pattern for Electron",
       "category": "architecture",
       "tags": ["electron", "github", "ipc", "gh-cli"]
+    },
+    {
+      "id": "category-normalization-gotcha",
+      "title": "Storage vs UI Category Value Normalization",
+      "category": "troubleshooting",
+      "tags": ["typescript", "data-mapping", "service-layer", "categories"]
     }
   ],
   "categories": ["architecture", "patterns", "troubleshooting"],
