@@ -1,0 +1,23 @@
+{
+  "version": "v0.9.7",
+  "createdAt": "2026-01-29T17:02:59.422Z",
+  "status": "active",
+  "requirementsEnabled": false,
+  "githubMilestone": null,
+  "issues": [
+    {
+      "number": 58,
+      "title": "Slow and sluggish",
+      "status": "not_planned",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    }
+  ],
+  "requirements": {
+    "total": 0,
+    "implemented": 0,
+    "verified": 0
+  }
+}

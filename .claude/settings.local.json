@@ -20,7 +20,13 @@
       "Bash(git add:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nfix: improve LLM service error handling for missing API key\n\n- Check for ANTHROPIC_API_KEY before attempting API call\n- Use lazy client initialization\n- Add clearer error messages for common failure cases\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git push:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(ls -la \"C:\\\\Users\\\\ericn\\\\.claude\"\" | grep -E \".ps1)",
+      "Bash(.sh)",
+      "Bash(.yaml)",
+      "Bash(.json \")",
+      "Bash(ls -la \"C:\\\\Users\\\\ericn\\\\.claude\"\" | grep -v \"^d \")",
+      "Bash(ls:*)"
     ]
   }
 }
