@@ -1,18 +1,18 @@
 {
   "version": "v0.9.6",
   "createdAt": "2026-01-29T15:45:31.643Z",
-  "status": "active",
+  "status": "shipped",
   "requirementsEnabled": false,
   "githubMilestone": null,
   "issues": [
     {
       "number": 57,
       "title": "Tiki.Desktop Update is still not working",
-      "status": "planned",
+      "status": "shipped",
       "requirements": [],
-      "currentPhase": null,
-      "totalPhases": null,
-      "completedAt": null
+      "currentPhase": 2,
+      "totalPhases": 2,
+      "completedAt": "2026-01-29T16:00:00.000Z"
     }
   ],
   "requirements": {
