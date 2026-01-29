@@ -61,6 +61,7 @@ jobs:
           path: |
             release/*.exe
             release/*.blockmap
+            release/*.yml
           retention-days: 5
 
       - name: Upload artifacts (Linux)
@@ -82,6 +83,7 @@ jobs:
             release/*.dmg
             release/*.zip
             release/*.blockmap
+            release/*.yml
           retention-days: 5
 
   publish:
