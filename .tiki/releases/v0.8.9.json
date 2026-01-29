@@ -1,0 +1,23 @@
+{
+  "version": "v0.8.9",
+  "createdAt": "2026-01-29T05:21:38.143Z",
+  "status": "active",
+  "requirementsEnabled": false,
+  "githubMilestone": null,
+  "issues": [
+    {
+      "number": 51,
+      "title": "Add Tiki.Desktop version file and a way for the user to update the Tiki.Desktop Application remotely from github",
+      "status": "not_planned",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": null
+    }
+  ],
+  "requirements": {
+    "total": 0,
+    "implemented": 0,
+    "verified": 0
+  }
+}
