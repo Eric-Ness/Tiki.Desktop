@@ -264,6 +264,39 @@ describe('Sidebar', () => {
       // Should not attempt to create a terminal
       expect(mockTerminalCreate).not.toHaveBeenCalled()
     })
+
+    it('should render "Install/Update Tiki" button', () => {
+      render(<Sidebar cwd="/test" onProjectSwitch={mockOnProjectSwitch} />)
+
+      expect(screen.getByRole('button', { name: 'Install/Update Tiki' })).toBeInTheDocument()
+    })
+
+    it('should create terminal and run update command when Install/Update Tiki is clicked', async () => {
+      render(<Sidebar cwd="/test/project" onProjectSwitch={mockOnProjectSwitch} />)
+
+      const button = screen.getByRole('button', { name: 'Install/Update Tiki' })
+      fireEvent.click(button)
+
+      // Should create a terminal with the project cwd and name "Update Tiki"
+      await waitFor(() => {
+        expect(mockTerminalCreate).toHaveBeenCalledWith('/test/project', 'Update Tiki')
+      })
+
+      // Should write the tiki update command with Enter (\r) to the terminal
+      await waitFor(() => {
+        expect(mockTerminalWrite).toHaveBeenCalledWith('terminal-123', 'claude --dangerously-skip-permissions /tiki:update-tiki\r')
+      })
+    })
+
+    it('should not create terminal for Update Tiki when cwd is empty', async () => {
+      render(<Sidebar cwd="" onProjectSwitch={mockOnProjectSwitch} />)
+
+      const button = screen.getByRole('button', { name: 'Install/Update Tiki' })
+      fireEvent.click(button)
+
+      // Should not attempt to create a terminal
+      expect(mockTerminalCreate).not.toHaveBeenCalled()
+    })
   })
 })
 

@@ -91,6 +91,32 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
     }
   }, [cwd])
 
+  const handleUpdateTiki = useCallback(async () => {
+    if (!cwd) return
+
+    try {
+      // Create a new terminal for the Tiki update process
+      const terminalId = await window.tikiDesktop.terminal.create(cwd, 'Update Tiki')
+
+      // Add the terminal to the store so it appears in the UI
+      useTikiStore.getState().addTerminal({
+        id: terminalId,
+        name: 'Update Tiki',
+        status: 'active'
+      })
+
+      // Switch to the terminal tab
+      useTikiStore.setState({ activeTerminal: terminalId })
+
+      // Small delay to ensure PTY is fully initialized before writing
+      setTimeout(() => {
+        window.tikiDesktop.terminal.write(terminalId, 'claude --dangerously-skip-permissions /tiki:update-tiki\r')
+      }, 100)
+    } catch (error) {
+      console.error('Failed to start Tiki update:', error)
+    }
+  }, [cwd])
+
   const handleRefreshIssues = useCallback(async () => {
     if (!cwd) return
     setGithubLoading(true)
@@ -332,12 +358,18 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
       )}
 
       {/* Footer */}
-      <div className="p-2 border-t border-border">
+      <div className="p-2 border-t border-border space-y-2">
         <button
           onClick={handleStartClaudeCode}
           className="w-full px-3 py-2 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 rounded text-sm font-medium transition-colors shadow-sm hover:shadow-md active:shadow-sm"
         >
           Start Claude Code
+        </button>
+        <button
+          onClick={handleUpdateTiki}
+          className="w-full px-3 py-2 bg-slate-600 hover:bg-slate-500 active:bg-slate-700 rounded text-sm font-medium transition-colors"
+        >
+          Install/Update Tiki
         </button>
       </div>
     </div>
