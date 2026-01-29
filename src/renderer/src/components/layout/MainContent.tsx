@@ -66,30 +66,33 @@ export function MainContent({ cwd }: MainContentProps) {
         >
           Workflow
         </TabButton>
-        <TabButton
+        {/* DISABLED: Timeline tab - Issue #61 */}
+        {/* <TabButton
           active={activeTab === 'timeline'}
           onClick={() => setActiveTab('timeline')}
         >
           Timeline
-        </TabButton>
-        <TabButton
+        </TabButton> */}
+        {/* DISABLED: Dependencies tab - Issue #61 */}
+        {/* <TabButton
           active={activeTab === 'dependencies'}
           onClick={() => setActiveTab('dependencies')}
         >
           Dependencies
-        </TabButton>
+        </TabButton> */}
         <TabButton
           active={activeTab === 'heatmap'}
           onClick={() => setActiveTab('heatmap')}
         >
           Heat Map
         </TabButton>
-        <TabButton
+        {/* DISABLED: Analytics tab - Issue #61 */}
+        {/* <TabButton
           active={activeTab === 'analytics'}
           onClick={() => setActiveTab('analytics')}
         >
           Analytics
-        </TabButton>
+        </TabButton> */}
         <TabButton
           active={activeTab === 'config'}
           onClick={() => setActiveTab('config')}
@@ -109,16 +112,19 @@ export function MainContent({ cwd }: MainContentProps) {
       <div className="flex-1 overflow-hidden">
         {activeTab === 'terminal' && <TerminalTabs cwd={cwd} />}
         {activeTab === 'workflow' && <WorkflowCanvas />}
-        {activeTab === 'timeline' && <TimelineView timeline={timeline} />}
-        {activeTab === 'dependencies' && (
+        {/* DISABLED: Timeline view - Issue #61 */}
+        {/* {activeTab === 'timeline' && <TimelineView timeline={timeline} />} */}
+        {/* DISABLED: Dependencies view - Issue #61 */}
+        {/* {activeTab === 'dependencies' && (
           <DependencyView
             issues={issues}
             releases={releases}
             onIssueSelect={handleIssueSelect}
           />
-        )}
+        )} */}
         {activeTab === 'heatmap' && <HeatMapPanel cwd={cwd} />}
-        {activeTab === 'analytics' && <VelocityDashboard cwd={cwd} />}
+        {/* DISABLED: Analytics view - Issue #61 */}
+        {/* {activeTab === 'analytics' && <VelocityDashboard cwd={cwd} />} */}
         {activeTab === 'config' && <ConfigEditor />}
         {activeTab === 'activity' && <ActivityLog />}
       </div>
