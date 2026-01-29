@@ -18,10 +18,11 @@ export interface RecommendationError {
 
 /**
  * Run a prompt through Claude CLI and get the response
+ * Uses stdin to avoid command line length limits on Windows
  */
 async function runClaudePrompt(prompt: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const proc = spawn('claude', ['-p', prompt, '--output-format', 'text'], {
+    const proc = spawn('claude', ['-p', '--output-format', 'text'], {
       shell: true,
       env: { ...process.env }
     })
@@ -48,6 +49,10 @@ async function runClaudePrompt(prompt: string): Promise<string> {
     proc.on('error', (err) => {
       reject(new Error(`Failed to spawn Claude CLI: ${err.message}`))
     })
+
+    // Write prompt to stdin and close it
+    proc.stdin.write(prompt)
+    proc.stdin.end()
   })
 }
 
