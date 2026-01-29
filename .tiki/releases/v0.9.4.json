@@ -1,9 +1,10 @@
 {
   "version": "v0.9.4",
   "createdAt": "2026-01-29T14:10:26.506Z",
-  "status": "active",
+  "status": "shipped",
   "requirementsEnabled": false,
   "githubMilestone": null,
+  "shippedAt": "2026-01-29T14:35:00.000Z",
   "issues": [
     {
       "number": 55,
