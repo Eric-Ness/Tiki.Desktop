@@ -662,6 +662,49 @@ export interface ExecutionPlanForPatternPreload {
   }>
 }
 
+// Heatmap type definitions (mirrored from main process for type safety)
+export type HeatMetricPreload = 'modifications' | 'bugs' | 'churn' | 'complexity'
+export type TimePeriodPreload = '7days' | '30days' | '90days' | 'all'
+
+export interface FileHeatDataPreload {
+  path: string
+  name: string
+  directory: string
+  metrics: {
+    modifications: number
+    bugIssues: number[]
+    linesOfCode: number
+    lastModified: string | null
+  }
+  heat: number
+}
+
+export interface DirectoryHeatDataPreload {
+  path: string
+  name: string
+  files: FileHeatDataPreload[]
+  subdirectories: DirectoryHeatDataPreload[]
+  totalHeat: number
+  fileCount: number
+}
+
+export interface HeatMapSummaryPreload {
+  totalFiles: number
+  hotSpots: number
+  bugProne: number
+  untouched: number
+  topHotSpot: FileHeatDataPreload | null
+}
+
+export interface HeatMapDataPreload {
+  files: FileHeatDataPreload[]
+  tree: DirectoryHeatDataPreload
+  summary: HeatMapSummaryPreload
+  metric: HeatMetricPreload
+  period: TimePeriodPreload
+  generatedAt: string
+}
+
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('tikiDesktop', {
@@ -1154,6 +1197,21 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.invoke('patterns:delete', { cwd, patternId }),
     top: (cwd: string, limit?: number) =>
       ipcRenderer.invoke('patterns:top', { cwd, limit })
+  },
+
+  // Heatmap API (for codebase heat map visualization)
+  heatmap: {
+    generate: (cwd: string, metric: HeatMetricPreload, period: TimePeriodPreload) =>
+      ipcRenderer.invoke('heatmap:generate', { cwd, metric, period }),
+    get: (cwd: string, metric: HeatMetricPreload, period: TimePeriodPreload) =>
+      ipcRenderer.invoke('heatmap:get', { cwd, metric, period }),
+    getFile: (cwd: string, filePath: string) =>
+      ipcRenderer.invoke('heatmap:get-file', { cwd, filePath }),
+    getHotspots: (cwd: string, limit?: number) =>
+      ipcRenderer.invoke('heatmap:get-hotspots', { cwd, limit }),
+    refresh: (cwd: string, metric: HeatMetricPreload, period: TimePeriodPreload) =>
+      ipcRenderer.invoke('heatmap:refresh', { cwd, metric, period }),
+    clearCache: (cwd: string) => ipcRenderer.invoke('heatmap:clear-cache', { cwd })
   }
 })
 
@@ -1570,6 +1628,26 @@ declare global {
         resolve: (cwd: string, patternId: string) => Promise<{ success: boolean }>
         delete: (cwd: string, patternId: string) => Promise<{ success: boolean }>
         top: (cwd: string, limit?: number) => Promise<FailurePatternPreload[]>
+      }
+      heatmap: {
+        generate: (
+          cwd: string,
+          metric: HeatMetricPreload,
+          period: TimePeriodPreload
+        ) => Promise<HeatMapDataPreload>
+        get: (
+          cwd: string,
+          metric: HeatMetricPreload,
+          period: TimePeriodPreload
+        ) => Promise<HeatMapDataPreload>
+        getFile: (cwd: string, filePath: string) => Promise<FileHeatDataPreload | null>
+        getHotspots: (cwd: string, limit?: number) => Promise<FileHeatDataPreload[]>
+        refresh: (
+          cwd: string,
+          metric: HeatMetricPreload,
+          period: TimePeriodPreload
+        ) => Promise<HeatMapDataPreload>
+        clearCache: (cwd: string) => Promise<{ success: boolean }>
       }
     }
   }

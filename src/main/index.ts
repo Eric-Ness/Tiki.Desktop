@@ -23,6 +23,7 @@ import { registerSearchHandlers } from './ipc/search'
 import { registerWorkflowHandlers, setWorkflowWindow, stopAllPolling } from './ipc/workflow'
 import { registerPredictionHandlers } from './ipc/prediction'
 import { registerPatternHandlers } from './ipc/patterns'
+import { registerHeatmapHandlers } from './ipc/heatmap'
 import { setMainWindow as setSettingsWindow } from './services/settings-store'
 import { setMainWindow as setNotificationWindow } from './services/notification-service'
 import { setUpdateWindow, initAutoUpdater, checkForUpdates } from './services/update-service'
@@ -91,6 +92,7 @@ app.whenReady().then(() => {
   registerWorkflowHandlers()
   registerPredictionHandlers()
   registerPatternHandlers()
+  registerHeatmapHandlers()
 
   createWindow()
 

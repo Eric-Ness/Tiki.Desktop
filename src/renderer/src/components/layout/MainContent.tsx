@@ -5,11 +5,12 @@ import { ConfigEditor } from '../config'
 import { ActivityLog } from '../activity'
 import { TimelineView } from '../timeline'
 import { DependencyView } from '../dependencies'
+import { HeatMapPanel } from '../heatmap'
 import { useActivityStore } from '../../stores/activity-store'
 import { useTikiStore } from '../../stores/tiki-store'
 import { extractTimeline } from '../../lib/timeline-utils'
 
-type Tab = 'terminal' | 'workflow' | 'timeline' | 'dependencies' | 'config' | 'activity'
+type Tab = 'terminal' | 'workflow' | 'timeline' | 'dependencies' | 'heatmap' | 'config' | 'activity'
 
 interface MainContentProps {
   cwd: string
@@ -70,6 +71,12 @@ export function MainContent({ cwd }: MainContentProps) {
           Dependencies
         </TabButton>
         <TabButton
+          active={activeTab === 'heatmap'}
+          onClick={() => setActiveTab('heatmap')}
+        >
+          Heat Map
+        </TabButton>
+        <TabButton
           active={activeTab === 'config'}
           onClick={() => setActiveTab('config')}
         >
@@ -96,6 +103,7 @@ export function MainContent({ cwd }: MainContentProps) {
             onIssueSelect={handleIssueSelect}
           />
         )}
+        {activeTab === 'heatmap' && <HeatMapPanel cwd={cwd} />}
         {activeTab === 'config' && <ConfigEditor />}
         {activeTab === 'activity' && <ActivityLog />}
       </div>

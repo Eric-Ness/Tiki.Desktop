@@ -173,6 +173,35 @@ if (isBrowserEnv) {
         resolve: vi.fn().mockResolvedValue({ success: true }),
         delete: vi.fn().mockResolvedValue({ success: true }),
         top: vi.fn().mockResolvedValue([])
+      },
+      heatmap: {
+        generate: vi.fn().mockResolvedValue({
+          files: [],
+          tree: { path: '.', name: '.', files: [], subdirectories: [], totalHeat: 0, fileCount: 0 },
+          summary: { totalFiles: 0, hotSpots: 0, bugProne: 0, untouched: 0, topHotSpot: null },
+          metric: 'modifications',
+          period: '30days',
+          generatedAt: new Date().toISOString()
+        }),
+        get: vi.fn().mockResolvedValue({
+          files: [],
+          tree: { path: '.', name: '.', files: [], subdirectories: [], totalHeat: 0, fileCount: 0 },
+          summary: { totalFiles: 0, hotSpots: 0, bugProne: 0, untouched: 0, topHotSpot: null },
+          metric: 'modifications',
+          period: '30days',
+          generatedAt: new Date().toISOString()
+        }),
+        getFile: vi.fn().mockResolvedValue(null),
+        getHotspots: vi.fn().mockResolvedValue([]),
+        refresh: vi.fn().mockResolvedValue({
+          files: [],
+          tree: { path: '.', name: '.', files: [], subdirectories: [], totalHeat: 0, fileCount: 0 },
+          summary: { totalFiles: 0, hotSpots: 0, bugProne: 0, untouched: 0, topHotSpot: null },
+          metric: 'modifications',
+          period: '30days',
+          generatedAt: new Date().toISOString()
+        }),
+        clearCache: vi.fn().mockResolvedValue({ success: true })
       }
     },
     writable: true,
