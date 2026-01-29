@@ -161,6 +161,18 @@ if (isBrowserEnv) {
         getAverageCost: vi.fn().mockResolvedValue({ average: null, recent: null }),
         isHighCost: vi.fn().mockResolvedValue(false),
         clearCache: vi.fn().mockResolvedValue({ success: true })
+      },
+      patterns: {
+        list: vi.fn().mockResolvedValue([]),
+        get: vi.fn().mockResolvedValue(undefined),
+        check: vi.fn().mockResolvedValue([]),
+        recordFailure: vi.fn().mockResolvedValue({ success: true }),
+        recordFix: vi.fn().mockResolvedValue({ success: true }),
+        analyze: vi.fn().mockResolvedValue([]),
+        applyPrevention: vi.fn().mockResolvedValue({ modifiedPlan: { phases: [] }, appliedMeasures: [] }),
+        resolve: vi.fn().mockResolvedValue({ success: true }),
+        delete: vi.fn().mockResolvedValue({ success: true }),
+        top: vi.fn().mockResolvedValue([])
       }
     },
     writable: true,

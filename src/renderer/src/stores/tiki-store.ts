@@ -65,6 +65,15 @@ export interface CachedPrediction {
   cachedAt: number
 }
 
+// Pattern match type for caching (simplified from preload types)
+export interface CachedPatternMatch {
+  patternId: string
+  patternName: string
+  confidence: number
+  matchedIndicators: string[]
+  suggestedMeasuresCount: number
+}
+
 export interface BranchInfo {
   name: string
   current: boolean
@@ -238,6 +247,12 @@ interface TikiDesktopState {
   setPrediction: (issueNumber: number, prediction: CachedPrediction) => void
   getPrediction: (issueNumber: number) => CachedPrediction | undefined
   clearPredictions: () => void
+
+  // Pattern Matches Cache
+  patternMatches: Record<number, CachedPatternMatch[]>
+  setPatternMatches: (issueNumber: number, matches: CachedPatternMatch[]) => void
+  getPatternMatches: (issueNumber: number) => CachedPatternMatch[] | undefined
+  clearPatternMatches: () => void
 }
 
 export const useTikiStore = create<TikiDesktopState>()(
@@ -601,7 +616,19 @@ export const useTikiStore = create<TikiDesktopState>()(
             }
           })),
         getPrediction: (issueNumber) => get().predictions[issueNumber],
-        clearPredictions: () => set({ predictions: {} })
+        clearPredictions: () => set({ predictions: {} }),
+
+        // Pattern Matches Cache
+        patternMatches: {},
+        setPatternMatches: (issueNumber, matches) =>
+          set((state) => ({
+            patternMatches: {
+              ...state.patternMatches,
+              [issueNumber]: matches
+            }
+          })),
+        getPatternMatches: (issueNumber) => get().patternMatches[issueNumber],
+        clearPatternMatches: () => set({ patternMatches: {} })
       }),
       {
         name: 'tiki-desktop-storage',

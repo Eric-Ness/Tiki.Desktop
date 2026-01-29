@@ -588,6 +588,80 @@ export interface PredictionPlanInput {
   phases: Array<{ files: string[]; verification: string[] }>
 }
 
+// Pattern detection type definitions (mirrored from main process for type safety)
+export type PatternCategory = 'code' | 'project' | 'workflow'
+
+export interface FailurePatternPreload {
+  id: string
+  name: string
+  description: string
+  category: PatternCategory
+  errorSignatures: string[]
+  filePatterns: string[]
+  contextIndicators: string[]
+  occurrenceCount: number
+  lastOccurrence: string
+  affectedIssues: number[]
+  successfulFixes: FixRecordPreload[]
+  preventiveMeasures: PreventiveMeasurePreload[]
+  createdAt: string
+  updatedAt: string
+  resolvedAt: string | null
+}
+
+export interface FailureRecordPreload {
+  id: string
+  issueNumber: number
+  phaseNumber: number
+  errorText: string
+  errorCategory: string
+  files: string[]
+  timestamp: string
+  resolution: 'fixed' | 'skipped' | 'pending' | null
+  fixDescription: string | null
+}
+
+export interface FixRecordPreload {
+  failureId: string
+  patternId: string
+  description: string
+  effectiveness: number
+  appliedAt: string
+  success: boolean
+}
+
+export interface PreventiveMeasurePreload {
+  id: string
+  description: string
+  type: 'context' | 'verification' | 'phase_structure' | 'manual'
+  automatic: boolean
+  effectiveness: number
+  application: string
+}
+
+export interface PatternMatchPreload {
+  pattern: FailurePatternPreload
+  confidence: number
+  matchedIndicators: string[]
+  suggestedMeasures: PreventiveMeasurePreload[]
+}
+
+export interface GitHubIssueForPatternPreload {
+  number: number
+  title: string
+  body?: string
+  labels?: Array<{ name: string }>
+}
+
+export interface ExecutionPlanForPatternPreload {
+  phases: Array<{
+    number: number
+    title: string
+    files: string[]
+    verification: string[]
+  }>
+}
+
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('tikiDesktop', {
@@ -1058,6 +1132,28 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
     isHighCost: (cwd: string, prediction: CostPrediction, threshold?: number) =>
       ipcRenderer.invoke('prediction:is-high-cost', { cwd, prediction, threshold }),
     clearCache: (cwd: string) => ipcRenderer.invoke('prediction:clear-cache', { cwd })
+  },
+
+  // Patterns API (for failure pattern detection and proactive prevention)
+  patterns: {
+    list: (cwd: string) => ipcRenderer.invoke('patterns:list', { cwd }),
+    get: (cwd: string, patternId: string) =>
+      ipcRenderer.invoke('patterns:get', { cwd, patternId }),
+    check: (cwd: string, issue: GitHubIssueForPatternPreload, plan?: ExecutionPlanForPatternPreload) =>
+      ipcRenderer.invoke('patterns:check', { cwd, issue, plan }),
+    recordFailure: (cwd: string, failure: FailureRecordPreload) =>
+      ipcRenderer.invoke('patterns:record-failure', { cwd, failure }),
+    recordFix: (cwd: string, patternId: string, fix: FixRecordPreload) =>
+      ipcRenderer.invoke('patterns:record-fix', { cwd, patternId, fix }),
+    analyze: (cwd: string) => ipcRenderer.invoke('patterns:analyze', { cwd }),
+    applyPrevention: (cwd: string, plan: ExecutionPlanForPatternPreload, matches: PatternMatchPreload[]) =>
+      ipcRenderer.invoke('patterns:apply-prevention', { cwd, plan, matches }),
+    resolve: (cwd: string, patternId: string) =>
+      ipcRenderer.invoke('patterns:resolve', { cwd, patternId }),
+    delete: (cwd: string, patternId: string) =>
+      ipcRenderer.invoke('patterns:delete', { cwd, patternId }),
+    top: (cwd: string, limit?: number) =>
+      ipcRenderer.invoke('patterns:top', { cwd, limit })
   }
 })
 
@@ -1447,6 +1543,33 @@ declare global {
         getAverageCost: (cwd: string) => Promise<{ average: number | null; recent: number | null }>
         isHighCost: (cwd: string, prediction: CostPrediction, threshold?: number) => Promise<boolean>
         clearCache: (cwd: string) => Promise<{ success: boolean }>
+      }
+      patterns: {
+        list: (cwd: string) => Promise<FailurePatternPreload[]>
+        get: (cwd: string, patternId: string) => Promise<FailurePatternPreload | undefined>
+        check: (
+          cwd: string,
+          issue: GitHubIssueForPatternPreload,
+          plan?: ExecutionPlanForPatternPreload
+        ) => Promise<PatternMatchPreload[]>
+        recordFailure: (cwd: string, failure: FailureRecordPreload) => Promise<{ success: boolean }>
+        recordFix: (
+          cwd: string,
+          patternId: string,
+          fix: FixRecordPreload
+        ) => Promise<{ success: boolean }>
+        analyze: (cwd: string) => Promise<FailurePatternPreload[]>
+        applyPrevention: (
+          cwd: string,
+          plan: ExecutionPlanForPatternPreload,
+          matches: PatternMatchPreload[]
+        ) => Promise<{
+          modifiedPlan: ExecutionPlanForPatternPreload
+          appliedMeasures: PreventiveMeasurePreload[]
+        }>
+        resolve: (cwd: string, patternId: string) => Promise<{ success: boolean }>
+        delete: (cwd: string, patternId: string) => Promise<{ success: boolean }>
+        top: (cwd: string, limit?: number) => Promise<FailurePatternPreload[]>
       }
     }
   }

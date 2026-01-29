@@ -1,11 +1,17 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { GitHubIssue, useTikiStore, CachedPrediction } from '../../stores/tiki-store'
+import { GitHubIssue, useTikiStore, CachedPrediction, CachedPatternMatch } from '../../stores/tiki-store'
 import { IssueActions } from '../issues'
 import { PRPreview } from './PRPreview'
 import { RollbackDialog } from '../rollback'
 import { TemplateSuggestions, CreateTemplateDialog, ApplyTemplateDialog } from '../templates'
 import { CostPrediction } from '../prediction'
+import { PatternWarning, PreventionSuggestions } from '../patterns'
+import type {
+  PatternMatchPreload,
+  FailurePatternPreload,
+  PreventiveMeasurePreload
+} from '../../../../preload/index'
 
 // Template type for ApplyTemplateDialog
 type TemplateCategory = 'issue_type' | 'component' | 'workflow' | 'custom'
@@ -91,9 +97,17 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
   const activeProject = useTikiStore((state) => state.activeProject)
   const plans = useTikiStore((state) => state.plans)
   const setPrediction = useTikiStore((state) => state.setPrediction)
+  const setPatternMatchesInStore = useTikiStore((state) => state.setPatternMatches)
+  const getPatternMatchesFromStore = useTikiStore((state) => state.getPatternMatches)
   const [showRollbackDialog, setShowRollbackDialog] = useState(false)
   const [hasTrackedCommits, setHasTrackedCommits] = useState(false)
   const [showCostPrediction, setShowCostPrediction] = useState(true)
+
+  // Pattern analysis state
+  const [patternMatches, setPatternMatches] = useState<PatternMatchPreload[]>([])
+  const [checkingPatterns, setCheckingPatterns] = useState(false)
+  const [showPatternAnalysis, setShowPatternAnalysis] = useState(true)
+  const [patternsDismissed, setPatternsDismissed] = useState(false)
 
   // Template dialog state
   const [showCreateTemplateDialog, setShowCreateTemplateDialog] = useState(false)
@@ -138,6 +152,130 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
     }
     checkCommits()
   }, [cwd, activeProject?.path, number])
+
+  // Check for pattern matches when issue changes
+  useEffect(() => {
+    const checkPatterns = async () => {
+      const projectPath = cwd || activeProject?.path
+      if (!projectPath || !number) {
+        setPatternMatches([])
+        return
+      }
+
+      // Reset dismissed state when issue changes
+      setPatternsDismissed(false)
+
+      // Check if we have cached matches
+      const cachedMatches = getPatternMatchesFromStore(number)
+      if (cachedMatches && cachedMatches.length > 0) {
+        // We have cached data, but we need to fetch full pattern data
+        // since the cache only stores summaries
+      }
+
+      setCheckingPatterns(true)
+      try {
+        const issueForPattern = {
+          number,
+          title,
+          body,
+          labels: normalizedLabels
+        }
+
+        // Convert plan to pattern format if available
+        const planForPattern = plan
+          ? {
+              phases: plan.phases.map((p) => ({
+                number: p.number,
+                title: p.title,
+                files: p.files,
+                verification: p.verification
+              }))
+            }
+          : undefined
+
+        const matches = await window.tikiDesktop.patterns.check(
+          projectPath,
+          issueForPattern,
+          planForPattern
+        )
+        setPatternMatches(matches)
+
+        // Cache simplified matches in store
+        const cachedMatches: CachedPatternMatch[] = matches.map((m) => ({
+          patternId: m.pattern.id,
+          patternName: m.pattern.name,
+          confidence: m.confidence,
+          matchedIndicators: m.matchedIndicators,
+          suggestedMeasuresCount: m.suggestedMeasures.length
+        }))
+        setPatternMatchesInStore(number, cachedMatches)
+      } catch (error) {
+        console.error('Failed to check patterns:', error)
+        setPatternMatches([])
+      }
+      setCheckingPatterns(false)
+    }
+
+    checkPatterns()
+  }, [cwd, activeProject?.path, number, title, body, plan])
+
+  // Handle apply all prevention measures
+  const handleApplyAllPrevention = useCallback(async () => {
+    const projectPath = cwd || activeProject?.path
+    if (!projectPath || !plan || patternMatches.length === 0) return
+
+    try {
+      const planForPattern = {
+        phases: plan.phases.map((p) => ({
+          number: p.number,
+          title: p.title,
+          files: p.files,
+          verification: p.verification
+        }))
+      }
+
+      const result = await window.tikiDesktop.patterns.applyPrevention(
+        projectPath,
+        planForPattern,
+        patternMatches
+      )
+
+      // Show success notification (you could add a toast here)
+      console.log(
+        `Applied ${result.appliedMeasures.length} preventive measures`,
+        result.appliedMeasures.map((m) => m.description)
+      )
+
+      // Optionally dismiss the warning after applying
+      setPatternsDismissed(true)
+    } catch (error) {
+      console.error('Failed to apply prevention measures:', error)
+    }
+  }, [cwd, activeProject?.path, plan, patternMatches])
+
+  // Handle dismiss pattern warning
+  const handleDismissPatterns = useCallback(() => {
+    setPatternsDismissed(true)
+  }, [])
+
+  // Handle view pattern details (could navigate to pattern dashboard)
+  const handleViewPatternDetails = useCallback((pattern: FailurePatternPreload) => {
+    // For now, log the pattern - could open a modal or navigate to dashboard
+    console.log('View pattern details:', pattern)
+  }, [])
+
+  // Get all suggested measures from matches
+  const allSuggestedMeasures = useMemo(() => {
+    const measuresMap = new Map<string, PreventiveMeasurePreload>()
+    for (const match of patternMatches) {
+      for (const measure of match.suggestedMeasures) {
+        if (!measuresMap.has(measure.id)) {
+          measuresMap.set(measure.id, measure)
+        }
+      }
+    }
+    return Array.from(measuresMap.values())
+  }, [patternMatches])
 
   // Handle template apply selection
   const handleTemplateApply = useCallback((template: PlanTemplate) => {
@@ -298,6 +436,99 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
           issueNumber={number}
           onApplied={handleTemplateApplied}
         />
+      )}
+
+      {/* Pattern Analysis Section */}
+      {(cwd || activeProject?.path) && (
+        <div className="border-t border-slate-700/50 pt-4" data-testid="pattern-analysis-section">
+          <button
+            onClick={() => setShowPatternAnalysis(!showPatternAnalysis)}
+            className="flex items-center gap-2 w-full text-left mb-2"
+          >
+            <svg
+              className={`w-3 h-3 text-slate-400 transition-transform ${showPatternAnalysis ? 'rotate-90' : ''}`}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+              Pattern Analysis
+              {checkingPatterns && (
+                <span className="text-xs text-slate-500">(checking...)</span>
+              )}
+              {!checkingPatterns && patternMatches.length > 0 && !patternsDismissed && (
+                <span className="px-1.5 py-0.5 text-xs rounded bg-amber-500/20 text-amber-400">
+                  {patternMatches.length} match{patternMatches.length !== 1 ? 'es' : ''}
+                </span>
+              )}
+            </h3>
+          </button>
+
+          {showPatternAnalysis && (
+            <div className="space-y-3">
+              {/* Pattern Warning Banner */}
+              {patternMatches.length > 0 && !patternsDismissed && (
+                <PatternWarning
+                  matches={patternMatches}
+                  onApplyAll={plan ? handleApplyAllPrevention : undefined}
+                  onDismiss={handleDismissPatterns}
+                  onViewDetails={handleViewPatternDetails}
+                />
+              )}
+
+              {/* Prevention Suggestions (expandable) */}
+              {patternMatches.length > 0 && !patternsDismissed && allSuggestedMeasures.length > 0 && (
+                <div className="bg-slate-800/50 rounded-lg border border-slate-700/50 p-4">
+                  <PreventionSuggestions
+                    measures={allSuggestedMeasures}
+                    onApply={async (measure) => {
+                      // Apply individual measure
+                      console.log('Apply measure:', measure)
+                    }}
+                    onDismiss={(measure) => {
+                      // Dismiss individual measure
+                      console.log('Dismiss measure:', measure)
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* No patterns found message */}
+              {!checkingPatterns && patternMatches.length === 0 && (
+                <div className="text-sm text-slate-500 bg-slate-800/30 rounded-lg p-3 border border-slate-700/30">
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="w-4 h-4 text-green-500"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    No failure patterns detected for this issue.
+                  </div>
+                </div>
+              )}
+
+              {/* Dismissed message */}
+              {patternsDismissed && patternMatches.length > 0 && (
+                <div className="text-sm text-slate-500 flex items-center justify-between">
+                  <span>Pattern warnings dismissed</span>
+                  <button
+                    onClick={() => setPatternsDismissed(false)}
+                    className="text-xs text-cyan-400 hover:text-cyan-300"
+                  >
+                    Show again
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Body section */}
