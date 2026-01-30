@@ -131,7 +131,35 @@ If requirements exist AND not --skip-verify:
 1. Read `.tiki/prompts/release-yolo/verification.md`
 2. Follow verification workflow
 
-### Step 9: Ship Release
+### Step 9: Run Pre-Ship Hook
+
+**Before creating the release tag**, check for and execute the pre-ship hook:
+
+1. Check if `.tiki/hooks/pre-ship` exists
+2. If it exists, run it with bash (on Windows, use Git Bash):
+
+```bash
+# On Windows
+bash .tiki/hooks/pre-ship
+
+# Set environment variables
+export TIKI_RELEASE_VERSION="${VERSION}"
+```
+
+3. If the hook modifies files (e.g., bumps version), commit the changes:
+
+```bash
+git add -A
+git commit -m "chore: bump version for ${VERSION}" --allow-empty
+```
+
+4. Push the commit before tagging:
+
+```bash
+git push origin HEAD
+```
+
+### Step 10: Ship Release
 
 Handle any failed issues (ship anyway, remove, or abort).
 
@@ -146,7 +174,7 @@ Close milestone if linked. Archive release file. Clean up yolo state.
 
 Update version.json with changelog entry for completed issues.
 
-### Step 10: Completion Summary
+### Step 11: Completion Summary
 
 ```text
 ## Release {version} Shipped!
