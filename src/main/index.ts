@@ -35,6 +35,13 @@ import { setUpdateWindow, initAutoUpdater, checkForUpdates } from './services/up
 let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
+  // Determine the correct icon based on platform
+  const iconPath = join(
+    __dirname,
+    '../../resources',
+    process.platform === 'win32' ? 'icon.ico' : 'icon.png'
+  )
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -42,6 +49,7 @@ function createWindow(): void {
     minHeight: 600,
     show: false,
     backgroundColor: '#0f0f0f',
+    icon: iconPath,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 15, y: 15 },
     webPreferences: {
