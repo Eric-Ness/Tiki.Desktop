@@ -1,0 +1,39 @@
+#!/bin/bash
+# Pre-ship hook for Tiki.Desktop
+# Automatically bumps the patch version in package.json before shipping
+set -e
+
+echo "Pre-ship hook: Bumping version for issue #${TIKI_ISSUE_NUMBER:-unknown}"
+
+# Check if package.json exists
+if [ ! -f "package.json" ]; then
+    echo "Error: package.json not found"
+    exit 1
+fi
+
+# Read current version
+CURRENT=$(node -p "require('./package.json').version" 2>/dev/null)
+if [ -z "$CURRENT" ]; then
+    echo "Error: Could not read version from package.json"
+    exit 1
+fi
+echo "Current version: $CURRENT"
+
+# Parse semver and increment patch
+IFS='.' read -r major minor patch <<< "$CURRENT"
+if [ -z "$major" ] || [ -z "$minor" ] || [ -z "$patch" ]; then
+    echo "Error: Invalid semver format: $CURRENT"
+    exit 1
+fi
+
+NEW_VERSION="$major.$minor.$((patch + 1))"
+echo "New version: $NEW_VERSION"
+
+# Update package.json using npm (also updates package-lock.json)
+npm version "$NEW_VERSION" --no-git-tag-version --allow-same-version
+
+# Stage the changed files for the ship commit
+git add package.json package-lock.json
+
+echo "Version bumped: $CURRENT -> $NEW_VERSION"
+echo "Files staged for commit: package.json, package-lock.json"
