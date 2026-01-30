@@ -9,7 +9,7 @@ interface IssueListProps {
   onRefresh?: () => void
 }
 
-const PAGE_SIZE = 25
+const PAGE_SIZE = 10
 
 export function IssueList({ onRefresh }: IssueListProps) {
   const [filter, setFilter] = useState<IssueFilter>('open')

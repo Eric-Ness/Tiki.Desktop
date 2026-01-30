@@ -53,8 +53,8 @@ describe('IssueList', () => {
   })
 
   describe('pagination', () => {
-    it('should show pagination controls when more than 25 issues', () => {
-      mockIssues.push(...createMockIssues(30))
+    it('should show pagination controls when more than 10 issues', () => {
+      mockIssues.push(...createMockIssues(15))
 
       render(<IssueList />)
 
@@ -64,8 +64,8 @@ describe('IssueList', () => {
       expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument()
     })
 
-    it('should not show pagination controls when 25 or fewer issues', () => {
-      mockIssues.push(...createMockIssues(25))
+    it('should not show pagination controls when 10 or fewer issues', () => {
+      mockIssues.push(...createMockIssues(10))
 
       render(<IssueList />)
 
@@ -73,34 +73,34 @@ describe('IssueList', () => {
       expect(screen.queryByText(/Page/)).not.toBeInTheDocument()
     })
 
-    it('should show only 25 issues per page', () => {
-      mockIssues.push(...createMockIssues(30))
+    it('should show only 10 issues per page', () => {
+      mockIssues.push(...createMockIssues(15))
 
       render(<IssueList />)
 
-      // Should show issues 1-25 on first page
+      // Should show issues 1-10 on first page
       expect(screen.getByText('#1')).toBeInTheDocument()
-      expect(screen.getByText('#25')).toBeInTheDocument()
-      expect(screen.queryByText('#26')).not.toBeInTheDocument()
+      expect(screen.getByText('#10')).toBeInTheDocument()
+      expect(screen.queryByText('#11')).not.toBeInTheDocument()
     })
 
     it('should navigate to next page', () => {
-      mockIssues.push(...createMockIssues(30))
+      mockIssues.push(...createMockIssues(15))
 
       render(<IssueList />)
 
       // Click next page
       fireEvent.click(screen.getByRole('button', { name: /next/i }))
 
-      // Should show issues 26-30 on second page
-      expect(screen.queryByText('#25')).not.toBeInTheDocument()
-      expect(screen.getByText('#26')).toBeInTheDocument()
-      expect(screen.getByText('#30')).toBeInTheDocument()
+      // Should show issues 11-15 on second page
+      expect(screen.queryByText('#10')).not.toBeInTheDocument()
+      expect(screen.getByText('#11')).toBeInTheDocument()
+      expect(screen.getByText('#15')).toBeInTheDocument()
       expect(screen.getByText(/Page 2 of 2/)).toBeInTheDocument()
     })
 
     it('should navigate to previous page', () => {
-      mockIssues.push(...createMockIssues(30))
+      mockIssues.push(...createMockIssues(15))
 
       render(<IssueList />)
 
@@ -115,7 +115,7 @@ describe('IssueList', () => {
     })
 
     it('should disable previous button on first page', () => {
-      mockIssues.push(...createMockIssues(30))
+      mockIssues.push(...createMockIssues(15))
 
       render(<IssueList />)
 
@@ -124,7 +124,7 @@ describe('IssueList', () => {
     })
 
     it('should disable next button on last page', () => {
-      mockIssues.push(...createMockIssues(30))
+      mockIssues.push(...createMockIssues(15))
 
       render(<IssueList />)
 
@@ -136,7 +136,7 @@ describe('IssueList', () => {
     })
 
     it('should reset to page 1 when filter changes', () => {
-      mockIssues.push(...createMockIssues(30))
+      mockIssues.push(...createMockIssues(15))
 
       render(<IssueList />)
 
