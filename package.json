@@ -76,7 +76,8 @@
     },
     "files": [
       "dist-electron",
-      "dist"
+      "dist",
+      "resources"
     ],
     "win": {
       "target": [
