@@ -26,7 +26,11 @@ export function ReleaseList() {
 
   // Separate active/in-progress from shipped
   const activeReleases = releases.filter((r) => r.status !== 'shipped')
-  const shippedReleases = releases.filter((r) => r.status === 'shipped').slice(-10)
+  // Sort shipped releases in descending order (newest first) and limit to 10
+  const shippedReleases = releases
+    .filter((r) => r.status === 'shipped')
+    .sort((a, b) => b.version.localeCompare(a.version))
+    .slice(0, 10)
 
   return (
     <div className="space-y-2">
