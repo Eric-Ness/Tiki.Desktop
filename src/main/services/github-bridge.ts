@@ -32,6 +32,7 @@ interface GhIssueResponse {
 let mainWindow: BrowserWindow | null = null
 let issueCache: Map<number, GitHubIssue> = new Map()
 let lastFetchTime: number = 0
+let cachedCwd: string | null = null
 const CACHE_TTL_MS = 60000 // 1 minute cache
 
 export function setGitHubWindow(window: BrowserWindow): void {
@@ -74,8 +75,8 @@ export async function getIssues(
   const workDir = cwd || process.cwd()
   const now = Date.now()
 
-  // Return cached data if still valid and same state filter
-  if (issueCache.size > 0 && now - lastFetchTime < CACHE_TTL_MS) {
+  // Return cached data if still valid, same state filter, and same project
+  if (issueCache.size > 0 && now - lastFetchTime < CACHE_TTL_MS && workDir === cachedCwd) {
     const cached = Array.from(issueCache.values())
     if (state === 'all') return cached
     return cached.filter((i) => (state === 'open' ? i.state === 'OPEN' : i.state === 'CLOSED'))
@@ -118,6 +119,7 @@ export async function getIssues(
     })
 
     lastFetchTime = now
+    cachedCwd = workDir
 
     // Notify renderer of updated issues
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -199,6 +201,7 @@ export async function refreshIssues(cwd?: string): Promise<void> {
 export function invalidateCache(): void {
   issueCache.clear()
   lastFetchTime = 0
+  cachedCwd = null
 }
 
 /**
