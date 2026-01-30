@@ -141,7 +141,7 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
     setGithubError(null)
     try {
       await window.tikiDesktop.github.refresh(cwd)
-      const issues = await window.tikiDesktop.github.getIssues('open', cwd)
+      const issues = await window.tikiDesktop.github.getIssues('all', cwd)
       setIssues(issues as never[])
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to refresh'
