@@ -9,9 +9,12 @@ interface IssueListProps {
   onRefresh?: () => void
 }
 
+const PAGE_SIZE = 25
+
 export function IssueList({ onRefresh }: IssueListProps) {
   const [filter, setFilter] = useState<IssueFilter>('open')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Group 1: GitHub data
   const { issues, githubLoading, githubError } = useTikiStore(
@@ -140,6 +143,20 @@ export function IssueList({ onRefresh }: IssueListProps) {
     return true
   })
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredIssues.length / PAGE_SIZE)
+  const paginatedIssues = filteredIssues.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  )
+  const showPagination = filteredIssues.length > PAGE_SIZE
+
+  // Reset to page 1 when filter changes
+  const handleFilterChange = (newFilter: IssueFilter) => {
+    setFilter(newFilter)
+    setCurrentPage(1)
+  }
+
   if (issues.length === 0) {
     return (
       <div className="px-2 py-1">
@@ -156,13 +173,13 @@ export function IssueList({ onRefresh }: IssueListProps) {
       {/* Header with filter buttons and refresh */}
       <div className="px-2 pb-1 flex items-center justify-between">
         <div className="flex gap-1">
-          <FilterButton active={filter === 'open'} onClick={() => setFilter('open')}>
+          <FilterButton active={filter === 'open'} onClick={() => handleFilterChange('open')}>
             Open
           </FilterButton>
-          <FilterButton active={filter === 'closed'} onClick={() => setFilter('closed')}>
+          <FilterButton active={filter === 'closed'} onClick={() => handleFilterChange('closed')}>
             Closed
           </FilterButton>
-          <FilterButton active={filter === 'all'} onClick={() => setFilter('all')}>
+          <FilterButton active={filter === 'all'} onClick={() => handleFilterChange('all')}>
             All
           </FilterButton>
         </div>
@@ -176,23 +193,48 @@ export function IssueList({ onRefresh }: IssueListProps) {
           No {filter === 'all' ? '' : filter} issues
         </div>
       ) : (
-        filteredIssues.map((issue) => {
-          const branchInfo = branchAssociations[issue.number]
-          const isCurrentBranch = branchInfo && currentBranch?.name === branchInfo.branchName
-          const cachedPrediction = predictions[issue.number]
-          return (
-            <IssueItem
-              key={issue.number}
-              issue={issue}
-              isSelected={selectedIssue === issue.number}
-              isActive={tikiState?.activeIssue === issue.number}
-              branchName={branchInfo?.branchName}
-              isCurrentBranch={isCurrentBranch}
-              prediction={cachedPrediction}
-              onClick={() => handleSelectIssue(issue.number)}
-            />
-          )
-        })
+        <>
+          {paginatedIssues.map((issue) => {
+            const branchInfo = branchAssociations[issue.number]
+            const isCurrentBranch = branchInfo && currentBranch?.name === branchInfo.branchName
+            const cachedPrediction = predictions[issue.number]
+            return (
+              <IssueItem
+                key={issue.number}
+                issue={issue}
+                isSelected={selectedIssue === issue.number}
+                isActive={tikiState?.activeIssue === issue.number}
+                branchName={branchInfo?.branchName}
+                isCurrentBranch={isCurrentBranch}
+                prediction={cachedPrediction}
+                onClick={() => handleSelectIssue(issue.number)}
+              />
+            )
+          })}
+
+          {/* Pagination controls */}
+          {showPagination && (
+            <div className="px-2 py-2 flex items-center justify-between text-xs text-slate-400">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-2 py-1 rounded hover:bg-background-tertiary disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Previous page"
+              >
+                &lt; Prev
+              </button>
+              <span>Page {currentPage} of {totalPages}</span>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-2 py-1 rounded hover:bg-background-tertiary disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Next page"
+              >
+                Next &gt;
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Create Issue Dialog */}
