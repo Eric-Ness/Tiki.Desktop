@@ -28,6 +28,7 @@ import { registerCodeHandlers } from './ipc/code'
 import { registerAnalyticsHandlers } from './ipc/analytics'
 import { registerWorkspaceHandlers } from './ipc/workspace'
 import { registerLearningHandlers } from './ipc/learning'
+import { registerHooksHandlers } from './ipc/hooks'
 import { setMainWindow as setSettingsWindow } from './services/settings-store'
 import { setMainWindow as setNotificationWindow } from './services/notification-service'
 import { setUpdateWindow, initAutoUpdater, checkForUpdates } from './services/update-service'
@@ -109,6 +110,7 @@ app.whenReady().then(() => {
   registerAnalyticsHandlers()
   registerWorkspaceHandlers()
   registerLearningHandlers()
+  registerHooksHandlers()
 
   createWindow()
 

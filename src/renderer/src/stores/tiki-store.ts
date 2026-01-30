@@ -244,6 +244,10 @@ interface TikiDesktopState {
   selectedKnowledge: string | null
   setSelectedKnowledge: (id: string | null) => void
 
+  // Hooks
+  selectedHook: string | null
+  setSelectedHook: (name: string | null) => void
+
   // Recent Searches (for search functionality)
   recentSearches: string[]
   addRecentSearch: (query: string) => void
@@ -606,6 +610,10 @@ export const useTikiStore = create<TikiDesktopState>()(
         // Knowledge
         selectedKnowledge: null,
         setSelectedKnowledge: (selectedKnowledge) => set({ selectedKnowledge }),
+
+        // Hooks
+        selectedHook: null,
+        setSelectedHook: (selectedHook) => set({ selectedHook }),
 
         // Recent Searches (for search functionality)
         recentSearches: [],

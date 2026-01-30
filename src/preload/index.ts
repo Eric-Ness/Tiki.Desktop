@@ -1118,6 +1118,24 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.invoke('knowledge:tags', { projectPath })
   },
 
+  // Hooks API (for .tiki/hooks/ lifecycle scripts)
+  hooks: {
+    list: (cwd?: string) => ipcRenderer.invoke('hooks:list', { cwd }),
+    read: (name: string, cwd?: string) => ipcRenderer.invoke('hooks:read', { name, cwd }),
+    write: (name: string, content: string, cwd?: string) =>
+      ipcRenderer.invoke('hooks:write', { name, content, cwd }),
+    delete: (name: string, cwd?: string) => ipcRenderer.invoke('hooks:delete', { name, cwd }),
+    execute: (
+      name: string,
+      env?: Record<string, string>,
+      cwd?: string,
+      timeout?: number
+    ) => ipcRenderer.invoke('hooks:execute', { name, env, cwd, timeout }),
+    history: (limit?: number) => ipcRenderer.invoke('hooks:history', { limit }),
+    types: () => ipcRenderer.invoke('hooks:types'),
+    ensureDirectory: (cwd?: string) => ipcRenderer.invoke('hooks:ensure-directory', { cwd })
+  },
+
   // Search API (for cross-content search)
   search: {
     query: (query: string, options?: SearchOptions) =>
@@ -1660,6 +1678,21 @@ declare global {
         delete: (projectPath: string, id: string) => Promise<boolean>
         tags: (projectPath: string) => Promise<string[]>
       }
+      hooks: {
+        list: (cwd?: string) => Promise<Hook[]>
+        read: (name: string, cwd?: string) => Promise<Hook | null>
+        write: (name: string, content: string, cwd?: string) => Promise<boolean>
+        delete: (name: string, cwd?: string) => Promise<boolean>
+        execute: (
+          name: string,
+          env?: Record<string, string>,
+          cwd?: string,
+          timeout?: number
+        ) => Promise<HookExecutionResult>
+        history: (limit?: number) => Promise<HookExecutionResult[]>
+        types: () => Promise<string[]>
+        ensureDirectory: (cwd?: string) => Promise<boolean>
+      }
       search: {
         query: (query: string, options?: SearchOptions) => Promise<SearchResult[]>
         updateIndex: (type: ContentType, items: SearchableContent[]) => Promise<{ success: boolean }>
@@ -1928,6 +1961,25 @@ interface CheckStatus {
   name: string
   state: string
   conclusion: string
+}
+
+// Hook types (mirrors main process hooks-service.ts)
+interface Hook {
+  name: string
+  path: string
+  type: string
+  enabled: boolean
+  content?: string
+}
+
+interface HookExecutionResult {
+  hook: string
+  exitCode: number
+  stdout: string
+  stderr: string
+  duration: number
+  timestamp: string
+  success: boolean
 }
 
 // Knowledge entry type (mirrors main process)

@@ -5,6 +5,8 @@ import { ReleaseList } from '../sidebar/ReleaseList'
 import { ProjectList } from '../sidebar/ProjectList'
 import { KnowledgeList } from '../knowledge/KnowledgeList'
 import { KnowledgeEditor } from '../knowledge/KnowledgeEditor'
+import { HooksList } from '../hooks/HooksList'
+import { HookEditor } from '../hooks/HookEditor'
 import { TemplateList } from '../templates/TemplateList'
 import { TemplateDetail } from '../templates/TemplateDetail'
 import { CreateTemplateDialog } from '../templates/CreateTemplateDialog'
@@ -59,6 +61,8 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
 
   const [showKnowledgeEditor, setShowKnowledgeEditor] = useState(false)
   const [knowledgeKey, setKnowledgeKey] = useState(0)
+  const [showHookEditor, setShowHookEditor] = useState(false)
+  const [hooksKey, setHooksKey] = useState(0)
   const [selectedTemplate, setSelectedTemplate] = useState<PlanTemplate | null>(null)
   const [showCreateTemplateDialog, setShowCreateTemplateDialog] = useState(false)
   const [templateKey, setTemplateKey] = useState(0)
@@ -294,6 +298,14 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
           />
         </SidebarSection>
 
+        {/* Hooks Section */}
+        <SidebarSection title="Hooks">
+          <HooksList
+            key={hooksKey}
+            onCreateHook={() => setShowHookEditor(true)}
+          />
+        </SidebarSection>
+
         {/* Templates Section */}
         <SidebarSection title="Templates">
           <TemplateList
@@ -310,6 +322,21 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
           onClose={() => setShowKnowledgeEditor(false)}
           onCreated={() => setKnowledgeKey((k) => k + 1)}
         />
+      )}
+
+      {/* Hook Editor Modal */}
+      {showHookEditor && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background-secondary border border-border rounded-lg shadow-xl w-[600px] max-h-[80vh] overflow-hidden">
+            <HookEditor
+              onCancel={() => setShowHookEditor(false)}
+              onSave={() => {
+                setShowHookEditor(false)
+                setHooksKey((k) => k + 1)
+              }}
+            />
+          </div>
+        </div>
       )}
 
       {/* Template Detail Modal */}

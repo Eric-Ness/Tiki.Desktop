@@ -5,6 +5,7 @@ import { IssueDetail } from '../detail/IssueDetail'
 import { ShipDetail } from '../detail/ShipDetail'
 import { ReleaseDetail } from '../detail/ReleaseDetail'
 import { KnowledgeDetail } from '../knowledge/KnowledgeDetail'
+import { HookDetail } from '../hooks/HookDetail'
 
 // Empty state component
 function EmptyState() {
@@ -40,15 +41,17 @@ function parsePhaseNumber(nodeId: string): number | null {
 }
 
 // Helper to determine selection type
-type SelectionType = 'empty' | 'phase' | 'issue' | 'ship' | 'github-issue' | 'release' | 'knowledge'
+type SelectionType = 'empty' | 'phase' | 'issue' | 'ship' | 'github-issue' | 'release' | 'knowledge' | 'hook'
 
 function getSelectionType(
   nodeId: string | null,
   selectedIssue: number | null,
   selectedRelease: string | null,
-  selectedKnowledge: string | null
+  selectedKnowledge: string | null,
+  selectedHook: string | null
 ): SelectionType {
   // Sidebar selections take priority
+  if (selectedHook !== null) return 'hook'
   if (selectedKnowledge !== null) return 'knowledge'
   if (selectedRelease !== null) return 'release'
   if (selectedIssue !== null) return 'github-issue'
@@ -65,12 +68,13 @@ interface DetailPanelProps {
 
 export function DetailPanel({ cwd }: DetailPanelProps) {
   // Selection state - consolidated selectors
-  const { selectedNode, selectedIssue, selectedRelease, selectedKnowledge } = useTikiStore(
+  const { selectedNode, selectedIssue, selectedRelease, selectedKnowledge, selectedHook } = useTikiStore(
     useShallow((state) => ({
       selectedNode: state.selectedNode,
       selectedIssue: state.selectedIssue,
       selectedRelease: state.selectedRelease,
-      selectedKnowledge: state.selectedKnowledge
+      selectedKnowledge: state.selectedKnowledge,
+      selectedHook: state.selectedHook
     }))
   )
 
@@ -83,12 +87,17 @@ export function DetailPanel({ cwd }: DetailPanelProps) {
     }))
   )
 
-  const selectionType = getSelectionType(selectedNode, selectedIssue, selectedRelease, selectedKnowledge)
+  const selectionType = getSelectionType(selectedNode, selectedIssue, selectedRelease, selectedKnowledge, selectedHook)
 
   // Render content based on selection type
   const renderContent = () => {
     if (selectionType === 'empty') {
       return <EmptyState />
+    }
+
+    // Hook from sidebar selection
+    if (selectionType === 'hook' && selectedHook !== null) {
+      return <HookDetail hookName={selectedHook} />
     }
 
     // Knowledge entry from sidebar selection
