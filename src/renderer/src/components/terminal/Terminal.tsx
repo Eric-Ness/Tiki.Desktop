@@ -34,6 +34,7 @@ export function Terminal({ terminalId, onReady, restoredInfo }: TerminalProps) {
   const cleanupRef = useRef<(() => void)[]>([])
   const restoredMessageShownRef = useRef(false)
   const isTerminalReadyRef = useRef(false)
+  const terminalIdRef = useRef<string | null>(terminalId)
 
   // Get terminal settings from the settings store
   const { settings: terminalSettings } = useSettingsCategory('terminal')
@@ -104,6 +105,19 @@ export function Terminal({ terminalId, onReady, restoredInfo }: TerminalProps) {
 
     terminal.open(containerRef.current)
 
+    // Handle Ctrl+V / Cmd+V paste
+    terminal.attachCustomKeyEventHandler((event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'v' && event.type === 'keydown') {
+        navigator.clipboard.readText().then((text) => {
+          if (text && terminalIdRef.current) {
+            window.tikiDesktop.terminal.write(terminalIdRef.current, text)
+          }
+        })
+        return false // Prevent default
+      }
+      return true // Allow other keys
+    })
+
     terminalRef.current = terminal
     fitAddonRef.current = fitAddon
 
@@ -167,6 +181,11 @@ export function Terminal({ terminalId, onReady, restoredInfo }: TerminalProps) {
       })
     }
   }, [effectiveSettings, terminalId])
+
+  // Keep terminalIdRef in sync
+  useEffect(() => {
+    terminalIdRef.current = terminalId
+  }, [terminalId])
 
   // Handle terminal ID changes (connect/disconnect PTY)
   useEffect(() => {
