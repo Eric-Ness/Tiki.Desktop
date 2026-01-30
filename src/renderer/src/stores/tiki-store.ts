@@ -248,6 +248,10 @@ interface TikiDesktopState {
   selectedHook: string | null
   setSelectedHook: (name: string | null) => void
 
+  // Commands
+  selectedCommand: string | null
+  setSelectedCommand: (name: string | null) => void
+
   // Recent Searches (for search functionality)
   recentSearches: string[]
   addRecentSearch: (query: string) => void
@@ -614,6 +618,10 @@ export const useTikiStore = create<TikiDesktopState>()(
         // Hooks
         selectedHook: null,
         setSelectedHook: (selectedHook) => set({ selectedHook }),
+
+        // Commands
+        selectedCommand: null,
+        setSelectedCommand: (selectedCommand) => set({ selectedCommand }),
 
         // Recent Searches (for search functionality)
         recentSearches: [],

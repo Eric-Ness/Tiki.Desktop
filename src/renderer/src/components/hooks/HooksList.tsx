@@ -78,12 +78,15 @@ export function HooksList({ onSelectHook, onCreateHook }: HooksListProps) {
     loadHooks()
   }, [loadHooks])
 
+  const setSelectedCommand = useTikiStore((state) => state.setSelectedCommand)
+
   const handleSelectHook = (hook: Hook) => {
     // Clear other selections
     setSelectedNode(null)
     setSelectedIssue(null)
     setSelectedRelease(null)
     setSelectedKnowledge(null)
+    setSelectedCommand(null)
     setSelectedHook(hook.name)
     onSelectHook?.(hook)
   }

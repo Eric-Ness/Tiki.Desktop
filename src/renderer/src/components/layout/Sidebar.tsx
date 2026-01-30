@@ -7,6 +7,7 @@ import { KnowledgeList } from '../knowledge/KnowledgeList'
 import { KnowledgeEditor } from '../knowledge/KnowledgeEditor'
 import { HooksList } from '../hooks/HooksList'
 import { HookEditor } from '../hooks/HookEditor'
+import { CommandsList, CommandEditor } from '../commands'
 import { TemplateList } from '../templates/TemplateList'
 import { TemplateDetail } from '../templates/TemplateDetail'
 import { CreateTemplateDialog } from '../templates/CreateTemplateDialog'
@@ -63,6 +64,8 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
   const [knowledgeKey, setKnowledgeKey] = useState(0)
   const [showHookEditor, setShowHookEditor] = useState(false)
   const [hooksKey, setHooksKey] = useState(0)
+  const [showCommandEditor, setShowCommandEditor] = useState(false)
+  const [commandsKey, setCommandsKey] = useState(0)
   const [selectedTemplate, setSelectedTemplate] = useState<PlanTemplate | null>(null)
   const [showCreateTemplateDialog, setShowCreateTemplateDialog] = useState(false)
   const [templateKey, setTemplateKey] = useState(0)
@@ -306,6 +309,14 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
           />
         </SidebarSection>
 
+        {/* Commands Section */}
+        <SidebarSection title="Commands">
+          <CommandsList
+            key={commandsKey}
+            onCreateCommand={() => setShowCommandEditor(true)}
+          />
+        </SidebarSection>
+
         {/* Templates Section */}
         <SidebarSection title="Templates">
           <TemplateList
@@ -333,6 +344,21 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
               onSave={() => {
                 setShowHookEditor(false)
                 setHooksKey((k) => k + 1)
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Command Editor Modal */}
+      {showCommandEditor && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background-secondary border border-border rounded-lg shadow-xl w-[600px] max-h-[80vh] overflow-hidden">
+            <CommandEditor
+              onCancel={() => setShowCommandEditor(false)}
+              onSave={() => {
+                setShowCommandEditor(false)
+                setCommandsKey((k) => k + 1)
               }}
             />
           </div>

@@ -1136,6 +1136,17 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
     ensureDirectory: (cwd?: string) => ipcRenderer.invoke('hooks:ensure-directory', { cwd })
   },
 
+  // Commands API (for .claude/commands/ custom slash commands)
+  commands: {
+    list: (cwd?: string) => ipcRenderer.invoke('commands:list', { cwd }),
+    read: (name: string, cwd?: string) => ipcRenderer.invoke('commands:read', { name, cwd }),
+    write: (name: string, content: string, cwd?: string) =>
+      ipcRenderer.invoke('commands:write', { name, content, cwd }),
+    delete: (name: string, cwd?: string) => ipcRenderer.invoke('commands:delete', { name, cwd }),
+    namespaces: (cwd?: string) => ipcRenderer.invoke('commands:namespaces', { cwd }),
+    ensureDirectory: (cwd?: string) => ipcRenderer.invoke('commands:ensure-directory', { cwd })
+  },
+
   // Search API (for cross-content search)
   search: {
     query: (query: string, options?: SearchOptions) =>
@@ -1693,6 +1704,14 @@ declare global {
         types: () => Promise<string[]>
         ensureDirectory: (cwd?: string) => Promise<boolean>
       }
+      commands: {
+        list: (cwd?: string) => Promise<Command[]>
+        read: (name: string, cwd?: string) => Promise<Command | null>
+        write: (name: string, content: string, cwd?: string) => Promise<boolean>
+        delete: (name: string, cwd?: string) => Promise<boolean>
+        namespaces: (cwd?: string) => Promise<string[]>
+        ensureDirectory: (cwd?: string) => Promise<boolean>
+      }
       search: {
         query: (query: string, options?: SearchOptions) => Promise<SearchResult[]>
         updateIndex: (type: ContentType, items: SearchableContent[]) => Promise<{ success: boolean }>
@@ -1980,6 +1999,15 @@ interface HookExecutionResult {
   duration: number
   timestamp: string
   success: boolean
+}
+
+// Command types (mirrors main process commands-service.ts)
+interface Command {
+  name: string
+  path: string
+  relativePath: string
+  namespace?: string
+  content?: string
 }
 
 // Knowledge entry type (mirrors main process)

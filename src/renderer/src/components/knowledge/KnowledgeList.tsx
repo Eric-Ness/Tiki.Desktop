@@ -44,6 +44,8 @@ export function KnowledgeList({ onSelectEntry, onCreateEntry }: KnowledgeListPro
   const setSelectedNode = useTikiStore((state) => state.setSelectedNode)
   const setSelectedIssue = useTikiStore((state) => state.setSelectedIssue)
   const setSelectedRelease = useTikiStore((state) => state.setSelectedRelease)
+  const setSelectedHook = useTikiStore((state) => state.setSelectedHook)
+  const setSelectedCommand = useTikiStore((state) => state.setSelectedCommand)
 
   // Load entries
   const loadEntries = useCallback(async () => {
@@ -77,6 +79,8 @@ export function KnowledgeList({ onSelectEntry, onCreateEntry }: KnowledgeListPro
     setSelectedNode(null)
     setSelectedIssue(null)
     setSelectedRelease(null)
+    setSelectedHook(null)
+    setSelectedCommand(null)
     setSelectedKnowledge(entry.id)
     onSelectEntry?.(entry)
   }

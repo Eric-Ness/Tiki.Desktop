@@ -26,14 +26,15 @@ export function IssueList({ onRefresh }: IssueListProps) {
   )
 
   // Group 2: Selection state
-  const { selectedIssue, setSelectedIssue, setSelectedNode, setSelectedRelease, setSelectedKnowledge, setSelectedHook } = useTikiStore(
+  const { selectedIssue, setSelectedIssue, setSelectedNode, setSelectedRelease, setSelectedKnowledge, setSelectedHook, setSelectedCommand } = useTikiStore(
     useShallow((state) => ({
       selectedIssue: state.selectedIssue,
       setSelectedIssue: state.setSelectedIssue,
       setSelectedNode: state.setSelectedNode,
       setSelectedRelease: state.setSelectedRelease,
       setSelectedKnowledge: state.setSelectedKnowledge,
-      setSelectedHook: state.setSelectedHook
+      setSelectedHook: state.setSelectedHook,
+      setSelectedCommand: state.setSelectedCommand
     }))
   )
 
@@ -53,6 +54,7 @@ export function IssueList({ onRefresh }: IssueListProps) {
     setSelectedRelease(null)
     setSelectedKnowledge(null)
     setSelectedHook(null)
+    setSelectedCommand(null)
     setSelectedIssue(issueNumber)
   }
 
