@@ -7,16 +7,17 @@ const AUTO_REFRESH_THROTTLE_MS = 30000
 /**
  * Hook that syncs GitHub issues with the Zustand store.
  * Loads issues on mount, listens for updates, and auto-refreshes on window focus.
- * @param cwd - The current working directory (project path)
  * @param activeProject - The currently active project, or null if no project is selected
  */
-export function useGitHubSync(cwd: string, activeProject: Project | null) {
+export function useGitHubSync(activeProject: Project | null) {
   const setIssues = useTikiStore((state) => state.setIssues)
   const setGithubLoading = useTikiStore((state) => state.setGithubLoading)
   const setGithubError = useTikiStore((state) => state.setGithubError)
   const lastRefreshRef = useRef<number>(0)
 
-  const loadIssues = useCallback(async (force = false) => {
+  const loadIssues = useCallback(async (force = false, projectPath?: string) => {
+    // Use provided projectPath or fall back to activeProject.path
+    const cwd = projectPath ?? activeProject?.path
     if (!cwd) return
 
     // Throttle auto-refresh (unless forced)
@@ -50,7 +51,7 @@ export function useGitHubSync(cwd: string, activeProject: Project | null) {
     } finally {
       setGithubLoading(false)
     }
-  }, [cwd, setIssues, setGithubLoading, setGithubError])
+  }, [activeProject?.path, setIssues, setGithubLoading, setGithubError])
 
   useEffect(() => {
     // If no active project, clear issues and don't set up listeners
@@ -59,8 +60,8 @@ export function useGitHubSync(cwd: string, activeProject: Project | null) {
       return
     }
 
-    // Load issues on mount (forced)
-    loadIssues(true)
+    // Load issues on mount/project change (forced), passing path explicitly to avoid stale closure
+    loadIssues(true, activeProject.path)
 
     // Listen for issue updates from main process
     const cleanupUpdates = window.tikiDesktop.github.onIssuesUpdated((issues) => {

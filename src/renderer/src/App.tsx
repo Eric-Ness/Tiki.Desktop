@@ -61,7 +61,7 @@ function App() {
   useTikiSync(activeProject)
 
   // Sync GitHub issues (only when project is active)
-  useGitHubSync(cwd, activeProject)
+  useGitHubSync(activeProject)
 
   // Sync store data to search index
   useSearchIndexSync()

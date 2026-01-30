@@ -48,39 +48,26 @@ describe('useGitHubSync', () => {
 
   describe('activeProject guard', () => {
     it('should not load issues when activeProject is null', () => {
-      renderHook(() => useGitHubSync('/some/path', null))
-
-      expect(mockGetIssues).not.toHaveBeenCalled()
-      expect(mockCheckCli).not.toHaveBeenCalled()
-    })
-
-    it('should not load issues when cwd is empty', () => {
-      const mockProject: Project = {
-        id: '1',
-        name: 'Test Project',
-        path: '/test/path'
-      }
-
-      renderHook(() => useGitHubSync('', mockProject))
+      renderHook(() => useGitHubSync(null))
 
       expect(mockGetIssues).not.toHaveBeenCalled()
       expect(mockCheckCli).not.toHaveBeenCalled()
     })
 
     it('should clear issues when activeProject is null', () => {
-      renderHook(() => useGitHubSync('/some/path', null))
+      renderHook(() => useGitHubSync(null))
 
       expect(setIssuesMock).toHaveBeenCalledWith([])
     })
 
-    it('should load issues when both cwd and activeProject are provided', () => {
+    it('should load issues when activeProject is provided', () => {
       const mockProject: Project = {
         id: '1',
         name: 'Test Project',
         path: '/test/path'
       }
 
-      renderHook(() => useGitHubSync('/test/path', mockProject))
+      renderHook(() => useGitHubSync(mockProject))
 
       expect(mockCheckCli).toHaveBeenCalled()
     })
@@ -92,14 +79,14 @@ describe('useGitHubSync', () => {
         path: '/test/path'
       }
 
-      renderHook(() => useGitHubSync('/test/path', mockProject))
+      renderHook(() => useGitHubSync(mockProject))
 
       expect(mockOnIssuesUpdated).toHaveBeenCalled()
       expect(mockOnError).toHaveBeenCalled()
     })
 
     it('should not set up event listeners when activeProject is null', () => {
-      renderHook(() => useGitHubSync('/some/path', null))
+      renderHook(() => useGitHubSync(null))
 
       expect(mockOnIssuesUpdated).not.toHaveBeenCalled()
       expect(mockOnError).not.toHaveBeenCalled()
@@ -113,18 +100,53 @@ describe('useGitHubSync', () => {
       }
 
       const { rerender } = renderHook(
-        ({ cwd, project }) => useGitHubSync(cwd, project),
-        { initialProps: { cwd: '/test/path', project: mockProject as Project | null } }
+        ({ project }) => useGitHubSync(project),
+        { initialProps: { project: mockProject as Project | null } }
       )
 
       // Clear mocks from initial render
       vi.clearAllMocks()
 
       // Change activeProject to null
-      rerender({ cwd: '/test/path', project: null })
+      rerender({ project: null })
 
       // The hook should clear issues when project becomes null
       expect(setIssuesMock).toHaveBeenCalledWith([])
+    })
+
+    it('should reload issues with correct path when switching projects', async () => {
+      const project1: Project = {
+        id: '1',
+        name: 'Project 1',
+        path: '/project1/path'
+      }
+
+      const project2: Project = {
+        id: '2',
+        name: 'Project 2',
+        path: '/project2/path'
+      }
+
+      const { rerender } = renderHook(
+        ({ project }) => useGitHubSync(project),
+        { initialProps: { project: project1 as Project | null } }
+      )
+
+      // Wait for initial load
+      await vi.waitFor(() => {
+        expect(mockGetIssues).toHaveBeenCalledWith('all', '/project1/path')
+      })
+
+      // Clear mocks from initial render
+      vi.clearAllMocks()
+
+      // Switch to project 2
+      rerender({ project: project2 })
+
+      // The hook should load issues with the NEW project's path
+      await vi.waitFor(() => {
+        expect(mockGetIssues).toHaveBeenCalledWith('all', '/project2/path')
+      })
     })
   })
 })
