@@ -35,6 +35,7 @@ export function Terminal({ terminalId, onReady, restoredInfo }: TerminalProps) {
   const restoredMessageShownRef = useRef(false)
   const isTerminalReadyRef = useRef(false)
   const terminalIdRef = useRef<string | null>(terminalId)
+  const copyOnSelectRef = useRef(false)
 
   // Get terminal settings from the settings store
   const { settings: terminalSettings } = useSettingsCategory('terminal')
@@ -105,17 +106,47 @@ export function Terminal({ terminalId, onReady, restoredInfo }: TerminalProps) {
 
     terminal.open(containerRef.current)
 
-    // Handle Ctrl+V / Cmd+V paste
+    // Handle Ctrl+C / Cmd+C copy and Ctrl+V / Cmd+V paste
     terminal.attachCustomKeyEventHandler((event) => {
-      if ((event.ctrlKey || event.metaKey) && event.key === 'v' && event.type === 'keydown') {
+      const isMod = event.ctrlKey || event.metaKey
+
+      // Handle copy (Ctrl+C / Cmd+C) when text is selected
+      if (isMod && event.key === 'c' && event.type === 'keydown') {
+        const selection = terminal.getSelection()
+        if (selection) {
+          // Copy selected text to clipboard
+          navigator.clipboard.writeText(selection)
+          event.preventDefault()
+          return false // Prevent sending Ctrl+C to terminal (which would be SIGINT)
+        }
+        // No selection - let Ctrl+C pass through as SIGINT
+        return true
+      }
+
+      // Handle paste (Ctrl+V / Cmd+V)
+      if (isMod && event.key === 'v' && event.type === 'keydown') {
+        // Prevent browser's default paste behavior to avoid double paste
+        event.preventDefault()
         navigator.clipboard.readText().then((text) => {
           if (text && terminalIdRef.current) {
             window.tikiDesktop.terminal.write(terminalIdRef.current, text)
           }
         })
-        return false // Prevent default
+        return false // Prevent xterm from also handling paste
       }
+
       return true // Allow other keys
+    })
+
+    // Handle copyOnSelect - automatically copy text when selected
+    const selectionDisposable = terminal.onSelectionChange(() => {
+      // Check if copyOnSelect is enabled (we use a ref to get latest setting without recreating terminal)
+      if (copyOnSelectRef.current) {
+        const selection = terminal.getSelection()
+        if (selection) {
+          navigator.clipboard.writeText(selection)
+        }
+      }
     })
 
     terminalRef.current = terminal
@@ -136,6 +167,7 @@ export function Terminal({ terminalId, onReady, restoredInfo }: TerminalProps) {
 
     return () => {
       isTerminalReadyRef.current = false
+      selectionDisposable.dispose()
       terminal.dispose()
       terminalRef.current = null
       fitAddonRef.current = null
@@ -182,10 +214,14 @@ export function Terminal({ terminalId, onReady, restoredInfo }: TerminalProps) {
     }
   }, [effectiveSettings, terminalId])
 
-  // Keep terminalIdRef in sync
+  // Keep refs in sync
   useEffect(() => {
     terminalIdRef.current = terminalId
   }, [terminalId])
+
+  useEffect(() => {
+    copyOnSelectRef.current = effectiveSettings.copyOnSelect
+  }, [effectiveSettings.copyOnSelect])
 
   // Handle terminal ID changes (connect/disconnect PTY)
   useEffect(() => {
