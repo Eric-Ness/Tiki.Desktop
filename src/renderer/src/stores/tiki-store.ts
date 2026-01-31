@@ -8,12 +8,40 @@ export interface Project {
   path: string
 }
 
+// Status for a single execution
+export type ExecutionStatus = 'idle' | 'executing' | 'paused' | 'failed' | 'auto_fixing' | 'running_hook'
+
+// Individual execution tracking (for concurrent executions)
+export interface Execution {
+  issueNumber: number
+  status: ExecutionStatus
+  currentPhase: number | null
+  totalPhases: number | null
+  completedPhases: number[]
+  autoFixAttempt?: number | null  // Current auto-fix attempt (e.g., 2 of 3)
+  maxAutoFixAttempts?: number     // Max auto-fix attempts allowed
+  hookName?: string | null        // Currently running hook name
+  errorMessage?: string | null    // Error message if failed
+  startedAt?: string | null       // When execution started
+}
+
+// TikiState supports both legacy single-execution and new multi-execution formats
 export interface TikiState {
+  // Legacy single-execution fields (for backward compatibility)
   activeIssue: number | null
   currentPhase: number | null
-  status: 'idle' | 'executing' | 'paused' | 'failed'
+  status: ExecutionStatus
   completedPhases: number[]
   lastActivity: string | null
+
+  // Enhanced state fields
+  autoFixAttempt?: number | null
+  maxAutoFixAttempts?: number
+  hookName?: string | null
+  errorMessage?: string | null
+
+  // Multi-execution support (new format from Tiki#90)
+  executions?: Execution[]
 }
 
 export interface ExecutionPlan {

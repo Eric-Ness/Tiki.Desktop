@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { useTikiStore, type Project } from '../../stores/tiki-store'
+import { useTikiStore, type Project, type Execution } from '../../stores/tiki-store'
 import { IssueList } from '../sidebar/IssueList'
 import { ReleaseList } from '../sidebar/ReleaseList'
 import { ProjectList } from '../sidebar/ProjectList'
@@ -50,6 +50,101 @@ interface PlanTemplate {
 interface SidebarProps {
   cwd: string
   onProjectSwitch: (project: Project) => void
+}
+
+// Component for rendering a single execution in multi-execution mode
+function ExecutionItem({ execution }: { execution: Execution }) {
+  const plans = useTikiStore((state) => state.plans)
+  const plan = plans.get(execution.issueNumber)
+
+  const getExecStatusColor = (status: string) => {
+    switch (status) {
+      case 'executing':
+        return 'bg-status-running'
+      case 'auto_fixing':
+        return 'bg-amber-500'
+      case 'running_hook':
+        return 'bg-purple-500'
+      case 'paused':
+        return 'bg-amber-400'
+      case 'failed':
+        return 'bg-status-failed'
+      default:
+        return 'bg-slate-500'
+    }
+  }
+
+  const getExecStatusLabel = (exec: Execution) => {
+    switch (exec.status) {
+      case 'auto_fixing':
+        if (exec.autoFixAttempt && exec.maxAutoFixAttempts) {
+          return `Auto-fixing (${exec.autoFixAttempt}/${exec.maxAutoFixAttempts})`
+        }
+        return 'Auto-fixing'
+      case 'running_hook':
+        return exec.hookName ? `Running ${exec.hookName}` : 'Running hook'
+      case 'executing':
+        return 'Executing'
+      case 'paused':
+        return 'Paused'
+      case 'failed':
+        return 'Failed'
+      default:
+        return 'Idle'
+    }
+  }
+
+  const completedCount = execution.completedPhases?.length || 0
+  const totalPhases = execution.totalPhases || plan?.phases?.length || 0
+
+  return (
+    <div className="p-2 bg-background rounded border border-border/50">
+      <div className="flex items-center gap-2">
+        <span className={`w-2 h-2 rounded-full ${getExecStatusColor(execution.status)} ${execution.status === 'auto_fixing' || execution.status === 'running_hook' || execution.status === 'executing' ? 'animate-pulse' : ''}`} />
+        <span className="text-xs text-slate-400">#{execution.issueNumber}</span>
+        <span className="text-xs text-slate-500 truncate flex-1">{getExecStatusLabel(execution)}</span>
+      </div>
+      {plan?.issue?.title && (
+        <div className="text-xs text-slate-400 truncate mt-1 pl-4">{plan.issue.title}</div>
+      )}
+      {totalPhases > 0 && (
+        <div className="mt-1.5 pl-4">
+          <div className="flex gap-0.5">
+            {Array.from({ length: totalPhases }).map((_, i) => {
+              const phaseNum = i + 1
+              const isCompleted = execution.completedPhases?.includes(phaseNum)
+              const isCurrent = phaseNum === execution.currentPhase
+              const phase = plan?.phases?.find((p) => p.number === phaseNum)
+              const isFailed = phase?.status === 'failed'
+              return (
+                <div
+                  key={phaseNum}
+                  className={`h-1 flex-1 rounded-full transition-colors ${
+                    isCompleted
+                      ? 'bg-status-completed'
+                      : isCurrent
+                        ? 'bg-status-running animate-pulse'
+                        : isFailed
+                          ? 'bg-status-failed'
+                          : 'bg-slate-600'
+                  }`}
+                  title={phase ? `Phase ${phaseNum}: ${phase.title}` : `Phase ${phaseNum}`}
+                />
+              )
+            })}
+          </div>
+          <div className="text-[10px] text-slate-500 mt-0.5 text-right">
+            {completedCount} / {totalPhases}
+          </div>
+        </div>
+      )}
+      {execution.status === 'failed' && execution.errorMessage && (
+        <div className="mt-1 px-2 py-0.5 bg-red-500/10 border border-red-500/20 rounded text-[10px] text-red-400 truncate" title={execution.errorMessage}>
+          {execution.errorMessage}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
@@ -162,6 +257,10 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
     switch (status) {
       case 'executing':
         return 'bg-status-running'
+      case 'auto_fixing':
+        return 'bg-amber-500'
+      case 'running_hook':
+        return 'bg-purple-500'
       case 'paused':
         return 'bg-amber-400'
       case 'failed':
@@ -171,8 +270,20 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
     }
   }
 
-  const getStatusLabel = (status: string | undefined | null) => {
-    switch (status) {
+  const getStatusLabel = (state: typeof tikiState) => {
+    if (!state) return 'Idle'
+
+    switch (state.status) {
+      case 'auto_fixing':
+        if (state.autoFixAttempt && state.maxAutoFixAttempts) {
+          return `Auto-fixing (${state.autoFixAttempt}/${state.maxAutoFixAttempts})`
+        }
+        return 'Auto-fixing'
+      case 'running_hook':
+        if (state.hookName) {
+          return `Running ${state.hookName}`
+        }
+        return 'Running hook'
       case 'executing':
         return 'Executing'
       case 'paused':
@@ -197,10 +308,25 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
         <SidebarSection title="State" defaultOpen>
           <div className="px-2 py-1 text-sm">
             <div className="flex items-center gap-2 text-slate-400">
-              <span className={`w-2 h-2 rounded-full ${getStatusColor(tikiState?.status)}`} />
-              <span>{getStatusLabel(tikiState?.status)}</span>
+              <span className={`w-2 h-2 rounded-full ${getStatusColor(tikiState?.status)} ${tikiState?.status === 'auto_fixing' || tikiState?.status === 'running_hook' ? 'animate-pulse' : ''}`} />
+              <span>{getStatusLabel(tikiState)}</span>
             </div>
-            {tikiState?.activeIssue ? (
+            {/* Error message for failed state */}
+            {tikiState?.status === 'failed' && tikiState.errorMessage && (
+              <div className="mt-1.5 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded text-xs text-red-400 truncate" title={tikiState.errorMessage}>
+                {tikiState.errorMessage}
+              </div>
+            )}
+
+            {/* Multi-execution mode: render each execution */}
+            {tikiState?.executions && tikiState.executions.length > 0 ? (
+              <div className="mt-2 space-y-3">
+                {tikiState.executions.map((exec) => (
+                  <ExecutionItem key={exec.issueNumber} execution={exec} />
+                ))}
+              </div>
+            ) : tikiState?.activeIssue ? (
+              /* Legacy single-execution mode */
               <div className="mt-2 space-y-2">
                 <div className="text-xs text-slate-500">
                   <span className="flex items-center gap-1">
