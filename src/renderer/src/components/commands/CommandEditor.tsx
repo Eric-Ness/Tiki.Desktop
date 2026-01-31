@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Save, X, FileText } from 'lucide-react'
 import { useTikiStore } from '../../stores/tiki-store'
 
+type CommandSource = 'claude' | 'tiki'
+
 interface CommandEditorProps {
   onSave?: (name: string) => void
   onCancel?: () => void
@@ -109,10 +111,16 @@ Provide feedback in this format:
   }
 }
 
+const sourceColors: Record<CommandSource, string> = {
+  claude: 'bg-purple-600 text-purple-100',
+  tiki: 'bg-emerald-600 text-emerald-100'
+}
+
 export function CommandEditor({ onSave, onCancel }: CommandEditorProps) {
   const activeProject = useTikiStore((state) => state.activeProject)
   const [namespaces, setNamespaces] = useState<string[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<string>('basic')
+  const [source, setSource] = useState<CommandSource>('claude')
   const [namespace, setNamespace] = useState<string>('')
   const [name, setName] = useState('')
   const [content, setContent] = useState('')
@@ -160,14 +168,14 @@ export function CommandEditor({ onSave, onCancel }: CommandEditorProps) {
     setError(null)
 
     try {
-      // Ensure commands directory exists
-      await window.tikiDesktop.commands.ensureDirectory(activeProject.path)
+      // Ensure commands directory exists for the chosen source
+      await window.tikiDesktop.commands.ensureDirectory(activeProject.path, source)
 
       // Build full command name
       const fullName = namespace ? `${namespace}:${name}` : name
 
-      // Write the command
-      const success = await window.tikiDesktop.commands.write(fullName, content, activeProject.path)
+      // Write the command with the source parameter
+      const success = await window.tikiDesktop.commands.write(fullName, content, activeProject.path, source)
 
       if (success) {
         onSave?.(fullName)
@@ -183,7 +191,8 @@ export function CommandEditor({ onSave, onCancel }: CommandEditorProps) {
   }
 
   const getPreviewPath = () => {
-    const parts = ['.claude', 'commands']
+    const baseDir = source === 'tiki' ? '.tiki' : '.claude'
+    const parts = [baseDir, 'commands']
     if (namespace) parts.push(namespace)
     parts.push((name || 'command-name') + '.md')
     return parts.join('/')
@@ -224,6 +233,44 @@ export function CommandEditor({ onSave, onCancel }: CommandEditorProps) {
             {error}
           </div>
         )}
+
+        {/* Location (Source) */}
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-1.5">Location</label>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSource('claude')}
+              className={`flex-1 px-3 py-2 rounded border transition-colors ${
+                source === 'claude'
+                  ? 'bg-purple-600/20 border-purple-500 text-purple-200'
+                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600'
+              }`}
+            >
+              <span className={`inline-block px-1.5 py-0.5 text-xs rounded mr-2 ${sourceColors.claude}`}>
+                .claude/commands
+              </span>
+              <span className="text-xs">User commands</span>
+            </button>
+            <button
+              onClick={() => setSource('tiki')}
+              className={`flex-1 px-3 py-2 rounded border transition-colors ${
+                source === 'tiki'
+                  ? 'bg-emerald-600/20 border-emerald-500 text-emerald-200'
+                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600'
+              }`}
+            >
+              <span className={`inline-block px-1.5 py-0.5 text-xs rounded mr-2 ${sourceColors.tiki}`}>
+                .tiki/commands
+              </span>
+              <span className="text-xs">Project commands</span>
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            {source === 'tiki'
+              ? 'Stored in .tiki/commands/ - project-specific commands'
+              : 'Stored in .claude/commands/ - user/shared commands'}
+          </p>
+        </div>
 
         {/* Namespace */}
         <div>

@@ -5,7 +5,8 @@ import {
   writeCommand,
   deleteCommand,
   getNamespaces,
-  ensureCommandsDirectory
+  ensureCommandsDirectory,
+  CommandSource
 } from '../services/commands-service'
 
 /**
@@ -25,8 +26,11 @@ export function registerCommandsHandlers(): void {
   // Write/create command
   ipcMain.handle(
     'commands:write',
-    async (_, { name, content, cwd }: { name: string; content: string; cwd?: string }) => {
-      return writeCommand(name, content, cwd)
+    async (
+      _,
+      { name, content, cwd, source }: { name: string; content: string; cwd?: string; source?: CommandSource }
+    ) => {
+      return writeCommand(name, content, cwd, source)
     }
   )
 
@@ -41,8 +45,11 @@ export function registerCommandsHandlers(): void {
   })
 
   // Ensure commands directory exists
-  ipcMain.handle('commands:ensure-directory', async (_, { cwd }: { cwd?: string }) => {
-    await ensureCommandsDirectory(cwd)
-    return true
-  })
+  ipcMain.handle(
+    'commands:ensure-directory',
+    async (_, { cwd, source }: { cwd?: string; source?: CommandSource }) => {
+      await ensureCommandsDirectory(cwd, source)
+      return true
+    }
+  )
 }

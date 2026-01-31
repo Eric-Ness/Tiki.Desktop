@@ -1136,15 +1136,16 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
     ensureDirectory: (cwd?: string) => ipcRenderer.invoke('hooks:ensure-directory', { cwd })
   },
 
-  // Commands API (for .claude/commands/ custom slash commands)
+  // Commands API (for .claude/commands/ and .tiki/commands/ custom slash commands)
   commands: {
     list: (cwd?: string) => ipcRenderer.invoke('commands:list', { cwd }),
     read: (name: string, cwd?: string) => ipcRenderer.invoke('commands:read', { name, cwd }),
-    write: (name: string, content: string, cwd?: string) =>
-      ipcRenderer.invoke('commands:write', { name, content, cwd }),
+    write: (name: string, content: string, cwd?: string, source?: CommandSource) =>
+      ipcRenderer.invoke('commands:write', { name, content, cwd, source }),
     delete: (name: string, cwd?: string) => ipcRenderer.invoke('commands:delete', { name, cwd }),
     namespaces: (cwd?: string) => ipcRenderer.invoke('commands:namespaces', { cwd }),
-    ensureDirectory: (cwd?: string) => ipcRenderer.invoke('commands:ensure-directory', { cwd })
+    ensureDirectory: (cwd?: string, source?: CommandSource) =>
+      ipcRenderer.invoke('commands:ensure-directory', { cwd, source })
   },
 
   // Search API (for cross-content search)
@@ -1707,10 +1708,10 @@ declare global {
       commands: {
         list: (cwd?: string) => Promise<Command[]>
         read: (name: string, cwd?: string) => Promise<Command | null>
-        write: (name: string, content: string, cwd?: string) => Promise<boolean>
+        write: (name: string, content: string, cwd?: string, source?: CommandSource) => Promise<boolean>
         delete: (name: string, cwd?: string) => Promise<boolean>
         namespaces: (cwd?: string) => Promise<string[]>
-        ensureDirectory: (cwd?: string) => Promise<boolean>
+        ensureDirectory: (cwd?: string, source?: CommandSource) => Promise<boolean>
       }
       search: {
         query: (query: string, options?: SearchOptions) => Promise<SearchResult[]>
@@ -2002,11 +2003,14 @@ interface HookExecutionResult {
 }
 
 // Command types (mirrors main process commands-service.ts)
+type CommandSource = 'claude' | 'tiki'
+
 interface Command {
   name: string
   path: string
   relativePath: string
   namespace?: string
+  source: CommandSource
   content?: string
 }
 

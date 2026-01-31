@@ -2,12 +2,20 @@ import { useState, useEffect, useCallback } from 'react'
 import { Save, X, FileText, Copy, Check } from 'lucide-react'
 import { useTikiStore } from '../../stores/tiki-store'
 
+type CommandSource = 'claude' | 'tiki'
+
 interface Command {
   name: string
   path: string
   relativePath: string
   namespace?: string
+  source: CommandSource
   content?: string
+}
+
+const sourceColors: Record<CommandSource, string> = {
+  claude: 'bg-purple-600 text-purple-100',
+  tiki: 'bg-emerald-600 text-emerald-100'
 }
 
 interface CommandDetailProps {
@@ -138,6 +146,9 @@ export function CommandDetail({ commandName, onClose }: CommandDetailProps) {
 
       {/* Command Info */}
       <div className="flex items-center gap-4 px-4 py-2 bg-slate-800/50 border-b border-slate-700 text-sm">
+        <span className={`px-1.5 py-0.5 text-xs rounded font-medium ${sourceColors[command.source]}`}>
+          {command.source === 'tiki' ? '.tiki' : '.claude'}
+        </span>
         {command.namespace && (
           <span className="text-slate-400">
             Namespace: <span className="text-slate-200">{command.namespace}</span>
