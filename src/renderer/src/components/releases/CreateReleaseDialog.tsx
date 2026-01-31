@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTikiStore } from '../../stores/tiki-store'
 
 interface IssueRecommendation {
@@ -14,7 +14,58 @@ interface CreateReleaseDialogProps {
   onCreated?: () => void
 }
 
+/**
+ * Parse semver version string into components
+ */
+function parseVersion(version: string): { major: number; minor: number; patch: number } | null {
+  const match = version.replace(/^v/, '').match(/^(\d+)\.(\d+)(?:\.(\d+))?/)
+  if (!match) return null
+  return {
+    major: parseInt(match[1], 10),
+    minor: parseInt(match[2], 10),
+    patch: match[3] !== undefined ? parseInt(match[3], 10) : 0
+  }
+}
+
+/**
+ * Increment version by bumping the patch number
+ */
+function incrementVersion(version: string): string {
+  const parsed = parseVersion(version)
+  if (!parsed) return 'v1.0.0'
+
+  // Check if original had 'v' prefix
+  const hasV = version.startsWith('v')
+  // Check if original had patch version
+  const hasPatch = /^v?\d+\.\d+\.\d+/.test(version)
+
+  const newPatch = parsed.patch + 1
+  const base = `${parsed.major}.${parsed.minor}${hasPatch || newPatch > 0 ? `.${newPatch}` : ''}`
+  return hasV ? `v${base}` : base
+}
+
 export function CreateReleaseDialog({ isOpen, onClose, onCreated }: CreateReleaseDialogProps) {
+  const releases = useTikiStore((state) => state.releases)
+
+  // Calculate the next version based on existing releases
+  const suggestedVersion = useMemo(() => {
+    if (releases.length === 0) return 'v1.0.0'
+
+    // Sort releases by version (descending) to find the latest
+    const sorted = [...releases].sort((a, b) => {
+      const aVer = parseVersion(a.version)
+      const bVer = parseVersion(b.version)
+      if (!aVer || !bVer) return 0
+
+      if (aVer.major !== bVer.major) return bVer.major - aVer.major
+      if (aVer.minor !== bVer.minor) return bVer.minor - aVer.minor
+      return bVer.patch - aVer.patch
+    })
+
+    const latestVersion = sorted[0]?.version || 'v0.0.0'
+    return incrementVersion(latestVersion)
+  }, [releases])
+
   const [version, setVersion] = useState('')
   const [selectedIssues, setSelectedIssues] = useState<Set<number>>(new Set())
   const [selectionMode, setSelectionMode] = useState<'manual' | 'llm'>('manual')
@@ -31,9 +82,13 @@ export function CreateReleaseDialog({ isOpen, onClose, onCreated }: CreateReleas
   // Version validation - must match semver-like pattern
   const isValidVersion = /^v?\d+\.\d+(\.\d+)?(-[a-zA-Z0-9.]+)?$/.test(version)
 
-  // Reset state when dialog closes
+  // Reset state when dialog opens/closes
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      // Pre-fill with suggested version when dialog opens
+      setVersion(suggestedVersion)
+    } else {
+      // Reset state when dialog closes
       setVersion('')
       setSelectedIssues(new Set())
       setSelectionMode('manual')
@@ -43,7 +98,7 @@ export function CreateReleaseDialog({ isOpen, onClose, onCreated }: CreateReleas
       setLlmRecommendations(null)
       setLlmSummary(null)
     }
-  }, [isOpen])
+  }, [isOpen, suggestedVersion])
 
   // Handle LLM recommendation request
   const handleLlmRecommend = useCallback(async () => {
