@@ -934,6 +934,7 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       issues: Array<{ number: number; title: string; body?: string; labels?: string[] }>
       version: string
     }) => ipcRenderer.invoke('tiki:recommend-release-issues', data),
+    getRequirements: () => ipcRenderer.invoke('tiki:get-requirements'),
     // Notification click handler
     onNotificationClick: (
       callback: (data: {
@@ -1531,6 +1532,13 @@ declare global {
             }
           | { error: string }
         >
+        getRequirements: () => Promise<Array<{
+          id: string
+          title: string
+          description?: string
+          priority?: 'high' | 'medium' | 'low'
+          category?: string
+        }>>
         onNotificationClick: (
           callback: (data: {
             event: string

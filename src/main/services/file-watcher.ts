@@ -271,6 +271,10 @@ export function stopWatching(): void {
   projectPath = null
 }
 
+export function getWatchedPath(): string | null {
+  return projectPath
+}
+
 export async function getCurrentState(): Promise<unknown | null> {
   if (!projectPath) return null
   const statePath = join(projectPath, '.tiki', 'state', 'current.json')

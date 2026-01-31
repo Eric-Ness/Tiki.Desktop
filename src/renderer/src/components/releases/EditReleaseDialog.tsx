@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Release, ReleaseIssue, useTikiStore } from '../../stores/tiki-store'
+import { Release, ReleaseIssue, Requirement, useTikiStore } from '../../stores/tiki-store'
 import { Trash2, Plus, X } from 'lucide-react'
+import { RequirementCoverageMatrix } from './RequirementCoverageMatrix'
 
 interface EditReleaseDialogProps {
   isOpen: boolean
@@ -20,11 +21,13 @@ export function EditReleaseDialog({ isOpen, release, onClose, onSaved, onDeleted
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'settings' | 'issues'>('settings')
+  const [activeTab, setActiveTab] = useState<'settings' | 'issues' | 'requirements'>('settings')
+  const [requirements, setRequirements] = useState<Requirement[]>([])
 
   const updateRelease = useTikiStore((state) => state.updateRelease)
   const issues = useTikiStore((state) => state.issues)
   const activeProject = useTikiStore((state) => state.activeProject)
+  const setSelectedIssue = useTikiStore((state) => state.setSelectedIssue)
 
   // Version validation - must match semver-like pattern
   const isValidVersion = /^v?\d+\.\d+(\.\d+)?(-[a-zA-Z0-9.]+)?$/.test(version)
@@ -81,6 +84,9 @@ export function EditReleaseDialog({ isOpen, release, onClose, onSaved, onDeleted
       setIssueNumbers(new Set(release.issues.map((i) => i.number)))
       setError(null)
       setActiveTab('settings')
+
+      // Load requirements for the coverage matrix
+      window.tikiDesktop.tiki.getRequirements().then(setRequirements).catch(console.error)
     }
   }, [isOpen, release])
 
@@ -107,6 +113,12 @@ export function EditReleaseDialog({ isOpen, release, onClose, onSaved, onDeleted
       next.delete(issueNumber)
       return next
     })
+  }
+
+  // Handle issue click from matrix - close dialog and navigate to issue
+  const handleIssueClick = (issueNumber: number) => {
+    setSelectedIssue(issueNumber)
+    onClose()
   }
 
   // Handle save
@@ -256,11 +268,23 @@ export function EditReleaseDialog({ isOpen, release, onClose, onSaved, onDeleted
             >
               Issues ({issueNumbers.size})
             </button>
+            {(requirementsEnabled || requirements.length > 0) && (
+              <button
+                onClick={() => setActiveTab('requirements')}
+                className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                  activeTab === 'requirements'
+                    ? 'text-amber-400 border-b-2 border-amber-400'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Requirements
+              </button>
+            )}
           </div>
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {activeTab === 'settings' ? (
+            {activeTab === 'settings' && (
               <>
                 {/* Version Input */}
                 <div>
@@ -322,7 +346,9 @@ export function EditReleaseDialog({ isOpen, release, onClose, onSaved, onDeleted
                   </button>
                 </div>
               </>
-            ) : (
+            )}
+
+            {activeTab === 'issues' && (
               <>
                 {/* Issues in release */}
                 <div>
@@ -386,6 +412,31 @@ export function EditReleaseDialog({ isOpen, release, onClose, onSaved, onDeleted
                   )}
                 </div>
               </>
+            )}
+
+            {activeTab === 'requirements' && (
+              <RequirementCoverageMatrix
+                release={{
+                  ...release,
+                  issues: releaseIssuesList.map((issue) => {
+                    // Find the full ReleaseIssue data
+                    const existing = release.issues.find((i) => i.number === issue.number)
+                    if (existing) return existing
+                    // For newly added issues, create a minimal ReleaseIssue
+                    return {
+                      number: issue.number,
+                      title: issue.title,
+                      status: 'not_planned' as const,
+                      requirements: [],
+                      currentPhase: null,
+                      totalPhases: null,
+                      completedAt: null
+                    }
+                  })
+                }}
+                requirements={requirements}
+                onIssueClick={handleIssueClick}
+              />
             )}
 
             {/* Error */}

@@ -183,6 +183,79 @@ export interface Release {
     implemented: number
     verified: number
   }
+  requirementMappings?: ReleaseRequirementMapping[]
+}
+
+export interface Requirement {
+  id: string
+  title: string
+  description?: string
+  priority?: 'high' | 'medium' | 'low'
+  category?: string
+}
+
+export interface ReleaseRequirementMapping {
+  id: string
+  addressedBy: number[]  // issue numbers
+}
+
+/**
+ * Build a coverage matrix mapping requirements to issues.
+ * Returns a Record where keys are requirement IDs and values are Records
+ * mapping issue numbers to boolean (true if the issue addresses the requirement).
+ */
+export function buildCoverageMatrix(
+  requirements: Requirement[],
+  releaseIssues: ReleaseIssue[],
+  releaseReqMappings: ReleaseRequirementMapping[]
+): Record<string, Record<number, boolean>> {
+  const matrix: Record<string, Record<number, boolean>> = {}
+
+  // Initialize matrix with all requirements
+  for (const req of requirements) {
+    matrix[req.id] = {}
+    // Initialize all issues as false
+    for (const issue of releaseIssues) {
+      matrix[req.id][issue.number] = false
+    }
+  }
+
+  // Fill in mappings
+  for (const mapping of releaseReqMappings) {
+    if (matrix[mapping.id]) {
+      for (const issueNum of mapping.addressedBy) {
+        // Only mark if issue is in the release
+        if (releaseIssues.some(i => i.number === issueNum)) {
+          matrix[mapping.id][issueNum] = true
+        }
+      }
+    }
+  }
+
+  return matrix
+}
+
+/**
+ * Calculate coverage statistics for a specific requirement.
+ * Returns the percentage of coverage and count of issues addressing it.
+ */
+export function calculateRequirementCoverage(
+  requirementId: string,
+  matrix: Record<string, Record<number, boolean>>
+): { percentage: number; issueCount: number } {
+  const reqMatrix = matrix[requirementId]
+  if (!reqMatrix) {
+    return { percentage: 0, issueCount: 0 }
+  }
+
+  const issueNumbers = Object.keys(reqMatrix).map(Number)
+  const totalIssues = issueNumbers.length
+  const addressedCount = issueNumbers.filter(num => reqMatrix[num]).length
+
+  return {
+    percentage: totalIssues > 0 ? (addressedCount / totalIssues) * 100 : 0,
+    issueCount: addressedCount
+  }
 }
 
 export type TerminalTabStatus = 'active' | 'idle' | 'busy'

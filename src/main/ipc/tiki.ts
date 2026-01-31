@@ -1,4 +1,6 @@
 import { ipcMain } from 'electron'
+import * as fs from 'fs'
+import * as path from 'path'
 import {
   startWatching,
   stopWatching,
@@ -10,7 +12,8 @@ import {
   createRelease,
   updateRelease,
   deleteRelease,
-  UpdateReleaseInput
+  UpdateReleaseInput,
+  getWatchedPath
 } from '../services/file-watcher'
 import { loadTikiCommands } from '../services/command-loader'
 import { recommendIssuesForRelease } from '../services/llm-service'
@@ -103,5 +106,28 @@ export function registerTikiHandlers(): void {
   // Delete a release
   ipcMain.handle('tiki:delete-release', async (_, { version }: { version: string }) => {
     return deleteRelease(version)
+  })
+
+  // Get requirements from .tiki/requirements.json
+  ipcMain.handle('tiki:get-requirements', async () => {
+    const watchedPath = getWatchedPath()
+    if (!watchedPath) {
+      return []
+    }
+
+    const requirementsPath = path.join(watchedPath, '.tiki', 'requirements.json')
+
+    try {
+      if (!fs.existsSync(requirementsPath)) {
+        return []
+      }
+      const content = fs.readFileSync(requirementsPath, 'utf-8')
+      const data = JSON.parse(content)
+      // Return the requirements array (handle both array format and object with requirements property)
+      return Array.isArray(data) ? data : (data.requirements || [])
+    } catch (error) {
+      console.error('Error reading requirements:', error)
+      return []
+    }
   })
 }
