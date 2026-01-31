@@ -4,6 +4,7 @@ import { GitHubIssue, useTikiStore, CachedPrediction, CachedPatternMatch } from 
 import { IssueActions } from '../issues'
 import { PRPreview } from './PRPreview'
 import { AssumptionTracker } from './AssumptionTracker'
+import { SuccessCriteriaChecklist } from './SuccessCriteriaChecklist'
 import { RollbackDialog } from '../rollback'
 import { TemplateSuggestions, CreateTemplateDialog, ApplyTemplateDialog } from '../templates'
 import { CostPrediction } from '../prediction'
@@ -542,6 +543,19 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
             </div>
           )}
         </div>
+      )}
+
+      {/* Success Criteria Checklist */}
+      {plan && plan.successCriteria && plan.successCriteria.length > 0 && (
+        <SuccessCriteriaChecklist
+          criteria={plan.successCriteria}
+          coverageMatrix={plan.coverageMatrix ?? {}}
+          phases={plan.phases.map((p) => ({
+            number: p.number,
+            status: p.status as 'pending' | 'in_progress' | 'completed' | 'failed' | 'skipped'
+          }))}
+          onPhaseClick={handleAssumptionPhaseClick}
+        />
       )}
 
       {/* Assumption Tracker Section */}
