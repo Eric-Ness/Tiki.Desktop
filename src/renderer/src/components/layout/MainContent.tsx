@@ -11,6 +11,7 @@ import { VelocityDashboard } from '../analytics'
 import { useActivityStore } from '../../stores/activity-store'
 import { useTikiStore } from '../../stores/tiki-store'
 import { extractTimeline } from '../../lib/timeline-utils'
+import { Breadcrumb, useBreadcrumbItems } from './Breadcrumb'
 
 type Tab = 'terminal' | 'workflow' | 'timeline' | 'dependencies' | 'heatmap' | 'analytics' | 'config' | 'activity'
 
@@ -21,6 +22,9 @@ interface MainContentProps {
 export function MainContent({ cwd }: MainContentProps) {
   const [activeTab, setActiveTab] = useState<Tab>('terminal')
   const activityEventCount = useActivityStore((state) => state.events.length)
+
+  // Breadcrumb navigation
+  const { items: breadcrumbItems } = useBreadcrumbItems()
 
   // Tiki store state - consolidated selectors
   const { currentPlan, tikiState, issues, releases, setSelectedIssue, setSelectedNode } = useTikiStore(
@@ -107,6 +111,9 @@ export function MainContent({ cwd }: MainContentProps) {
           Activity
         </TabButton>
       </div>
+
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb items={breadcrumbItems} />
 
       {/* Tab Content */}
       <div className="flex-1 overflow-hidden">
