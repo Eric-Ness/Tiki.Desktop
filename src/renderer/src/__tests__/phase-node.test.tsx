@@ -21,6 +21,7 @@ type TestPhaseData = {
   status?: PhaseNodeData['status']
   files?: string[]
   verification?: string[]
+  hasRisk?: boolean
 }
 
 // Helper to render PhaseNode with required props
@@ -190,6 +191,43 @@ describe('PhaseNode', () => {
 
       const titleElement = container.querySelector('[data-testid="phase-title"]')
       expect(titleElement).toHaveClass('truncate')
+    })
+  })
+
+  describe('Risk indicator', () => {
+    it('shows risk indicator when hasRisk is true', () => {
+      renderPhaseNode({ hasRisk: true })
+
+      const riskIndicator = screen.getByTestId('risk-indicator')
+      expect(riskIndicator).toBeInTheDocument()
+      expect(riskIndicator).toHaveClass('bg-amber-500')
+    })
+
+    it('does not show risk indicator when hasRisk is false', () => {
+      renderPhaseNode({ hasRisk: false })
+
+      expect(screen.queryByTestId('risk-indicator')).not.toBeInTheDocument()
+    })
+
+    it('does not show risk indicator when hasRisk is undefined', () => {
+      renderPhaseNode({})
+
+      expect(screen.queryByTestId('risk-indicator')).not.toBeInTheDocument()
+    })
+
+    it('positions risk indicator at top-left corner', () => {
+      renderPhaseNode({ hasRisk: true })
+
+      const riskIndicator = screen.getByTestId('risk-indicator')
+      expect(riskIndicator).toHaveClass('-top-1')
+      expect(riskIndicator).toHaveClass('-left-1')
+    })
+
+    it('can show both risk indicator and error indicator simultaneously', () => {
+      renderPhaseNode({ hasRisk: true, status: 'failed' })
+
+      expect(screen.getByTestId('risk-indicator')).toBeInTheDocument()
+      expect(screen.getByTestId('error-indicator')).toBeInTheDocument()
     })
   })
 })

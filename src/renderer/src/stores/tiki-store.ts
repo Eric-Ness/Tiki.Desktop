@@ -44,6 +44,20 @@ export interface TikiState {
   executions?: Execution[]
 }
 
+export interface Assumption {
+  id: string
+  confidence: 'high' | 'medium' | 'low'
+  description: string
+  source?: string
+  affectsPhases?: number[]
+}
+
+export interface SuccessCriterion {
+  id: string
+  category: 'functional' | 'non-functional' | 'testing' | 'documentation'
+  description: string
+}
+
 export interface ExecutionPlan {
   issue: {
     number: number
@@ -59,6 +73,24 @@ export interface ExecutionPlan {
     summary?: string
     error?: string
   }>
+  assumptions?: Assumption[]
+  successCriteria?: SuccessCriterion[]
+  coverageMatrix?: Record<string, { phases: number[] }>
+}
+
+/**
+ * Get phase numbers that have low-confidence assumptions affecting them.
+ * Useful for displaying risk indicators in the UI.
+ */
+export function getPhasesWithRisk(plan: ExecutionPlan | null): Set<number> {
+  const riskyPhases = new Set<number>()
+  if (!plan?.assumptions) return riskyPhases
+  for (const assumption of plan.assumptions) {
+    if (assumption.confidence === 'low') {
+      assumption.affectsPhases?.forEach((p) => riskyPhases.add(p))
+    }
+  }
+  return riskyPhases
 }
 
 export interface GitHubIssue {

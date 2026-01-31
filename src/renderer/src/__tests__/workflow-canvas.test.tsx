@@ -74,6 +74,17 @@ function createTestPlan(phases: number): ExecutionPlan {
   }
 }
 
+// Helper to create a test plan with assumptions
+function createTestPlanWithAssumptions(
+  phases: number,
+  assumptions: Array<{ id: string; confidence: 'high' | 'medium' | 'low'; description: string; affectsPhases?: number[] }>
+): ExecutionPlan {
+  return {
+    ...createTestPlan(phases),
+    assumptions
+  }
+}
+
 describe('WorkflowCanvas', () => {
   beforeEach(() => {
     // Reset store state before each test
@@ -195,6 +206,94 @@ describe('WorkflowCanvas', () => {
       await waitFor(() => {
         const selectedNode = container.querySelector('[data-selected="true"]')
         expect(selectedNode).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Risk Indicator Integration', () => {
+    it('should pass hasRisk=true to phases with low-confidence assumptions', async () => {
+      const testPlan = createTestPlanWithAssumptions(3, [
+        { id: 'A1', confidence: 'low', description: 'Low confidence assumption', affectsPhases: [1, 2] }
+      ])
+      useTikiStore.setState({ currentPlan: testPlan })
+
+      render(<WorkflowCanvas />)
+
+      // Phases 1 and 2 should have risk indicator
+      await waitFor(() => {
+        const phase1 = screen.getByTestId('node-phase-1')
+        expect(phase1.querySelector('[data-testid="risk-indicator"]')).toBeInTheDocument()
+
+        const phase2 = screen.getByTestId('node-phase-2')
+        expect(phase2.querySelector('[data-testid="risk-indicator"]')).toBeInTheDocument()
+      })
+
+      // Phase 3 should not have risk indicator
+      const phase3 = screen.getByTestId('node-phase-3')
+      expect(phase3.querySelector('[data-testid="risk-indicator"]')).not.toBeInTheDocument()
+    })
+
+    it('should not pass hasRisk for high-confidence assumptions', async () => {
+      const testPlan = createTestPlanWithAssumptions(2, [
+        { id: 'A1', confidence: 'high', description: 'High confidence assumption', affectsPhases: [1, 2] }
+      ])
+      useTikiStore.setState({ currentPlan: testPlan })
+
+      render(<WorkflowCanvas />)
+
+      // Neither phase should have risk indicator
+      await waitFor(() => {
+        const phase1 = screen.getByTestId('node-phase-1')
+        expect(phase1.querySelector('[data-testid="risk-indicator"]')).not.toBeInTheDocument()
+
+        const phase2 = screen.getByTestId('node-phase-2')
+        expect(phase2.querySelector('[data-testid="risk-indicator"]')).not.toBeInTheDocument()
+      })
+    })
+
+    it('should not pass hasRisk for medium-confidence assumptions', async () => {
+      const testPlan = createTestPlanWithAssumptions(2, [
+        { id: 'A1', confidence: 'medium', description: 'Medium confidence assumption', affectsPhases: [1] }
+      ])
+      useTikiStore.setState({ currentPlan: testPlan })
+
+      render(<WorkflowCanvas />)
+
+      // Phase should not have risk indicator
+      await waitFor(() => {
+        const phase1 = screen.getByTestId('node-phase-1')
+        expect(phase1.querySelector('[data-testid="risk-indicator"]')).not.toBeInTheDocument()
+      })
+    })
+
+    it('should handle plan without assumptions', async () => {
+      const testPlan = createTestPlan(2)
+      useTikiStore.setState({ currentPlan: testPlan })
+
+      render(<WorkflowCanvas />)
+
+      // No phases should have risk indicator
+      await waitFor(() => {
+        const phase1 = screen.getByTestId('node-phase-1')
+        expect(phase1.querySelector('[data-testid="risk-indicator"]')).not.toBeInTheDocument()
+
+        const phase2 = screen.getByTestId('node-phase-2')
+        expect(phase2.querySelector('[data-testid="risk-indicator"]')).not.toBeInTheDocument()
+      })
+    })
+
+    it('should handle assumptions without affectsPhases', async () => {
+      const testPlan = createTestPlanWithAssumptions(2, [
+        { id: 'A1', confidence: 'low', description: 'Low confidence without phases' }
+      ])
+      useTikiStore.setState({ currentPlan: testPlan })
+
+      render(<WorkflowCanvas />)
+
+      // No phases should have risk indicator
+      await waitFor(() => {
+        const phase1 = screen.getByTestId('node-phase-1')
+        expect(phase1.querySelector('[data-testid="risk-indicator"]')).not.toBeInTheDocument()
       })
     })
   })

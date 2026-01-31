@@ -20,7 +20,7 @@ import { IssueNode } from './nodes/IssueNode'
 import { ShipNode } from './nodes/ShipNode'
 import { DependencyEdge } from './edges/DependencyEdge'
 import { PhaseControls } from './PhaseControls'
-import { useTikiStore } from '../../stores/tiki-store'
+import { useTikiStore, getPhasesWithRisk } from '../../stores/tiki-store'
 import { usePhaseControls } from '../../hooks/usePhaseControls'
 
 // Register custom node types
@@ -67,17 +67,28 @@ function WorkflowCanvasInner({ nodes: propNodes, edges: propEdges }: WorkflowCan
     [nodes, edges]
   )
 
-  // Add selected state to nodes
+  // Calculate phases with risk (low-confidence assumptions)
+  const riskyPhases = useMemo(() => getPhasesWithRisk(currentPlan), [currentPlan])
+
+  // Add selected state and risk indicator to nodes
   const nodesWithSelection = useMemo(
     () =>
-      layoutedNodes.map((node) => ({
-        ...node,
-        data: {
-          ...node.data,
-          selected: node.id === selectedNode
+      layoutedNodes.map((node) => {
+        // Extract phase number from node id (e.g., 'phase-1' -> 1)
+        const phaseMatch = node.id.match(/^phase-(\d+)$/)
+        const phaseNumber = phaseMatch ? parseInt(phaseMatch[1], 10) : null
+        const hasRisk = phaseNumber !== null && riskyPhases.has(phaseNumber)
+
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            selected: node.id === selectedNode,
+            hasRisk
+          }
         }
-      })),
-    [layoutedNodes, selectedNode]
+      }),
+    [layoutedNodes, selectedNode, riskyPhases]
   )
 
   // Handle node click - update selected node in store

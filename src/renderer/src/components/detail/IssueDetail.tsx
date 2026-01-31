@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import { GitHubIssue, useTikiStore, CachedPrediction, CachedPatternMatch } from '../../stores/tiki-store'
 import { IssueActions } from '../issues'
 import { PRPreview } from './PRPreview'
+import { AssumptionTracker } from './AssumptionTracker'
 import { RollbackDialog } from '../rollback'
 import { TemplateSuggestions, CreateTemplateDialog, ApplyTemplateDialog } from '../templates'
 import { CostPrediction } from '../prediction'
@@ -99,6 +100,7 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
   const setPrediction = useTikiStore((state) => state.setPrediction)
   const setPatternMatchesInStore = useTikiStore((state) => state.setPatternMatches)
   const getPatternMatchesFromStore = useTikiStore((state) => state.getPatternMatches)
+  const setSelectedNode = useTikiStore((state) => state.setSelectedNode)
   const [showRollbackDialog, setShowRollbackDialog] = useState(false)
   const [hasTrackedCommits, setHasTrackedCommits] = useState(false)
   const [showCostPrediction, setShowCostPrediction] = useState(true)
@@ -108,6 +110,9 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
   const [checkingPatterns, setCheckingPatterns] = useState(false)
   const [showPatternAnalysis, setShowPatternAnalysis] = useState(true)
   const [patternsDismissed, setPatternsDismissed] = useState(false)
+
+  // Assumption tracker state
+  const [showAssumptionTracker, setShowAssumptionTracker] = useState(true)
 
   // Template dialog state
   const [showCreateTemplateDialog, setShowCreateTemplateDialog] = useState(false)
@@ -289,6 +294,14 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
     setSelectedTemplate(null)
     // The plan will be created/updated through the normal workflow
   }, [])
+
+  // Handle clicking on a phase in the AssumptionTracker
+  const handleAssumptionPhaseClick = useCallback(
+    (phaseNumber: number) => {
+      setSelectedNode(`phase-${phaseNumber}`)
+    },
+    [setSelectedNode]
+  )
 
   // Handle prediction loaded - cache it in the store
   const handlePredictionLoaded = useCallback(
@@ -529,6 +542,14 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
             </div>
           )}
         </div>
+      )}
+
+      {/* Assumption Tracker Section */}
+      {plan && plan.assumptions && plan.assumptions.length > 0 && (
+        <AssumptionTracker
+          assumptions={plan.assumptions}
+          onPhaseClick={handleAssumptionPhaseClick}
+        />
       )}
 
       {/* Body section */}

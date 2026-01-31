@@ -9,6 +9,7 @@ export interface PhaseNodeData {
   files: string[]
   verification: string[]
   selected?: boolean // Whether this node is currently selected
+  hasRisk?: boolean // Whether this phase has low-confidence assumptions
   [key: string]: unknown // Required for @xyflow/react v12 compatibility
 }
 
@@ -51,7 +52,7 @@ const statusStyles: Record<
 }
 
 export function PhaseNode({ data }: PhaseNodeProps) {
-  const { number, title, status, files, selected = false } = data
+  const { number, title, status, files, selected = false, hasRisk = false } = data
   const styles = statusStyles[status]
   const fileCount = files.length
 
@@ -125,6 +126,24 @@ export function PhaseNode({ data }: PhaseNodeProps) {
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+        )}
+
+        {/* Risk indicator for phases with low-confidence assumptions */}
+        {hasRisk && (
+          <div
+            data-testid="risk-indicator"
+            className="
+              absolute -top-1 -left-1
+              w-5 h-5 rounded-full
+              bg-amber-500 text-amber-100
+              flex items-center justify-center
+              shadow-lg
+            "
+          >
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L1 21h22L12 2zm0 4l7.53 13H4.47L12 6zm-1 5v4h2v-4h-2zm0 6v2h2v-2h-2z" />
             </svg>
           </div>
         )}
