@@ -7,9 +7,10 @@ interface EditReleaseDialogProps {
   release: Release
   onClose: () => void
   onSaved?: () => void
+  onDeleted?: () => void
 }
 
-export function EditReleaseDialog({ isOpen, release, onClose, onSaved }: EditReleaseDialogProps) {
+export function EditReleaseDialog({ isOpen, release, onClose, onSaved, onDeleted }: EditReleaseDialogProps) {
   const [version, setVersion] = useState(release.version)
   const [status, setStatus] = useState(release.status)
   const [requirementsEnabled, setRequirementsEnabled] = useState(release.requirementsEnabled ?? false)
@@ -17,6 +18,7 @@ export function EditReleaseDialog({ isOpen, release, onClose, onSaved }: EditRel
     new Set(release.issues.map((i) => i.number))
   )
   const [loading, setLoading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'settings' | 'issues'>('settings')
 
@@ -179,6 +181,33 @@ export function EditReleaseDialog({ isOpen, release, onClose, onSaved }: EditRel
     }
   }
 
+  // Handle delete
+  const handleDelete = async () => {
+    if (!confirm(`Are you sure you want to delete release ${release.version}? This cannot be undone.`)) {
+      return
+    }
+
+    setDeleting(true)
+    setError(null)
+
+    try {
+      const result = await window.tikiDesktop.tiki.deleteRelease(release.version)
+
+      if (!result.success) {
+        setError(result.error || 'Failed to delete release')
+        return
+      }
+
+      onDeleted?.()
+      onClose()
+    } catch (err) {
+      console.error('Failed to delete release:', err)
+      setError(err instanceof Error ? err.message : 'Failed to delete release')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -264,7 +293,7 @@ export function EditReleaseDialog({ isOpen, release, onClose, onSaved }: EditRel
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-background border border-border rounded text-slate-200 focus:outline-none focus:border-amber-500 transition-colors"
+                    className="w-full px-3 py-2 text-sm bg-background-tertiary border border-border rounded text-slate-200 focus:outline-none focus:border-amber-500 transition-colors [&>option]:bg-slate-800 [&>option]:text-slate-200"
                   >
                     <option value="active">Active</option>
                     <option value="completed">Completed</option>
@@ -380,21 +409,31 @@ export function EditReleaseDialog({ isOpen, release, onClose, onSaved }: EditRel
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border bg-background flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-background flex-shrink-0">
             <button
-              onClick={onClose}
-              disabled={loading}
-              className="px-3 py-1.5 text-sm text-slate-300 hover:text-slate-100 transition-colors disabled:opacity-50"
+              onClick={handleDelete}
+              disabled={loading || deleting}
+              className="px-3 py-1.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
-              Cancel
+              <Trash2 className="w-3.5 h-3.5" />
+              {deleting ? 'Deleting...' : 'Delete'}
             </button>
-            <button
-              onClick={handleSave}
-              disabled={loading || !isValidVersion || !hasChanges}
-              className="px-3 py-1.5 text-sm bg-amber-600 hover:bg-amber-500 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Saving...' : 'Save'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onClose}
+                disabled={loading || deleting}
+                className="px-3 py-1.5 text-sm text-slate-300 hover:text-slate-100 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={loading || deleting || !isValidVersion || !hasChanges}
+                className="px-3 py-1.5 text-sm bg-amber-600 hover:bg-amber-500 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

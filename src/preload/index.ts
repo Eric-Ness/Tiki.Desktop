@@ -929,6 +929,7 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
         }>
       }
     }) => ipcRenderer.invoke('tiki:update-release', data),
+    deleteRelease: (version: string) => ipcRenderer.invoke('tiki:delete-release', { version }),
     recommendReleaseIssues: (data: {
       issues: Array<{ number: number; title: string; body?: string; labels?: string[] }>
       version: string
@@ -1514,6 +1515,7 @@ declare global {
             }>
           }
         }) => Promise<{ success: boolean; error?: string }>
+        deleteRelease: (version: string) => Promise<{ success: boolean; error?: string }>
         recommendReleaseIssues: (data: {
           issues: Array<{ number: number; title: string; body?: string; labels?: string[] }>
           version: string

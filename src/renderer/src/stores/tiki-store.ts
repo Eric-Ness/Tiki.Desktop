@@ -251,6 +251,7 @@ interface TikiDesktopState {
   releases: Release[]
   setReleases: (releases: Release[]) => void
   updateRelease: (version: string, release: Release) => void
+  removeRelease: (version: string) => void
   selectedRelease: string | null
   setSelectedRelease: (version: string | null) => void
 
@@ -615,6 +616,10 @@ export const useTikiStore = create<TikiDesktopState>()(
               return { releases: newReleases }
             }
           }),
+        removeRelease: (version) =>
+          set((state) => ({
+            releases: state.releases.filter((r) => r.version !== version)
+          })),
         selectedRelease: null,
         setSelectedRelease: (selectedRelease) => set({ selectedRelease }),
 

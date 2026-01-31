@@ -9,6 +9,7 @@ import {
   getBranches,
   createRelease,
   updateRelease,
+  deleteRelease,
   UpdateReleaseInput
 } from '../services/file-watcher'
 import { loadTikiCommands } from '../services/command-loader'
@@ -98,4 +99,9 @@ export function registerTikiHandlers(): void {
       return updateRelease(data.currentVersion, data.updates)
     }
   )
+
+  // Delete a release
+  ipcMain.handle('tiki:delete-release', async (_, { version }: { version: string }) => {
+    return deleteRelease(version)
+  })
 }

@@ -111,8 +111,12 @@ async function handlePlanChange(filePath: string): Promise<void> {
             }
           }
         } else if (!previousState && data.issue) {
-          // New plan created
-          notifyIssuePlanned(data.issue.number, data.issue.title)
+          // New plan created - but only notify if it's not already shipped/completed
+          // This prevents duplicate alerts when the app restarts or watcher reinitializes
+          // (shipped/completed plans are historical, not new)
+          if (data.status !== 'shipped' && data.status !== 'completed') {
+            notifyIssuePlanned(data.issue.number, data.issue.title)
+          }
         }
       }
 
@@ -498,6 +502,50 @@ export async function updateRelease(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update release'
+    }
+  }
+}
+
+export interface DeleteReleaseResult {
+  success: boolean
+  error?: string
+}
+
+export async function deleteRelease(version: string): Promise<DeleteReleaseResult> {
+  if (!projectPath) {
+    return { success: false, error: 'No project path' }
+  }
+
+  const releasesPath = join(projectPath, '.tiki', 'releases')
+  const archivePath = join(releasesPath, 'archive')
+  const releaseFile = join(releasesPath, `${version}.json`)
+  const archiveFile = join(archivePath, `${version}.json`)
+
+  try {
+    let deleted = false
+
+    // Try to delete from main releases folder
+    if (existsSync(releaseFile)) {
+      await unlink(releaseFile)
+      deleted = true
+    }
+
+    // Also try to delete from archive folder
+    if (existsSync(archiveFile)) {
+      await unlink(archiveFile)
+      deleted = true
+    }
+
+    if (!deleted) {
+      return { success: false, error: 'Release not found' }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error deleting release:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to delete release'
     }
   }
 }

@@ -4,6 +4,7 @@ import { EditReleaseDialog } from '../releases/EditReleaseDialog'
 
 interface ReleaseDetailProps {
   release: Release
+  onDeleted?: () => void
 }
 
 const statusColors: Record<string, string> = {
@@ -21,12 +22,21 @@ const issueStatusColors: Record<string, string> = {
   planned: 'bg-blue-500'
 }
 
-export function ReleaseDetail({ release }: ReleaseDetailProps) {
+export function ReleaseDetail({ release, onDeleted }: ReleaseDetailProps) {
   const { version, status, issues, requirements, requirementsEnabled, githubMilestone } = release
   const activeProject = useTikiStore((state) => state.activeProject)
   const setActiveTab = useTikiStore((state) => state.setActiveTab)
+  const setSelectedRelease = useTikiStore((state) => state.setSelectedRelease)
+  const removeRelease = useTikiStore((state) => state.removeRelease)
   const [executing, setExecuting] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+
+  const handleDeleted = useCallback(() => {
+    // Clear selection and remove from store
+    setSelectedRelease(null)
+    removeRelease(version)
+    onDeleted?.()
+  }, [version, setSelectedRelease, removeRelease, onDeleted])
 
   // Calculate progress
   const completedIssues = issues.filter(
@@ -180,6 +190,7 @@ export function ReleaseDetail({ release }: ReleaseDetailProps) {
         isOpen={editDialogOpen}
         release={release}
         onClose={() => setEditDialogOpen(false)}
+        onDeleted={handleDeleted}
       />
 
       {/* Progress section */}
