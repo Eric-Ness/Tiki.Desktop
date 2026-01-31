@@ -918,6 +918,15 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
         version?: string
         status?: 'active' | 'shipped' | 'completed' | 'not_planned'
         requirementsEnabled?: boolean
+        issues?: Array<{
+          number: number
+          title: string
+          status?: string
+          requirements?: string[]
+          currentPhase?: number | null
+          totalPhases?: number | null
+          completedAt?: string | null
+        }>
       }
     }) => ipcRenderer.invoke('tiki:update-release', data),
     recommendReleaseIssues: (data: {
@@ -1494,6 +1503,15 @@ declare global {
             version?: string
             status?: 'active' | 'shipped' | 'completed' | 'not_planned'
             requirementsEnabled?: boolean
+            issues?: Array<{
+              number: number
+              title: string
+              status?: string
+              requirements?: string[]
+              currentPhase?: number | null
+              totalPhases?: number | null
+              completedAt?: string | null
+            }>
           }
         }) => Promise<{ success: boolean; error?: string }>
         recommendReleaseIssues: (data: {

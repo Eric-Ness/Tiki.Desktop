@@ -369,10 +369,21 @@ export interface UpdateReleaseResult {
   error?: string
 }
 
+export interface ReleaseIssueInput {
+  number: number
+  title: string
+  status?: string
+  requirements?: string[]
+  currentPhase?: number | null
+  totalPhases?: number | null
+  completedAt?: string | null
+}
+
 export interface UpdateReleaseInput {
   version: string
   status?: 'active' | 'shipped' | 'completed' | 'not_planned'
   requirementsEnabled?: boolean
+  issues?: ReleaseIssueInput[]
 }
 
 export async function createRelease(
@@ -457,6 +468,9 @@ export async function updateRelease(
     }
     if (updates.requirementsEnabled !== undefined) {
       release.requirementsEnabled = updates.requirementsEnabled
+    }
+    if (updates.issues !== undefined) {
+      release.issues = updates.issues
     }
 
     // Handle version rename
