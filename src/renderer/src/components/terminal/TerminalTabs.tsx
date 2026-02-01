@@ -113,7 +113,7 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
   )
 
   // Create a new terminal (defined first so it can be used by restoreSessionOrCreateTerminal)
-  const createTerminal = useCallback(async () => {
+  const createTerminal = useCallback(async (prePasteCommand = true) => {
     if (!cwd) return
 
     try {
@@ -143,6 +143,14 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
             : {})
         }
       })
+
+      // Pre-paste the claude command (without newline so user can press Enter)
+      if (prePasteCommand) {
+        // Small delay to ensure PTY is fully initialized before writing
+        setTimeout(() => {
+          window.tikiDesktop.terminal.write(ptyId, 'claude --dangerously-skip-permissions')
+        }, 100)
+      }
     } catch (error) {
       logger.error('Failed to create terminal:', error)
     }
@@ -213,33 +221,37 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
     }
   }, [cwd, createTerminal])
 
-  // Try to restore session on mount, or create initial terminal
-  useEffect(() => {
-    if (terminals.length === 0 && cwd && !initializedRef.current) {
-      initializedRef.current = true
-      restoreSessionOrCreateTerminal()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cwd])
-
-  // When switching projects, auto-create a terminal if the new project has none
-  // and switch activeTerminal to one belonging to this project
+  // Consolidated terminal initialization and project switching
+  // This effect handles both initial mount and project switching
   useEffect(() => {
     if (!cwd) return
 
-    // Check if the current activeTerminal belongs to this project
+    // Check current state
     const allTerms = useTikiStore.getState().terminals
     const projectTerminals = allTerms.filter((t) => t.projectPath === cwd)
     const currentActive = useTikiStore.getState().activeTerminal
 
+    // If no terminals exist for this project
     if (projectTerminals.length === 0) {
-      // No terminals for this project, create one
-      createTerminal()
+      // Prevent duplicate initialization
+      if (initializingRef.current) {
+        return
+      }
+
+      // First mount: try to restore session or create terminal
+      if (!initializedRef.current) {
+        initializedRef.current = true
+        restoreSessionOrCreateTerminal()
+      } else {
+        // Project switch: just create a new terminal
+        createTerminal()
+      }
     } else if (currentActive && !projectTerminals.some((t) => t.id === currentActive)) {
       // Active terminal is from another project, switch to this project's first terminal
       setActiveTerminalTab(projectTerminals[0].id)
     }
-  }, [cwd, createTerminal, setActiveTerminalTab])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cwd])
 
   const closeTerminal = useCallback(
     async (tabId: string) => {
@@ -270,6 +282,10 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
               ],
               activeTerminal: ptyId
             }))
+            // Pre-paste the claude command
+            setTimeout(() => {
+              window.tikiDesktop.terminal.write(ptyId, 'claude --dangerously-skip-permissions')
+            }, 100)
           } catch (error) {
             logger.error('Failed to create replacement terminal:', error)
           }
@@ -385,7 +401,7 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
 
         {/* New terminal button */}
         <button
-          onClick={createTerminal}
+          onClick={() => createTerminal()}
           className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-white hover:bg-background/50"
           title="New Terminal (Ctrl+Shift+T)"
         >
@@ -439,7 +455,7 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
                 Create a new terminal to get started
               </p>
               <button
-                onClick={createTerminal}
+                onClick={() => createTerminal()}
                 className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 rounded text-sm font-medium transition-colors duration-150"
               >
                 New Terminal (Ctrl+Shift+T)
