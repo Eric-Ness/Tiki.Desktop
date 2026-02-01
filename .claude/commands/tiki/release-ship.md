@@ -46,17 +46,41 @@ fi
 - **Not found:** List available releases, suggest `/tiki:release-new`
 - **Already shipped:** Show ship date and archive location
 
-### Step 2.5: Pre-Ship Hook (Conditional)
+### Step 2.5: Pre-Ship Hook (Conditional) - VERSION BUMP
+
+**CRITICAL: This step bumps the version in package.json. DO NOT SKIP.**
 
 **Only execute if:** `.tiki/hooks/pre-ship` (or `.sh`/`.ps1` on Windows) exists.
 
 Read `.tiki/prompts/hooks/execute-hook.md` for execution workflow. On Windows, also read `.tiki/prompts/hooks/windows-support.md`.
 
-Run `pre-ship` hook with:
+**You MUST run the pre-ship hook with these environment variables:**
+
+```bash
+# Get first issue number from release for context
+FIRST_ISSUE=$(cat ".tiki/releases/${VERSION}.json" | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).issues[0]?.number || ''")
+
+# Execute pre-ship hook with TIKI_RELEASE_VERSION set
+TIKI_ISSUE_NUMBER="$FIRST_ISSUE" TIKI_RELEASE_VERSION="${VERSION}" bash .tiki/hooks/pre-ship
+```
+
+**Environment variables to pass:**
 - `TIKI_ISSUE_NUMBER`: First issue number in release (for context)
-- `TIKI_RELEASE_VERSION`: Release version being shipped
+- `TIKI_RELEASE_VERSION`: Release version being shipped (e.g., "v1.0.14")
+
+**Expected output on success:**
+```
+Pre-ship: Bumping version for release v1.0.14
+Version bumped: 1.0.12 -> 1.0.14
+Files staged for commit: package.json, package-lock.json
+```
 
 If hook fails (non-zero exit or timeout), abort release ship and show error message.
+
+**After hook runs:** Commit the staged package.json changes before proceeding:
+```bash
+git commit -m "chore: bump version to ${VERSION#v}"
+```
 
 ### Step 3: Pre-Ship Verification
 
