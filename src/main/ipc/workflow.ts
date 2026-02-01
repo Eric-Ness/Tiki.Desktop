@@ -1,4 +1,5 @@
 import { ipcMain, BrowserWindow } from 'electron'
+import { logger } from '../services/logger'
 import {
   getWorkflows,
   getWorkflowRuns,
@@ -86,7 +87,7 @@ async function poll(workflowId: number, cwd: string): Promise<void> {
     }
   } catch (error) {
     // Log error but continue polling
-    console.error('Workflow polling error:', error)
+    logger.error('Workflow polling error:', error)
   }
 }
 

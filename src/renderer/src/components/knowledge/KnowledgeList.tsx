@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { logger } from '../../lib/logger'
 import { useTikiStore } from '../../stores/tiki-store'
 
 type KnowledgeCategory = 'pattern' | 'gotcha' | 'decision' | 'learning'
@@ -63,7 +64,7 @@ export function KnowledgeList({ onSelectEntry, onCreateEntry }: KnowledgeListPro
       })
       setEntries(loaded)
     } catch (err) {
-      console.error('Failed to load knowledge entries:', err)
+      logger.error('Failed to load knowledge entries:', err)
       setEntries([])
     } finally {
       setLoading(false)

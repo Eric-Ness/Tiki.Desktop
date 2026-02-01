@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { logger } from '../../lib/logger'
 import { useTikiStore } from '../../stores/tiki-store'
 
 type KnowledgeCategory = 'pattern' | 'gotcha' | 'decision' | 'learning'
@@ -72,7 +73,7 @@ export function KnowledgeDetail({ onClose, onDeleted, onUpdated }: KnowledgeDeta
         setEditSourceIssue(loaded.sourceIssue?.toString() || '')
       }
     } catch (err) {
-      console.error('Failed to load knowledge entry:', err)
+      logger.error('Failed to load knowledge entry:', err)
       setEntry(null)
     } finally {
       setLoading(false)
@@ -107,7 +108,7 @@ export function KnowledgeDetail({ onClose, onDeleted, onUpdated }: KnowledgeDeta
       loadEntry()
       onUpdated?.()
     } catch (err) {
-      console.error('Failed to update knowledge entry:', err)
+      logger.error('Failed to update knowledge entry:', err)
     } finally {
       setSaving(false)
     }
@@ -126,7 +127,7 @@ export function KnowledgeDetail({ onClose, onDeleted, onUpdated }: KnowledgeDeta
       setSelectedKnowledge(null)
       onDeleted?.()
     } catch (err) {
-      console.error('Failed to delete knowledge entry:', err)
+      logger.error('Failed to delete knowledge entry:', err)
     } finally {
       setDeleting(false)
     }

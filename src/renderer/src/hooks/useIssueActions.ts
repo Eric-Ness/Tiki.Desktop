@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { logger } from '../lib/logger'
 import { useTikiStore, type GitHubIssue, type TikiState, type ExecutionPlan } from '../stores/tiki-store'
 
 export type IssueActionType = 'yolo' | 'plan' | 'execute' | 'resume' | 'ship' | 'verify' | 'get' | 'review' | 'audit'
@@ -215,7 +216,7 @@ export function useIssueActions() {
       try {
         const terminalId = await ensureTerminal()
         if (!terminalId) {
-          console.error('No terminal available')
+          logger.error('No terminal available')
           setExecuting(null)
           return false
         }
@@ -265,7 +266,7 @@ export function useIssueActions() {
 
         return true
       } catch (error) {
-        console.error('Failed to execute action:', error)
+        logger.error('Failed to execute action:', error)
         return false
       } finally {
         // Clear executing state after a short delay to allow UI feedback
@@ -335,7 +336,7 @@ export function useIssueActions() {
           })
 
           if (!result.success) {
-            console.error('Failed to create branch:', result.error)
+            logger.error('Failed to create branch:', result.error)
             setBranchOperationInProgress(false)
             return false
           }
@@ -350,7 +351,7 @@ export function useIssueActions() {
           })
 
           if (!result.success) {
-            console.error('Failed to switch branch:', result.error)
+            logger.error('Failed to switch branch:', result.error)
             setBranchOperationInProgress(false)
             return false
           }
@@ -368,7 +369,7 @@ export function useIssueActions() {
         // Execute the original action
         return executeActionDirect(pendingAction, pendingIssue.number)
       } catch (error) {
-        console.error('Branch operation failed:', error)
+        logger.error('Branch operation failed:', error)
         setBranchOperationInProgress(false)
         return false
       }

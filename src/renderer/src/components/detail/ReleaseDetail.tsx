@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { logger } from '../../lib/logger'
 import { Release, ReleaseIssue, useTikiStore } from '../../stores/tiki-store'
 import { EditReleaseDialog } from '../releases/EditReleaseDialog'
 
@@ -83,7 +84,7 @@ export function ReleaseDetail({ release, onDeleted }: ReleaseDetailProps) {
     try {
       const terminalId = await ensureTerminal()
       if (!terminalId) {
-        console.error('No terminal available')
+        logger.error('No terminal available')
         return
       }
 
@@ -99,7 +100,7 @@ export function ReleaseDetail({ release, onDeleted }: ReleaseDetailProps) {
         new CustomEvent('terminal:focus', { detail: { id: terminalId } })
       )
     } catch (error) {
-      console.error('Failed to start release:', error)
+      logger.error('Failed to start release:', error)
     } finally {
       setTimeout(() => setExecuting(false), 500)
     }

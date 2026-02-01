@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { logger } from '../../lib/logger'
 import { MetricCard } from './MetricCard'
 import { VelocityChart } from './VelocityChart'
 import { BreakdownChart } from './BreakdownChart'
@@ -154,7 +155,7 @@ export function VelocityDashboard({ cwd }: VelocityDashboardProps) {
       setInsights(insightsData as Insight[])
       setRecent(recentData)
     } catch (err) {
-      console.error('Failed to load analytics data:', err)
+      logger.error('Failed to load analytics data:', err)
       setError(err instanceof Error ? err.message : 'Failed to load analytics data')
     } finally {
       setLoading(false)

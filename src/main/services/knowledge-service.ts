@@ -1,6 +1,7 @@
 import { join } from 'path'
 import { readFile, writeFile, readdir, unlink, mkdir, access, constants } from 'fs/promises'
 import { randomUUID } from 'crypto'
+import { logger } from './logger'
 
 export type KnowledgeCategory = 'pattern' | 'gotcha' | 'decision' | 'learning'
 
@@ -140,7 +141,7 @@ export async function listKnowledgeEntries(
 
     return entries
   } catch (error) {
-    console.error('Error listing knowledge entries:', error)
+    logger.error('Error listing knowledge entries:', error)
     return []
   }
 }

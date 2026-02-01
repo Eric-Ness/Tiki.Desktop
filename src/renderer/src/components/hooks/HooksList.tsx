@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Plus, Play, Trash2, FileCode } from 'lucide-react'
+import { logger } from '../../lib/logger'
 import { useTikiStore } from '../../stores/tiki-store'
 
 interface Hook {
@@ -67,7 +68,7 @@ export function HooksList({ onSelectHook, onCreateHook }: HooksListProps) {
       setHooks(loadedHooks)
       setHistory(loadedHistory)
     } catch (err) {
-      console.error('Failed to load hooks:', err)
+      logger.error('Failed to load hooks:', err)
       setHooks([])
     } finally {
       setLoading(false)
@@ -103,10 +104,10 @@ export function HooksList({ onSelectHook, onCreateHook }: HooksListProps) {
       setHistory(newHistory)
 
       if (!result.success) {
-        console.error(`Hook ${hook.name} failed:`, result.stderr)
+        logger.error(`Hook ${hook.name} failed:`, result.stderr)
       }
     } catch (err) {
-      console.error(`Failed to execute hook ${hook.name}:`, err)
+      logger.error(`Failed to execute hook ${hook.name}:`, err)
     } finally {
       setExecuting(null)
     }
@@ -125,7 +126,7 @@ export function HooksList({ onSelectHook, onCreateHook }: HooksListProps) {
       }
       loadHooks()
     } catch (err) {
-      console.error(`Failed to delete hook ${hook.name}:`, err)
+      logger.error(`Failed to delete hook ${hook.name}:`, err)
     }
   }
 

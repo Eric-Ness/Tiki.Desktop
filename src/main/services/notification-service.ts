@@ -1,6 +1,7 @@
 import { Notification, BrowserWindow, nativeImage } from 'electron'
 import { join } from 'path'
 import { getSettings } from './settings-store'
+import { logger } from './logger'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -85,7 +86,7 @@ export function showNotification(options: NotificationOptions): void {
 
   // Check if Notification is supported
   if (!Notification.isSupported()) {
-    console.warn('Desktop notifications are not supported on this system')
+    logger.warn('Desktop notifications are not supported on this system')
     return
   }
 

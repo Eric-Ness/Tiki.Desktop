@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Save, X, FileText, Copy, Check } from 'lucide-react'
+import { logger } from '../../lib/logger'
 import { useTikiStore } from '../../stores/tiki-store'
 
 type CommandSource = 'claude' | 'tiki'
@@ -48,7 +49,7 @@ export function CommandDetail({ commandName, onClose }: CommandDetailProps) {
       setContent(loadedCommand?.content || '')
       setHasChanges(false)
     } catch (err) {
-      console.error('Failed to load command:', err)
+      logger.error('Failed to load command:', err)
       setCommand(null)
     } finally {
       setLoading(false)
@@ -74,7 +75,7 @@ export function CommandDetail({ commandName, onClose }: CommandDetailProps) {
       // Reload to get updated command
       await loadCommand()
     } catch (err) {
-      console.error('Failed to save command:', err)
+      logger.error('Failed to save command:', err)
     } finally {
       setSaving(false)
     }

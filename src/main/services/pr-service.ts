@@ -1,5 +1,6 @@
 import { execFile } from 'child_process'
 import { promisify } from 'util'
+import { logger } from './logger'
 
 const execFileAsync = promisify(execFile)
 
@@ -54,7 +55,7 @@ export async function getPRForIssue(cwd: string, issueNumber: number): Promise<P
     const branchResults = JSON.parse(branchPRs)
     return branchResults.length > 0 ? branchResults[0] : null
   } catch (error) {
-    console.error('Failed to get PR for issue:', error)
+    logger.error('Failed to get PR for issue:', error)
     return null
   }
 }

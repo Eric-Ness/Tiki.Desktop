@@ -1,4 +1,5 @@
 import { spawn } from 'child_process'
+import { logger } from './logger'
 
 export interface IssueRecommendation {
   number: number
@@ -121,7 +122,7 @@ Include ALL issues in the recommendations array, with includeInRelease set to tr
       }))
     }
   } catch (error) {
-    console.error('LLM recommendation error:', error)
+    logger.error('LLM recommendation error:', error)
 
     if (error instanceof Error) {
       if (error.message.includes('not found') || error.message.includes('ENOENT')) {

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { logger } from '../../lib/logger'
 
 interface BranchInfo {
   name: string
@@ -66,7 +67,7 @@ export function BranchSelector({
         setWorkingTree(status)
       } catch (err) {
         setError('Failed to load branches')
-        console.error('Failed to fetch branches:', err)
+        logger.error('Failed to fetch branches:', err)
       } finally {
         setLoading(false)
       }
@@ -192,7 +193,7 @@ export function BranchSelector({
       }
     } catch (err) {
       setError('Failed to switch branch')
-      console.error('Branch switch error:', err)
+      logger.error('Branch switch error:', err)
     } finally {
       setSwitching(false)
       setShowUncommittedWarning(false)

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { logger } from '../../lib/logger'
 
 // Types for PR data
 export interface PullRequest {
@@ -180,7 +181,7 @@ export function PRPreview({ issueNumber }: PRPreviewProps) {
         setPr(result as PullRequest | null)
       })
       .catch((error) => {
-        console.error('Failed to fetch PR:', error)
+        logger.error('Failed to fetch PR:', error)
         setPr(null)
       })
       .finally(() => setLoading(false))

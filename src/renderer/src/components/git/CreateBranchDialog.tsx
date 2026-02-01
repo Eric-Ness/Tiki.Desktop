@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { logger } from '../../lib/logger'
 
 interface BranchInfo {
   name: string
@@ -88,7 +89,7 @@ export function CreateBranchDialog({
         const main = branchList.find((b) => b.name === 'main' || b.name === 'master')
         setBaseBranch(defaultBaseBranch || main?.name || current?.name || 'main')
       } catch (err) {
-        console.error('Failed to fetch branches:', err)
+        logger.error('Failed to fetch branches:', err)
       } finally {
         setLoading(false)
       }
@@ -172,7 +173,7 @@ export function CreateBranchDialog({
             parseInt(issueNumber)
           )
         } catch (err) {
-          console.error('Failed to associate issue:', err)
+          logger.error('Failed to associate issue:', err)
           // Don't fail the whole operation for this
         }
       }
@@ -181,7 +182,7 @@ export function CreateBranchDialog({
       onClose()
     } catch (err) {
       setError('Failed to create branch')
-      console.error('Branch creation error:', err)
+      logger.error('Branch creation error:', err)
     } finally {
       setCreating(false)
     }

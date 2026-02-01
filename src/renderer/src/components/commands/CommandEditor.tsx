@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Save, X, FileText } from 'lucide-react'
+import { logger } from '../../lib/logger'
 import { useTikiStore } from '../../stores/tiki-store'
 
 type CommandSource = 'claude' | 'tiki'
@@ -133,7 +134,7 @@ export function CommandEditor({ onSave, onCancel }: CommandEditorProps) {
       window.tikiDesktop.commands
         .namespaces(activeProject.path)
         .then(setNamespaces)
-        .catch(console.error)
+        .catch((err) => logger.error('Failed to load namespaces:', err))
     }
   }, [activeProject?.path])
 
@@ -183,7 +184,7 @@ export function CommandEditor({ onSave, onCancel }: CommandEditorProps) {
         setError('Failed to save command')
       }
     } catch (err) {
-      console.error('Failed to save command:', err)
+      logger.error('Failed to save command:', err)
       setError('Failed to save command')
     } finally {
       setSaving(false)

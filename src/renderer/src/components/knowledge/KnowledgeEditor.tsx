@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { logger } from '../../lib/logger'
 import { useTikiStore } from '../../stores/tiki-store'
 
 type KnowledgeCategory = 'pattern' | 'gotcha' | 'decision' | 'learning'
@@ -66,7 +67,7 @@ export function KnowledgeEditor({ onClose, onCreated }: KnowledgeEditorProps) {
       onCreated?.()
       onClose()
     } catch (err) {
-      console.error('Failed to create knowledge entry:', err)
+      logger.error('Failed to create knowledge entry:', err)
       setError('Failed to create entry')
     } finally {
       setSaving(false)

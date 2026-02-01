@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
+import { logger } from '../services/logger'
 import {
   startWatching,
   stopWatching,
@@ -126,7 +127,7 @@ export function registerTikiHandlers(): void {
       // Return the requirements array (handle both array format and object with requirements property)
       return Array.isArray(data) ? data : (data.requirements || [])
     } catch (error) {
-      console.error('Error reading requirements:', error)
+      logger.error('Error reading requirements:', error)
       return []
     }
   })

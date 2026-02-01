@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { logger } from '../../lib/logger'
 import { useTikiStore, type GitHubIssue } from '../../stores/tiki-store'
 import type { IssueActionType } from '../../hooks/useIssueActions'
 
@@ -90,7 +91,7 @@ export function StartIssueDialog({
           setGenerating(false)
         }
       } catch (error) {
-        console.error('Failed to fetch branch data:', error)
+        logger.error('Failed to fetch branch data:', error)
       } finally {
         setLoading(false)
       }

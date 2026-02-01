@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Save, X, FileCode } from 'lucide-react'
+import { logger } from '../../lib/logger'
 import { useTikiStore } from '../../stores/tiki-store'
 
 interface HookEditorProps {
@@ -93,7 +94,7 @@ export function HookEditor({ onSave, onCancel }: HookEditorProps) {
 
   // Load available hook types
   useEffect(() => {
-    window.tikiDesktop.hooks.types().then(setHookTypes).catch(console.error)
+    window.tikiDesktop.hooks.types().then(setHookTypes).catch((err) => logger.error('Failed to load hook types:', err))
   }, [])
 
   // Update content when type changes
@@ -133,7 +134,7 @@ export function HookEditor({ onSave, onCancel }: HookEditorProps) {
         setError('Failed to save hook')
       }
     } catch (err) {
-      console.error('Failed to save hook:', err)
+      logger.error('Failed to save hook:', err)
       setError('Failed to save hook')
     } finally {
       setSaving(false)

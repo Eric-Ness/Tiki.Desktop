@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { logger } from '../../lib/logger'
 import { useTikiStore } from '../../stores/tiki-store'
 import { BranchSelector } from './BranchSelector'
 import { CreateBranchDialog } from './CreateBranchDialog'
@@ -41,7 +42,7 @@ export function BranchStatus({ cwd }: BranchStatusProps) {
       const status = await window.tikiDesktop.branch.workingTreeStatus(cwd)
       setWorkingTree(status)
     } catch (error) {
-      console.error('Failed to fetch branch info:', error)
+      logger.error('Failed to fetch branch info:', error)
     }
   }, [cwd, setCurrentBranch])
 
@@ -88,10 +89,10 @@ export function BranchStatus({ cwd }: BranchStatusProps) {
       if (result.success) {
         await refreshBranchInfo()
       } else {
-        console.error('Push failed:', result.error)
+        logger.error('Push failed:', result.error)
       }
     } catch (error) {
-      console.error('Push error:', error)
+      logger.error('Push error:', error)
     } finally {
       setBranchOperationInProgress(false)
       setIsOpen(false)
@@ -126,7 +127,7 @@ export function BranchStatus({ cwd }: BranchStatusProps) {
     // For now, just close the dropdown - branch deletion confirmation will be added later
     setIsOpen(false)
     // TODO: Open delete branch confirmation
-    console.log('Delete branch - TODO: implement delete branch confirmation')
+    logger.debug('Delete branch - TODO: implement delete branch confirmation')
   }
 
   const [creatingCheckpoint, setCreatingCheckpoint] = useState(false)
@@ -142,7 +143,7 @@ export function BranchStatus({ cwd }: BranchStatusProps) {
       await window.tikiDesktop.rollback.createCheckpoint(cwd, name)
       setIsOpen(false)
     } catch (error) {
-      console.error('Failed to create checkpoint:', error)
+      logger.error('Failed to create checkpoint:', error)
     } finally {
       setCreatingCheckpoint(false)
     }

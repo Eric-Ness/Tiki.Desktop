@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Save, Play, X, FileCode, Clock, CheckCircle, XCircle } from 'lucide-react'
+import { logger } from '../../lib/logger'
 import { useTikiStore } from '../../stores/tiki-store'
 import { SyntaxHighlighter } from '../code/SyntaxHighlighter'
 
@@ -52,7 +53,7 @@ export function HookDetail({ hookName, onClose }: HookDetailProps) {
       setContent(loadedHook?.content || '')
       setHasChanges(false)
     } catch (err) {
-      console.error('Failed to load hook:', err)
+      logger.error('Failed to load hook:', err)
       setHook(null)
     } finally {
       setLoading(false)
@@ -78,7 +79,7 @@ export function HookDetail({ hookName, onClose }: HookDetailProps) {
       // Reload to get updated hook
       await loadHook()
     } catch (err) {
-      console.error('Failed to save hook:', err)
+      logger.error('Failed to save hook:', err)
     } finally {
       setSaving(false)
     }
@@ -93,7 +94,7 @@ export function HookDetail({ hookName, onClose }: HookDetailProps) {
       const result = await window.tikiDesktop.hooks.execute(hookName, {}, activeProject.path)
       setLastResult(result)
     } catch (err) {
-      console.error('Failed to execute hook:', err)
+      logger.error('Failed to execute hook:', err)
     } finally {
       setExecuting(false)
     }

@@ -1,6 +1,7 @@
 import * as pty from 'node-pty'
 import { BrowserWindow } from 'electron'
 import { platform } from 'os'
+import { logger } from './logger'
 import {
   terminalPersistence,
   PersistedTerminalState,
@@ -173,7 +174,7 @@ export function cleanupAllTerminals(): void {
     try {
       terminal.process.kill()
     } catch (error) {
-      console.error(`[TerminalManager] Error killing terminal ${terminal.id}:`, error)
+      logger.error(`[TerminalManager] Error killing terminal ${terminal.id}:`, error)
     }
   }
   terminals.clear()

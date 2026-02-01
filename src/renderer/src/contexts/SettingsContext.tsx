@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
+import { logger } from '../lib/logger'
 import type { SettingsSchema, DeepPartial } from '../types/settings'
 import type {
   ExportAppDataInput,
@@ -87,7 +88,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
           setSettings(loaded as SettingsSchema)
         }
       } catch (err) {
-        console.error('Failed to load settings:', err)
+        logger.error('Failed to load settings:', err)
       } finally {
         setIsLoading(false)
       }
@@ -110,7 +111,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       const updated = await window.tikiDesktop.settings.set(partial as Record<string, unknown>)
       setSettings(updated as SettingsSchema)
     } catch (err) {
-      console.error('Failed to update settings:', err)
+      logger.error('Failed to update settings:', err)
       throw err
     }
   }, [])
@@ -121,7 +122,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       const reset = await window.tikiDesktop.settings.reset(category)
       setSettings(reset as SettingsSchema)
     } catch (err) {
-      console.error('Failed to reset settings:', err)
+      logger.error('Failed to reset settings:', err)
       throw err
     }
   }, [])
@@ -137,7 +138,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       const preview = await window.tikiDesktop.settings.previewImport(currentAppData)
       return preview
     } catch (err) {
-      console.error('Failed to preview import:', err)
+      logger.error('Failed to preview import:', err)
       return null
     }
   }, [])
