@@ -1095,7 +1095,19 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.invoke('claude-stats:get-plan-usage', options),
     getRaw: () => ipcRenderer.invoke('claude-stats:get-raw'),
     getDailyTokens: (days?: number) => ipcRenderer.invoke('claude-stats:get-daily-tokens', days),
-    isAvailable: () => ipcRenderer.invoke('claude-stats:is-available')
+    isAvailable: () => ipcRenderer.invoke('claude-stats:is-available'),
+    // Claude.ai API methods (direct API calls)
+    fetchFromApi: () => ipcRenderer.invoke('claude-api:fetch-usage'),
+    testConnection: (sessionKey: string) =>
+      ipcRenderer.invoke('claude-api:test-connection', sessionKey),
+    saveSessionKey: (sessionKey: string) =>
+      ipcRenderer.invoke('claude-api:save-session-key', sessionKey),
+    getSessionKey: () => ipcRenderer.invoke('claude-api:get-session-key'),
+    hasSessionKey: () => ipcRenderer.invoke('claude-api:has-session-key'),
+    clearSessionKey: () => ipcRenderer.invoke('claude-api:clear-session-key'),
+    getDataSource: () => ipcRenderer.invoke('claude-api:get-data-source'),
+    setDataSource: (source: 'files' | 'api') =>
+      ipcRenderer.invoke('claude-api:set-data-source', source)
   },
 
   // Knowledge API (for .tiki/knowledge/)
@@ -1720,6 +1732,20 @@ declare global {
           tokensByModel: Record<string, number>
         }>>
         isAvailable: () => Promise<boolean>
+        // Claude.ai API methods
+        fetchFromApi: () => Promise<{
+          fiveHour: { utilization: number; resetsAt: string | null } | null
+          sevenDay: { utilization: number; resetsAt: string | null } | null
+          sevenDayOpus: { utilization: number; resetsAt: string | null } | null
+          sevenDaySonnet: { utilization: number; resetsAt: string | null } | null
+        }>
+        testConnection: (sessionKey: string) => Promise<{ success: boolean; error?: string }>
+        saveSessionKey: (sessionKey: string) => Promise<boolean>
+        getSessionKey: () => Promise<string | null>
+        hasSessionKey: () => Promise<boolean>
+        clearSessionKey: () => Promise<boolean>
+        getDataSource: () => Promise<'files' | 'api'>
+        setDataSource: (source: 'files' | 'api') => Promise<boolean>
       }
       knowledge: {
         list: (

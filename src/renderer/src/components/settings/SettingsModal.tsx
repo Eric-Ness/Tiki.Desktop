@@ -5,6 +5,7 @@ import { TerminalSection } from './sections/TerminalSection'
 import { NotificationsSection } from './sections/NotificationsSection'
 import { KeyboardShortcutsSection } from './sections/KeyboardShortcutsSection'
 import { GitHubSection } from './sections/GitHubSection'
+import { ClaudeApiSection } from './sections/ClaudeApiSection'
 import { DataPrivacySection } from './sections/DataPrivacySection'
 import { AboutSection } from './sections/AboutSection'
 
@@ -50,6 +51,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         return <KeyboardShortcutsSection />
       case 'github':
         return <GitHubSection />
+      case 'claudeApi':
+        return <ClaudeApiSection />
       case 'dataPrivacy':
         return <DataPrivacySection />
       case 'about':
