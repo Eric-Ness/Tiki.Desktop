@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import * as Prism from 'prismjs'
+import DOMPurify from 'dompurify'
 
 // Import core languages
 import 'prismjs/components/prism-typescript'
@@ -77,6 +78,16 @@ function escapeHtml(text: string): string {
     .replace(/'/g, '&#039;')
 }
 
+// DOMPurify configuration: only allow Prism's span-based output
+const PURIFY_CONFIG = {
+  ALLOWED_TAGS: ['span'],
+  ALLOWED_ATTR: ['class']
+}
+
+function sanitizeHtml(html: string): string {
+  return DOMPurify.sanitize(html, PURIFY_CONFIG)
+}
+
 export function SyntaxHighlighter({
   code,
   language,
@@ -136,7 +147,7 @@ export function SyntaxHighlighter({
                 key={index}
                 data-testid={isHighlighted ? 'highlighted-line' : undefined}
                 className={`px-4 leading-6 ${isHighlighted ? 'bg-amber-900/30' : ''}`}
-                dangerouslySetInnerHTML={{ __html: htmlLine || '&nbsp;' }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(htmlLine) || '&nbsp;' }}
               />
             )
           })}

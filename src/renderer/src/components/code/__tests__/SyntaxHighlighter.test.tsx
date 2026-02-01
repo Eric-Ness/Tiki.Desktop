@@ -305,4 +305,39 @@ describe('SyntaxHighlighter', () => {
       expect(screen.getByTestId('syntax-highlighter')).toBeInTheDocument()
     })
   })
+
+  describe('XSS Prevention', () => {
+    it('should sanitize script tags in code', () => {
+      const malicious = '<script>alert("XSS")</script>'
+      render(<SyntaxHighlighter code={malicious} language="html" />)
+
+      // Script tag should not exist in DOM
+      expect(document.querySelector('script')).toBeNull()
+      expect(screen.getByTestId('syntax-highlighter')).toBeInTheDocument()
+    })
+
+    it('should sanitize event handlers in code', () => {
+      const malicious = '<img src=x onerror=alert(1)>'
+      render(<SyntaxHighlighter code={malicious} language="html" />)
+
+      // img tag with onerror should not exist
+      expect(document.querySelector('img')).toBeNull()
+    })
+
+    it('should sanitize onclick handlers in code', () => {
+      const malicious = '<div onclick="alert(1)">click me</div>'
+      render(<SyntaxHighlighter code={malicious} language="html" />)
+
+      // div with onclick should not exist
+      expect(document.querySelector('div[onclick]')).toBeNull()
+    })
+
+    it('should handle code containing HTML-like strings safely', () => {
+      const code = 'const x = "<script>alert(1)</script>"'
+      render(<SyntaxHighlighter code={code} language="javascript" />)
+
+      expect(document.querySelector('script')).toBeNull()
+      expect(screen.getByTestId('syntax-highlighter')).toBeInTheDocument()
+    })
+  })
 })
