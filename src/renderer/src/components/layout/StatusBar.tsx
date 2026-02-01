@@ -1,5 +1,5 @@
 import { useTikiStore } from '../../stores/tiki-store'
-import { UsageWidget } from '../usage/UsageWidget'
+import { PlanUsageWidget } from '../usage/PlanUsageWidget'
 import { BranchStatus } from '../git/BranchStatus'
 import { LayoutPresetSelector } from './LayoutPresetSelector'
 import { CIStatusIndicator } from './CIStatusIndicator'
@@ -83,8 +83,8 @@ export function StatusBar({ version, cwd, onOpenWorkflowDashboard }: StatusBarPr
         {/* Separator */}
         <div className="w-px h-4 bg-slate-700" />
 
-        {/* Usage Widget */}
-        <UsageWidget />
+        {/* Plan Usage Widget */}
+        <PlanUsageWidget />
 
         {/* Separator */}
         <div className="w-px h-4 bg-slate-700" />

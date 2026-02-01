@@ -1,5 +1,34 @@
 import { useTikiStore, Release } from '../../stores/tiki-store'
 
+/**
+ * Parse semver version string into numeric components for proper sorting
+ */
+function parseVersion(version: string): { major: number; minor: number; patch: number } | null {
+  const match = version.replace(/^v/, '').match(/^(\d+)\.(\d+)(?:\.(\d+))?/)
+  if (!match) return null
+  return {
+    major: parseInt(match[1], 10),
+    minor: parseInt(match[2], 10),
+    patch: match[3] !== undefined ? parseInt(match[3], 10) : 0
+  }
+}
+
+/**
+ * Compare two semantic versions (descending order - newest first)
+ */
+function compareVersionsDesc(a: string, b: string): number {
+  const aVer = parseVersion(a)
+  const bVer = parseVersion(b)
+
+  // If either can't be parsed, fall back to string comparison
+  if (!aVer || !bVer) return b.localeCompare(a)
+
+  // Compare major.minor.patch (descending)
+  if (aVer.major !== bVer.major) return bVer.major - aVer.major
+  if (aVer.minor !== bVer.minor) return bVer.minor - aVer.minor
+  return bVer.patch - aVer.patch
+}
+
 export function ReleaseList() {
   const releases = useTikiStore((state) => state.releases)
   const selectedRelease = useTikiStore((state) => state.selectedRelease)
@@ -30,10 +59,10 @@ export function ReleaseList() {
 
   // Separate active/in-progress from shipped
   const activeReleases = releases.filter((r) => r.status !== 'shipped')
-  // Sort shipped releases in descending order (newest first) and limit to 10
+  // Sort shipped releases in descending order (newest first) using semantic versioning and limit to 10
   const shippedReleases = releases
     .filter((r) => r.status === 'shipped')
-    .sort((a, b) => b.version.localeCompare(a.version))
+    .sort((a, b) => compareVersionsDesc(a.version, b.version))
     .slice(0, 10)
 
   return (

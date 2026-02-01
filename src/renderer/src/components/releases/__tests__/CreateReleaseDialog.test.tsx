@@ -8,7 +8,7 @@ const mockIssues = [
   {
     number: 1,
     title: 'Add login feature',
-    state: 'open',
+    state: 'OPEN',
     labels: [{ name: 'enhancement', color: 'blue' }],
     url: 'https://github.com/test/repo/issues/1',
     createdAt: '2024-01-01',
@@ -17,7 +17,7 @@ const mockIssues = [
   {
     number: 2,
     title: 'Fix navigation bug',
-    state: 'open',
+    state: 'OPEN',
     labels: [{ name: 'bug', color: 'red' }],
     url: 'https://github.com/test/repo/issues/2',
     createdAt: '2024-01-02',
@@ -26,18 +26,28 @@ const mockIssues = [
   {
     number: 3,
     title: 'Update documentation',
-    state: 'open',
+    state: 'OPEN',
     labels: [],
     url: 'https://github.com/test/repo/issues/3',
     createdAt: '2024-01-03',
     updatedAt: '2024-01-03'
+  },
+  {
+    number: 4,
+    title: 'Closed issue',
+    state: 'CLOSED',
+    labels: [],
+    url: 'https://github.com/test/repo/issues/4',
+    createdAt: '2024-01-04',
+    updatedAt: '2024-01-04'
   }
 ]
 
 vi.mock('../../../stores/tiki-store', () => ({
   useTikiStore: vi.fn((selector) => {
     const state = {
-      issues: mockIssues
+      issues: mockIssues,
+      releases: []
     }
     return selector(state)
   })
@@ -102,9 +112,11 @@ describe('CreateReleaseDialog', () => {
       )
 
       const input = screen.getByPlaceholderText(/v1\.0\.0/i)
-      await user.type(input, 'v1.0.0')
+      // Input is pre-filled with suggested version, clear and type new value
+      await user.clear(input)
+      await user.type(input, 'v2.0.0')
 
-      expect(input).toHaveValue('v1.0.0')
+      expect(input).toHaveValue('v2.0.0')
     })
 
     it('should accept valid semver versions', async () => {
@@ -354,9 +366,7 @@ describe('CreateReleaseDialog', () => {
         />
       )
 
-      const input = screen.getByPlaceholderText(/v1\.0\.0/i)
-      await user.type(input, 'v1.0.0')
-
+      // Version is pre-filled with suggested version (v1.0.0), which is already valid
       // Create button should still be disabled without selecting an issue
       const createButton = screen.getByRole('button', { name: /create/i })
       expect(createButton).toBeDisabled()
@@ -399,6 +409,40 @@ describe('CreateReleaseDialog', () => {
       await user.click(closeButton)
 
       expect(mockOnClose).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('Issue filtering', () => {
+    it('should only show open issues and not closed issues', () => {
+      render(
+        <CreateReleaseDialog
+          isOpen={true}
+          onClose={mockOnClose}
+          onCreated={mockOnCreated}
+        />
+      )
+
+      // Should show open issues
+      expect(screen.getByText('Add login feature')).toBeInTheDocument()
+      expect(screen.getByText('Fix navigation bug')).toBeInTheDocument()
+      expect(screen.getByText('Update documentation')).toBeInTheDocument()
+
+      // Should NOT show closed issues
+      expect(screen.queryByText('Closed issue')).not.toBeInTheDocument()
+    })
+
+    it('should only show 3 checkboxes for 3 open issues', () => {
+      render(
+        <CreateReleaseDialog
+          isOpen={true}
+          onClose={mockOnClose}
+          onCreated={mockOnCreated}
+        />
+      )
+
+      // Should have exactly 3 checkboxes (for 3 open issues, not 4 total)
+      const checkboxes = screen.getAllByRole('checkbox')
+      expect(checkboxes.length).toBe(3)
     })
   })
 })

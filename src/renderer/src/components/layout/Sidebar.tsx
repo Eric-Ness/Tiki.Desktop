@@ -346,12 +346,12 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
                     <div className="flex items-center justify-between text-slate-500 mb-1">
                       <span>Progress</span>
                       <span>
-                        {tikiState.completedPhases?.length || 0} / {currentPlan.phases.length}
+                        {currentPlan.phases.filter(p => p.status === 'completed').length} / {currentPlan.phases.length}
                       </span>
                     </div>
                     <div className="flex gap-1">
                       {currentPlan.phases.map((phase) => {
-                        const isCompleted = tikiState.completedPhases?.includes(phase.number)
+                        const isCompleted = phase.status === 'completed'
                         const isCurrent = phase.number === tikiState.currentPhase
                         const isFailed = phase.status === 'failed'
                         return (

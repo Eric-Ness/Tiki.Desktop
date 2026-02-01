@@ -49,7 +49,7 @@ export function CreateReleaseDialog({ isOpen, onClose, onCreated }: CreateReleas
 
   // Calculate the next version based on existing releases
   const suggestedVersion = useMemo(() => {
-    if (releases.length === 0) return 'v1.0.0'
+    if (!releases || releases.length === 0) return 'v1.0.0'
 
     // Sort releases by version (descending) to find the latest
     const sorted = [...releases].sort((a, b) => {
@@ -77,7 +77,12 @@ export function CreateReleaseDialog({ isOpen, onClose, onCreated }: CreateReleas
   const [llmRecommendations, setLlmRecommendations] = useState<IssueRecommendation[] | null>(null)
   const [llmSummary, setLlmSummary] = useState<string | null>(null)
 
-  const issues = useTikiStore((state) => state.issues)
+  const allIssues = useTikiStore((state) => state.issues)
+
+  // Filter to only show open issues - closed issues should not be added to new releases
+  const issues = useMemo(() => {
+    return allIssues.filter((i) => i.state === 'OPEN')
+  }, [allIssues])
 
   // Version validation - must match semver-like pattern
   const isValidVersion = /^v?\d+\.\d+(\.\d+)?(-[a-zA-Z0-9.]+)?$/.test(version)

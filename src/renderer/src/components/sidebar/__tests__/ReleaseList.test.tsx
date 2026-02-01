@@ -9,6 +9,8 @@ const mockSetSelectedRelease = vi.fn()
 const mockSetSelectedNode = vi.fn()
 const mockSetSelectedIssue = vi.fn()
 const mockSetSelectedKnowledge = vi.fn()
+const mockSetSelectedHook = vi.fn()
+const mockSetSelectedCommand = vi.fn()
 
 vi.mock('../../../stores/tiki-store', () => ({
   useTikiStore: vi.fn((selector) => {
@@ -18,7 +20,9 @@ vi.mock('../../../stores/tiki-store', () => ({
       setSelectedRelease: mockSetSelectedRelease,
       setSelectedNode: mockSetSelectedNode,
       setSelectedIssue: mockSetSelectedIssue,
-      setSelectedKnowledge: mockSetSelectedKnowledge
+      setSelectedKnowledge: mockSetSelectedKnowledge,
+      setSelectedHook: mockSetSelectedHook,
+      setSelectedCommand: mockSetSelectedCommand
     }
     return selector(state)
   })
@@ -90,6 +94,44 @@ describe('ReleaseList', () => {
       expect(versions[0]).toBe('v0.15.0')
       expect(versions[9]).toBe('v0.06.0')
       expect(versions.length).toBe(10)
+    })
+
+    it('should sort using semantic versioning (v1.12 > v1.7)', () => {
+      // Add releases in random order to test semantic sorting
+      mockReleases.push(
+        { version: 'v1.7.0', status: 'shipped', issues: [] } as Release,
+        { version: 'v1.12.0', status: 'shipped', issues: [] } as Release,
+        { version: 'v1.2.0', status: 'shipped', issues: [] } as Release,
+        { version: 'v1.10.0', status: 'shipped', issues: [] } as Release,
+        { version: 'v2.0.0', status: 'active', issues: [] } as Release
+      )
+
+      render(<ReleaseList />)
+
+      const archiveSection = screen.getByText('Archive').parentElement
+      const versionElements = archiveSection!.querySelectorAll('.font-medium')
+      const versions = Array.from(versionElements).map((el) => el.textContent)
+
+      // Should be sorted by semantic version descending: v1.12.0, v1.10.0, v1.7.0, v1.2.0
+      expect(versions).toEqual(['v1.12.0', 'v1.10.0', 'v1.7.0', 'v1.2.0'])
+    })
+
+    it('should sort major versions correctly', () => {
+      mockReleases.push(
+        { version: 'v1.0.0', status: 'shipped', issues: [] } as Release,
+        { version: 'v10.0.0', status: 'shipped', issues: [] } as Release,
+        { version: 'v2.0.0', status: 'shipped', issues: [] } as Release,
+        { version: 'v11.0.0', status: 'shipped', issues: [] } as Release
+      )
+
+      render(<ReleaseList />)
+
+      const archiveSection = screen.getByText('Archive').parentElement
+      const versionElements = archiveSection!.querySelectorAll('.font-medium')
+      const versions = Array.from(versionElements).map((el) => el.textContent)
+
+      // Should be sorted by semantic version descending
+      expect(versions).toEqual(['v11.0.0', 'v10.0.0', 'v2.0.0', 'v1.0.0'])
     })
   })
 })

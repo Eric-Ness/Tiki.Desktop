@@ -52,9 +52,9 @@ export function EditReleaseDialog({ isOpen, release, onClose, onSaved, onDeleted
     requirementsEnabled !== (release.requirementsEnabled ?? false) ||
     issuesChanged
 
-  // Get issues not in release (available to add)
+  // Get issues not in release (available to add) - only show open issues
   const availableIssues = useMemo(() => {
-    return issues.filter((i) => !issueNumbers.has(i.number))
+    return issues.filter((i) => !issueNumbers.has(i.number) && i.state === 'OPEN')
   }, [issues, issueNumbers])
 
   // Get issues in release

@@ -6,6 +6,27 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { EditReleaseDialog } from '../EditReleaseDialog'
 import type { Release } from '../../../stores/tiki-store'
 
+// Mock issues for testing
+const mockOpenIssue = {
+  number: 1,
+  title: 'Open Issue',
+  state: 'OPEN',
+  labels: [],
+  url: 'https://github.com/test/1',
+  createdAt: '2024-01-01',
+  updatedAt: '2024-01-01'
+}
+
+const mockClosedIssue = {
+  number: 2,
+  title: 'Closed Issue',
+  state: 'CLOSED',
+  labels: [],
+  url: 'https://github.com/test/2',
+  createdAt: '2024-01-01',
+  updatedAt: '2024-01-01'
+}
+
 // Mock the tiki store
 vi.mock('../../../stores/tiki-store', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../stores/tiki-store')>()
@@ -14,7 +35,7 @@ vi.mock('../../../stores/tiki-store', async (importOriginal) => {
     useTikiStore: vi.fn((selector) => {
       const state = {
         updateRelease: vi.fn(),
-        issues: [],
+        issues: [mockOpenIssue, mockClosedIssue],
         activeProject: { path: '/test' },
         setSelectedIssue: vi.fn()
       }
@@ -220,6 +241,29 @@ describe('EditReleaseDialog', () => {
     // Should show the coverage matrix
     await waitFor(() => {
       expect(screen.getByTestId('coverage-matrix')).toBeInTheDocument()
+    })
+  })
+
+  describe('issue filtering', () => {
+    it('should only show open issues in the Add Issues section', async () => {
+      render(
+        <EditReleaseDialog
+          isOpen={true}
+          release={mockRelease}
+          onClose={vi.fn()}
+        />
+      )
+
+      // Switch to Issues tab
+      fireEvent.click(screen.getByRole('button', { name: /issues/i }))
+
+      // Wait for issues to render
+      await waitFor(() => {
+        // Should show the open issue
+        expect(screen.getByText('Open Issue')).toBeInTheDocument()
+        // Should NOT show the closed issue
+        expect(screen.queryByText('Closed Issue')).not.toBeInTheDocument()
+      })
     })
   })
 })

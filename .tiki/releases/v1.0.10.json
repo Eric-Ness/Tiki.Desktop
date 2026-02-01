@@ -1,0 +1,60 @@
+{
+  "version": "v1.0.10",
+  "createdAt": "2026-01-31T23:21:42.619Z",
+  "status": "shipped",
+  "requirementsEnabled": false,
+  "githubMilestone": null,
+  "issues": [
+    {
+      "number": 101,
+      "title": "Archive Not Sorting Properly",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": 1,
+      "totalPhases": 1,
+      "completedAt": "2026-02-01T00:20:00.000Z"
+    },
+    {
+      "number": 100,
+      "title": "Phase progress counter shows 0/N and never updates",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": 1,
+      "totalPhases": 1,
+      "completedAt": "2026-02-01T00:15:00.000Z"
+    },
+    {
+      "number": 93,
+      "title": "fix: CreateReleaseDialog test failures due to missing null check",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": 1,
+      "totalPhases": 1,
+      "completedAt": "2026-02-01T00:00:00.000Z"
+    },
+    {
+      "number": 89,
+      "title": "Cluade plan usage",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": 2,
+      "totalPhases": 2,
+      "completedAt": "2026-02-01T00:10:00.000Z"
+    },
+    {
+      "number": 102,
+      "title": "Adding issue to release",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": 1,
+      "totalPhases": 1,
+      "completedAt": "2026-02-01T00:25:00.000Z"
+    }
+  ],
+  "requirements": {
+    "total": 0,
+    "implemented": 0,
+    "verified": 0
+  },
+  "shippedAt": "2026-02-01T00:30:00.000Z"
+}
