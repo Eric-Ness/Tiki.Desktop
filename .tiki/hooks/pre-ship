@@ -1,9 +1,17 @@
 #!/bin/bash
 # Pre-ship hook for Tiki.Desktop
-# Automatically bumps the patch version in package.json before shipping
+# Bumps version only during release ship (not individual issue ship)
 set -e
 
-echo "Pre-ship hook: Bumping version for issue #${TIKI_ISSUE_NUMBER:-unknown}"
+# Only bump version for release ships
+if [ -z "$TIKI_RELEASE_VERSION" ]; then
+    echo "Pre-ship: Skipping version bump (not a release ship)"
+    exit 0
+fi
+
+echo "================================================"
+echo "Pre-ship: Bumping version for release $TIKI_RELEASE_VERSION"
+echo "================================================"
 
 # Check if package.json exists
 if [ ! -f "package.json" ]; then
@@ -11,29 +19,27 @@ if [ ! -f "package.json" ]; then
     exit 1
 fi
 
+# Extract version number from release (v1.0.11 -> 1.0.11)
+RELEASE_VERSION="${TIKI_RELEASE_VERSION#v}"
+echo "Release version: $RELEASE_VERSION"
+
 # Read current version
 CURRENT=$(node -p "require('./package.json').version" 2>/dev/null)
-if [ -z "$CURRENT" ]; then
-    echo "Error: Could not read version from package.json"
-    exit 1
-fi
-echo "Current version: $CURRENT"
+echo "Current package.json version: $CURRENT"
 
-# Parse semver and increment patch
-IFS='.' read -r major minor patch <<< "$CURRENT"
-if [ -z "$major" ] || [ -z "$minor" ] || [ -z "$patch" ]; then
-    echo "Error: Invalid semver format: $CURRENT"
-    exit 1
+# Check if already at correct version
+if [ "$CURRENT" = "$RELEASE_VERSION" ]; then
+    echo "Version already at $RELEASE_VERSION - no bump needed"
+    exit 0
 fi
 
-NEW_VERSION="$major.$minor.$((patch + 1))"
-echo "New version: $NEW_VERSION"
-
-# Update package.json using npm (also updates package-lock.json)
-npm version "$NEW_VERSION" --no-git-tag-version --allow-same-version
+# Update package.json to match release version
+npm version "$RELEASE_VERSION" --no-git-tag-version --allow-same-version
 
 # Stage the changed files for the ship commit
 git add package.json package-lock.json
 
-echo "Version bumped: $CURRENT -> $NEW_VERSION"
+echo ""
+echo "Version bumped: $CURRENT -> $RELEASE_VERSION"
 echo "Files staged for commit: package.json, package-lock.json"
+echo "================================================"

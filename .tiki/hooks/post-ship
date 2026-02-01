@@ -1,0 +1,58 @@
+#!/bin/bash
+# Post-ship hook for Tiki.Desktop
+# Builds and uploads Windows installer to GitHub release when shipping a release
+set -e
+
+# Only run for release ships (TIKI_RELEASE_VERSION is set)
+if [ -z "$TIKI_RELEASE_VERSION" ]; then
+    echo "Post-ship: Skipping build (not a release ship)"
+    exit 0
+fi
+
+echo "================================================"
+echo "Post-ship: Building Windows installer for $TIKI_RELEASE_VERSION"
+echo "================================================"
+
+# Get the version from package.json (should match the release)
+VERSION=$(node -p "require('./package.json').version" 2>/dev/null)
+echo "Package version: $VERSION"
+
+# Build the Windows installer (skip native rebuild, skip code signing)
+echo ""
+echo "Building Windows installer..."
+npm run build
+npx electron-builder --win --x64 -c.npmRebuild=false -c.win.signAndEditExecutable=false
+
+# Verify the build outputs exist
+EXE_FILE="release/Tiki.Desktop.Setup.${VERSION}.exe"
+YML_FILE="release/latest.yml"
+BLOCKMAP_FILE="release/Tiki.Desktop.Setup.${VERSION}.exe.blockmap"
+
+if [ ! -f "$EXE_FILE" ]; then
+    echo "Error: Build failed - $EXE_FILE not found"
+    exit 1
+fi
+
+echo ""
+echo "Build complete:"
+ls -lh "$EXE_FILE" "$YML_FILE" "$BLOCKMAP_FILE" 2>/dev/null
+
+# Upload to GitHub release
+echo ""
+echo "Uploading to GitHub release $TIKI_RELEASE_VERSION..."
+
+# Delete old Windows artifacts if they exist (ignore errors)
+gh release delete-asset "$TIKI_RELEASE_VERSION" "Tiki.Desktop.Setup.*.exe" --yes 2>/dev/null || true
+gh release delete-asset "$TIKI_RELEASE_VERSION" "Tiki.Desktop.Setup.*.exe.blockmap" --yes 2>/dev/null || true
+gh release delete-asset "$TIKI_RELEASE_VERSION" "latest.yml" --yes 2>/dev/null || true
+
+# Upload new artifacts
+gh release upload "$TIKI_RELEASE_VERSION" "$EXE_FILE" "$YML_FILE" "$BLOCKMAP_FILE" --clobber
+
+echo ""
+echo "================================================"
+echo "Windows installer uploaded to $TIKI_RELEASE_VERSION"
+echo "- $EXE_FILE"
+echo "- $YML_FILE"
+echo "- $BLOCKMAP_FILE"
+echo "================================================"
