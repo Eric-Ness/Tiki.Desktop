@@ -6,6 +6,7 @@ import { MainContent } from './components/layout/MainContent'
 import { DetailPanel } from './components/layout/DetailPanel'
 import { StatusBar } from './components/layout/StatusBar'
 import { TitleBar } from './components/layout/TitleBar'
+import { DevelopmentLayout } from './components/layout/DevelopmentLayout'
 import { CommandPalette } from './components/command-palette'
 import { GlobalSearch } from './components/search'
 import { SettingsModal } from './components/settings'
@@ -38,10 +39,11 @@ function App() {
   const detailPanelRef = useRef<ImperativePanelHandle>(null)
 
   // Layout state - consolidated selectors
-  const { sidebarCollapsed, detailPanelCollapsed } = useTikiStore(
+  const { sidebarCollapsed, detailPanelCollapsed, layoutMode } = useTikiStore(
     useShallow((state) => ({
       sidebarCollapsed: state.sidebarCollapsed,
-      detailPanelCollapsed: state.detailPanelCollapsed
+      detailPanelCollapsed: state.detailPanelCollapsed,
+      layoutMode: state.layoutMode
     }))
   )
 
@@ -275,40 +277,44 @@ function App() {
 
         {/* Main Content Area */}
         <div className="flex-1 overflow-hidden">
-          <ResizablePanelGroup direction="horizontal" onLayout={(sizes) => updatePanelSizes(sizes)} enableTransition={enablePanelTransition}>
-            {/* Sidebar */}
-            <ResizablePanel
-              ref={sidebarPanelRef}
-              defaultSize={20}
-              minSize={15}
-              maxSize={30}
-              collapsible={true}
-              collapsedSize={0}
-            >
-              <Sidebar cwd={cwd} onProjectSwitch={handleProjectSwitch} />
-            </ResizablePanel>
+          {layoutMode === 'development' ? (
+            <DevelopmentLayout cwd={cwd} />
+          ) : (
+            <ResizablePanelGroup direction="horizontal" onLayout={(sizes) => updatePanelSizes(sizes)} enableTransition={enablePanelTransition}>
+              {/* Sidebar */}
+              <ResizablePanel
+                ref={sidebarPanelRef}
+                defaultSize={20}
+                minSize={15}
+                maxSize={30}
+                collapsible={true}
+                collapsedSize={0}
+              >
+                <Sidebar cwd={cwd} onProjectSwitch={handleProjectSwitch} />
+              </ResizablePanel>
 
-            <ResizableHandle />
+              <ResizableHandle />
 
-            {/* Main Content */}
-            <ResizablePanel defaultSize={55} minSize={30}>
-              <MainContent cwd={cwd} />
-            </ResizablePanel>
+              {/* Main Content */}
+              <ResizablePanel defaultSize={55} minSize={30}>
+                <MainContent cwd={cwd} />
+              </ResizablePanel>
 
-            <ResizableHandle />
+              <ResizableHandle />
 
-            {/* Detail Panel */}
-            <ResizablePanel
-              ref={detailPanelRef}
-              defaultSize={25}
-              minSize={20}
-              maxSize={40}
-              collapsible={true}
-              collapsedSize={0}
-            >
-              <DetailPanel cwd={cwd} />
-            </ResizablePanel>
-          </ResizablePanelGroup>
+              {/* Detail Panel */}
+              <ResizablePanel
+                ref={detailPanelRef}
+                defaultSize={25}
+                minSize={20}
+                maxSize={40}
+                collapsible={true}
+                collapsedSize={0}
+              >
+                <DetailPanel cwd={cwd} />
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          )}
         </div>
 
         {/* Status Bar */}
