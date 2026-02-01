@@ -1,6 +1,6 @@
 {
   "name": "tiki-desktop",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "Desktop application for the Tiki workflow framework",
   "main": "dist-electron/main/index.js",
   "scripts": {
