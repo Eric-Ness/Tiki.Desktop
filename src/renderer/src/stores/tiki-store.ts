@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { persist, devtools } from 'zustand/middleware'
+import type { LayoutMode, DevelopmentModeState } from '../types/layout'
+import { DEFAULT_DEVELOPMENT_STATE } from '../types/layout'
 
 // Types
 export interface Project {
@@ -418,6 +420,41 @@ interface TikiDesktopState {
   activeWorkspace: string | null
   setActiveWorkspace: (id: string | null) => void
   getWorkspaceState: () => WorkspaceStateSnapshot
+
+  // =========================================================================
+  // LAYOUT MODE STATE
+  // =========================================================================
+
+  /**
+   * Current layout mode.
+   * workflow is the default (existing behavior).
+   * development enables VS Code-like UI.
+   */
+  layoutMode: LayoutMode
+
+  /**
+   * Set the active layout mode.
+   * Triggers UI restructure and may adjust panel sizes.
+   */
+  setLayoutMode: (mode: LayoutMode) => void
+
+  /**
+   * State specific to development mode.
+   * Only relevant when layoutMode === 'development'.
+   */
+  developmentState: DevelopmentModeState
+
+  /**
+   * Partially update development mode state.
+   * Merges with existing state.
+   */
+  setDevelopmentState: (state: Partial<DevelopmentModeState>) => void
+
+  /**
+   * Toggle between workflow and development modes.
+   * Convenience method for keyboard shortcuts.
+   */
+  toggleLayoutMode: () => void
 }
 
 export const useTikiStore = create<TikiDesktopState>()(
@@ -834,7 +871,23 @@ export const useTikiStore = create<TikiDesktopState>()(
             currentPhase: state.tikiState?.currentPhase ?? undefined,
             selectedNode: state.selectedNode
           }
-        }
+        },
+
+        // Layout mode (default to workflow for backward compatibility)
+        layoutMode: 'workflow',
+        developmentState: { ...DEFAULT_DEVELOPMENT_STATE },
+
+        setLayoutMode: (mode) => set({ layoutMode: mode }),
+
+        setDevelopmentState: (partial) =>
+          set((state) => ({
+            developmentState: { ...state.developmentState, ...partial }
+          })),
+
+        toggleLayoutMode: () =>
+          set((state) => ({
+            layoutMode: state.layoutMode === 'workflow' ? 'development' : 'workflow'
+          }))
       }),
       {
         name: 'tiki-desktop-storage',
@@ -848,7 +901,10 @@ export const useTikiStore = create<TikiDesktopState>()(
           recentCommands: state.recentCommands,
           recentSearches: state.recentSearches,
           terminalLayout: state.terminalLayout,
-          focusedPaneId: state.focusedPaneId
+          focusedPaneId: state.focusedPaneId,
+          // Layout mode persistence
+          layoutMode: state.layoutMode,
+          developmentState: state.developmentState
         })
       }
     ),
