@@ -375,6 +375,54 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
                   </div>
                 )}
               </div>
+            ) : currentPlan?.phases?.some(p => p.status === 'in_progress' || p.status === 'failed') ? (
+              /* Plan-based fallback: Show progress from plan when state.json is stale */
+              <div className="mt-2 space-y-2">
+                <div className="text-xs text-slate-500">
+                  <span className="flex items-center gap-1">
+                    <svg className="w-3 h-3 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    Issue #{currentPlan.issue?.number}
+                    <span className="text-amber-500/70 text-[10px]">(from plan)</span>
+                  </span>
+                  {currentPlan.issue?.title && (
+                    <span className="block truncate text-slate-400 mt-0.5 pl-4">{currentPlan.issue.title}</span>
+                  )}
+                </div>
+                <div className="text-xs">
+                  <div className="flex items-center justify-between text-slate-500 mb-1">
+                    <span>Progress</span>
+                    <span>
+                      {currentPlan.phases.filter(p => p.status === 'completed').length} / {currentPlan.phases.length}
+                    </span>
+                  </div>
+                  <div className="flex gap-1">
+                    {currentPlan.phases.map((phase) => {
+                      const isCompleted = phase.status === 'completed'
+                      const isInProgress = phase.status === 'in_progress'
+                      const isFailed = phase.status === 'failed'
+                      return (
+                        <div
+                          key={phase.number}
+                          className={`h-1.5 flex-1 rounded-full transition-colors ${
+                            isCompleted
+                              ? 'bg-status-completed'
+                              : isInProgress
+                                ? 'bg-status-running animate-pulse'
+                                : isFailed
+                                  ? 'bg-status-failed'
+                                  : 'bg-slate-600'
+                          }`}
+                          title={`Phase ${phase.number}: ${phase.title} (${phase.status})`}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="mt-2 text-xs text-slate-500 flex items-center gap-1">
                 <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
