@@ -1,4 +1,5 @@
 import { useTikiStore } from '../../stores/tiki-store'
+import { useEditorStore, selectActiveFile } from '../../stores/editor-store'
 import { PlanUsageWidget } from '../usage/PlanUsageWidget'
 import { BranchStatus } from '../git/BranchStatus'
 import { LayoutPresetSelector } from './LayoutPresetSelector'
@@ -14,6 +15,8 @@ interface StatusBarProps {
 export function StatusBar({ version, cwd, onOpenWorkflowDashboard }: StatusBarProps) {
   const tikiState = useTikiStore((state) => state.tikiState)
   const currentPlan = useTikiStore((state) => state.currentPlan)
+  const layoutMode = useTikiStore((state) => state.layoutMode)
+  const activeFile = useEditorStore(selectActiveFile)
 
   // Extract project name from cwd
   const projectName = cwd ? cwd.split(/[/\\]/).pop() || '' : ''
@@ -65,6 +68,20 @@ export function StatusBar({ version, cwd, onOpenWorkflowDashboard }: StatusBarPr
 
       {/* Right side - Info */}
       <div className="flex items-center gap-4">
+        {/* Development mode info (cursor position, language) */}
+        {layoutMode === 'development' && activeFile && (
+          <>
+            <div className="flex items-center gap-3 text-slate-400">
+              <span>
+                Ln {activeFile.cursorPosition.lineNumber}, Col {activeFile.cursorPosition.column}
+              </span>
+              <span className="text-slate-500">{activeFile.language}</span>
+              <span className="text-slate-600">UTF-8</span>
+            </div>
+            <div className="w-px h-4 bg-slate-700" />
+          </>
+        )}
+
         {/* Learning Mode Toggle */}
         <LearningModeToggle compact />
 

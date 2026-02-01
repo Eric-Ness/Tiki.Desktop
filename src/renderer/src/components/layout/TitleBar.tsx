@@ -7,6 +7,7 @@ import {
   RestoreConfirmDialog,
   WorkspaceManager
 } from '../workspace'
+import { LayoutModeSwitcher } from './LayoutModeSwitcher'
 
 interface WorkspaceSnapshotData {
   id: string
@@ -211,8 +212,9 @@ export function TitleBar() {
           </button>
         </div>
 
-        {/* Center - Project name */}
-        <div className="flex-1 flex justify-center">
+        {/* Center - Mode Switcher and Project name */}
+        <div className="flex-1 flex justify-center items-center gap-4 no-drag">
+          <LayoutModeSwitcher variant="titlebar" />
           <span className={`text-xs ${activeProject ? 'text-slate-300' : 'text-slate-500'}`}>
             {activeProject ? activeProject.name : 'No project selected'}
           </span>

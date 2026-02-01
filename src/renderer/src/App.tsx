@@ -24,6 +24,9 @@ import { useSettingsShortcut } from './hooks/useSettingsShortcut'
 import { useSearchShortcut } from './hooks/useSearchShortcut'
 import { useSearchIndexSync } from './hooks/useSearchIndexSync'
 import { useActivityLogger } from './hooks/useActivityLogger'
+import { useLayoutModeShortcuts } from './hooks/useLayoutModeShortcuts'
+import { useQuickOpenShortcut } from './hooks/useQuickOpenShortcut'
+import { QuickOpen } from './components/editor/QuickOpen'
 import { useShallow } from 'zustand/react/shallow'
 import { useTikiStore, type Project } from './stores/tiki-store'
 import { useLayoutPresetsStore, builtInPresets } from './stores/layout-presets'
@@ -75,6 +78,12 @@ function App() {
 
   // Log activity events
   useActivityLogger()
+
+  // Layout mode shortcuts (Ctrl+Shift+W/D/L)
+  useLayoutModeShortcuts()
+
+  // Quick open shortcut (Ctrl+P in Development mode)
+  const { isQuickOpenOpen, closeQuickOpen } = useQuickOpenShortcut()
 
   // Command palette state and commands
   const { isOpen: commandPaletteOpen, close: closeCommandPalette } = useCommandPaletteShortcut()
@@ -319,6 +328,9 @@ function App() {
 
         {/* Status Bar */}
         <StatusBar version={version} cwd={cwd} />
+
+        {/* Quick Open Dialog (Development mode) */}
+        <QuickOpen isOpen={isQuickOpenOpen} onClose={closeQuickOpen} />
 
         {/* Update Toast */}
         {showUpdateToast && updateStatus && (
