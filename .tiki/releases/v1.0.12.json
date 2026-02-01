@@ -1,0 +1,32 @@
+{
+  "version": "v1.0.12",
+  "createdAt": "2026-02-01T04:00:56.779Z",
+  "status": "active",
+  "requirementsEnabled": false,
+  "githubMilestone": null,
+  "issues": [
+    {
+      "number": 103,
+      "title": "minimize command sections and add pagination",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": 3,
+      "totalPhases": 3,
+      "completedAt": "2026-02-01T04:20:00.000Z"
+    },
+    {
+      "number": 104,
+      "title": "Refresh Releases after creation",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": 1,
+      "totalPhases": 1,
+      "completedAt": "2026-02-01T04:30:00.000Z"
+    }
+  ],
+  "requirements": {
+    "total": 0,
+    "implemented": 0,
+    "verified": 0
+  }
+}

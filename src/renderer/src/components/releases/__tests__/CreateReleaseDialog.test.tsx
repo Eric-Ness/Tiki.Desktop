@@ -43,11 +43,14 @@ const mockIssues = [
   }
 ]
 
+const mockSetReleases = vi.fn()
+
 vi.mock('../../../stores/tiki-store', () => ({
   useTikiStore: vi.fn((selector) => {
     const state = {
       issues: mockIssues,
-      releases: []
+      releases: [],
+      setReleases: mockSetReleases
     }
     return selector(state)
   })
@@ -409,6 +412,43 @@ describe('CreateReleaseDialog', () => {
       await user.click(closeButton)
 
       expect(mockOnClose).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('Release creation and refresh', () => {
+    it('should refresh releases list after successful creation', async () => {
+      const user = userEvent.setup()
+      const mockGetReleases = vi.fn().mockResolvedValue([])
+
+      // Setup window.tikiDesktop mock
+      window.tikiDesktop = {
+        tiki: {
+          createRelease: vi.fn().mockResolvedValue({ success: true }),
+          getReleases: mockGetReleases
+        }
+      } as unknown as typeof window.tikiDesktop
+
+      render(
+        <CreateReleaseDialog
+          isOpen={true}
+          onClose={mockOnClose}
+          onCreated={mockOnCreated}
+        />
+      )
+
+      // Select an issue
+      const firstCheckbox = screen.getAllByRole('checkbox')[0]
+      await user.click(firstCheckbox)
+
+      // Click Create
+      const createButton = screen.getByRole('button', { name: /create/i })
+      await user.click(createButton)
+
+      // Wait for async operations
+      await vi.waitFor(() => {
+        // Should have called getReleases to refresh the list
+        expect(mockGetReleases).toHaveBeenCalled()
+      })
     })
   })
 

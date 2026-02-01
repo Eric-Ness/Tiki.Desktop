@@ -47,6 +47,7 @@ function incrementVersion(version: string): string {
 
 export function CreateReleaseDialog({ isOpen, onClose, onCreated }: CreateReleaseDialogProps) {
   const releases = useTikiStore((state) => state.releases)
+  const setReleases = useTikiStore((state) => state.setReleases)
 
   // Calculate the next version based on existing releases
   const suggestedVersion = useMemo(() => {
@@ -201,6 +202,14 @@ export function CreateReleaseDialog({ isOpen, onClose, onCreated }: CreateReleas
       if (!result.success) {
         setError(result.error || 'Failed to create release')
         return
+      }
+
+      // Refresh releases list immediately instead of relying on file watcher
+      try {
+        const updatedReleases = await window.tikiDesktop.tiki.getReleases()
+        setReleases(updatedReleases as typeof releases)
+      } catch (refreshErr) {
+        logger.warn('Failed to refresh releases after creation:', refreshErr)
       }
 
       onCreated?.()

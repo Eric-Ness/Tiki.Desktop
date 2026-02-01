@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { RefreshCw, Plus, Trash2, FileText, Folder } from 'lucide-react'
+import { RefreshCw, Plus, Trash2, FileText, Folder, ChevronDown } from 'lucide-react'
+import { logger } from '../../lib/logger'
 import { useTikiStore } from '../../stores/tiki-store'
 
 type CommandSource = 'claude' | 'tiki'
+
+const PAGE_SIZE = 15
 
 interface Command {
   name: string
@@ -40,6 +43,34 @@ export function CommandsList({ onSelectCommand, onCreateCommand }: CommandsListP
   const setSelectedKnowledge = useTikiStore((state) => state.setSelectedKnowledge)
   const setSelectedHook = useTikiStore((state) => state.setSelectedHook)
 
+  // Collapse state for source sections
+  const [collapsedSources, setCollapsedSources] = useState<Record<CommandSource, boolean>>({
+    tiki: false,
+    claude: false
+  })
+
+  // Collapse state for namespace sections (key: "source-namespace")
+  const [collapsedNamespaces, setCollapsedNamespaces] = useState<Record<string, boolean>>({})
+
+  // Pagination state per source
+  const [sourcePages, setSourcePages] = useState<Record<CommandSource, number>>({
+    tiki: 1,
+    claude: 1
+  })
+
+  const toggleSourceCollapse = (source: CommandSource) => {
+    setCollapsedSources((prev) => ({ ...prev, [source]: !prev[source] }))
+  }
+
+  const toggleNamespaceCollapse = (source: CommandSource, namespace: string) => {
+    const key = `${source}-${namespace}`
+    setCollapsedNamespaces((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const setSourcePage = (source: CommandSource, page: number) => {
+    setSourcePages((prev) => ({ ...prev, [source]: page }))
+  }
+
   // Load commands
   const loadCommands = useCallback(async () => {
     if (!activeProject?.path) {
@@ -53,7 +84,7 @@ export function CommandsList({ onSelectCommand, onCreateCommand }: CommandsListP
       const loadedCommands = await window.tikiDesktop.commands.list(activeProject.path)
       setCommands(loadedCommands)
     } catch (err) {
-      console.error('Failed to load commands:', err)
+      logger.error('Failed to load commands:', err)
       setCommands([])
     } finally {
       setLoading(false)
@@ -88,7 +119,7 @@ export function CommandsList({ onSelectCommand, onCreateCommand }: CommandsListP
       }
       loadCommands()
     } catch (err) {
-      console.error(`Failed to delete command ${command.name}:`, err)
+      logger.error(`Failed to delete command ${command.name}:`, err)
     }
   }
 
@@ -171,73 +202,171 @@ export function CommandsList({ onSelectCommand, onCreateCommand }: CommandsListP
 
               const { grouped, order } = getNamespaceGroups(sourceCommands)
               const sourceLabel = source === 'tiki' ? '.tiki/commands' : '.claude/commands'
+              const isSourceCollapsed = collapsedSources[source]
+
+              // Pagination for this source
+              const currentPage = sourcePages[source]
+              const totalPages = Math.ceil(sourceCommands.length / PAGE_SIZE)
+              const showPagination = sourceCommands.length > PAGE_SIZE
+
+              // Get all commands for this source in order (respecting namespaces)
+              const allSourceCommands = order.flatMap((ns) => grouped[ns])
+              const paginatedCommands = allSourceCommands.slice(
+                (currentPage - 1) * PAGE_SIZE,
+                currentPage * PAGE_SIZE
+              )
+
+              // Build a set of namespaces that have commands in the current page
+              const paginatedNamespaces = new Set(paginatedCommands.map((cmd) => cmd.namespace || '__root__'))
 
               return (
-                <div key={source}>
-                  {/* Source header */}
-                  <div className="px-3 py-2 flex items-center gap-2 bg-slate-800/50 border-b border-slate-700">
+                <div
+                  key={source}
+                  data-testid={`source-section-${source}`}
+                  data-collapsed={isSourceCollapsed ? 'true' : 'false'}
+                >
+                  {/* Source header - clickable to collapse */}
+                  <button
+                    onClick={() => toggleSourceCollapse(source)}
+                    className="w-full px-3 py-2 flex items-center gap-2 bg-slate-800/50 border-b border-slate-700 hover:bg-slate-700/50 transition-colors"
+                  >
+                    <ChevronDown
+                      className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                        isSourceCollapsed ? '-rotate-90' : ''
+                      }`}
+                    />
                     <span
                       className={`px-1.5 py-0.5 text-xs rounded font-medium ${sourceColors[source]}`}
                     >
                       {sourceLabel}
                     </span>
                     <span className="text-xs text-slate-500">({sourceCommands.length})</span>
-                  </div>
+                  </button>
 
-                  {order.map((namespace) => (
-                    <div key={`${source}-${namespace}`}>
-                      {/* Namespace header (only for namespaced commands) */}
-                      {namespace !== '__root__' && (
-                        <div className="px-3 py-1.5 flex items-center gap-2 bg-slate-800/30">
-                          <Folder className="w-3 h-3 text-slate-500" />
-                          <span className="text-xs text-slate-400 font-medium">{namespace}</span>
-                        </div>
-                      )}
-                      {/* Commands in namespace */}
-                      {grouped[namespace].map((command) => (
-                        <div
-                          key={command.name}
-                          onClick={() => handleSelectCommand(command)}
-                          className={`p-3 cursor-pointer hover:bg-slate-800/50 transition-colors ${
-                            selectedCommand === command.name
-                              ? 'bg-slate-800 border-l-2 border-cyan-500'
-                              : ''
-                          } ${namespace !== '__root__' ? 'pl-6' : ''}`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <FileText
-                                className={`w-4 h-4 flex-shrink-0 ${
-                                  source === 'tiki' ? 'text-emerald-400' : 'text-purple-400'
-                                }`}
-                              />
-                              <span className="text-sm text-slate-200 truncate">
-                                /{command.name}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1 flex-shrink-0">
+                  {/* Collapsible content */}
+                  <div
+                    className="overflow-hidden transition-[grid-template-rows] duration-200 ease-out"
+                    style={{
+                      display: 'grid',
+                      gridTemplateRows: isSourceCollapsed ? '0fr' : '1fr'
+                    }}
+                  >
+                    <div className="min-h-0">
+                      {order.map((namespace) => {
+                        // Skip namespaces not in current page
+                        if (!paginatedNamespaces.has(namespace)) return null
+
+                        const namespaceKey = `${source}-${namespace}`
+                        const isNamespaceCollapsed = collapsedNamespaces[namespaceKey] || false
+                        const namespaceCmds = paginatedCommands.filter(
+                          (cmd) => (cmd.namespace || '__root__') === namespace
+                        )
+
+                        if (namespaceCmds.length === 0) return null
+
+                        return (
+                          <div
+                            key={namespaceKey}
+                            data-testid={`namespace-section-${namespaceKey}`}
+                            data-collapsed={isNamespaceCollapsed ? 'true' : 'false'}
+                          >
+                            {/* Namespace header (only for namespaced commands) */}
+                            {namespace !== '__root__' && (
                               <button
-                                onClick={(e) => handleDeleteCommand(e, command)}
-                                className="p-1 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition-colors"
-                                title="Delete command"
+                                data-testid={`namespace-header-${namespaceKey}`}
+                                onClick={() => toggleNamespaceCollapse(source, namespace)}
+                                className="w-full px-3 py-1.5 flex items-center gap-2 bg-slate-800/30 hover:bg-slate-700/30 transition-colors"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <ChevronDown
+                                  className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${
+                                    isNamespaceCollapsed ? '-rotate-90' : ''
+                                  }`}
+                                />
+                                <Folder className="w-3 h-3 text-slate-500" />
+                                <span className="text-xs text-slate-400 font-medium">{namespace}</span>
                               </button>
+                            )}
+                            {/* Commands in namespace - collapsible */}
+                            <div
+                              className="overflow-hidden transition-[grid-template-rows] duration-200 ease-out"
+                              style={{
+                                display: namespace !== '__root__' ? 'grid' : 'block',
+                                gridTemplateRows: isNamespaceCollapsed ? '0fr' : '1fr'
+                              }}
+                            >
+                              <div className="min-h-0">
+                                {namespaceCmds.map((command) => (
+                                  <div
+                                    key={command.name}
+                                    onClick={() => handleSelectCommand(command)}
+                                    className={`p-3 cursor-pointer hover:bg-slate-800/50 transition-colors ${
+                                      selectedCommand === command.name
+                                        ? 'bg-slate-800 border-l-2 border-cyan-500'
+                                        : ''
+                                    } ${namespace !== '__root__' ? 'pl-6' : ''}`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <FileText
+                                          className={`w-4 h-4 flex-shrink-0 ${
+                                            source === 'tiki' ? 'text-emerald-400' : 'text-purple-400'
+                                          }`}
+                                        />
+                                        <span className="text-sm text-slate-200 truncate">
+                                          /{command.name}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1 flex-shrink-0">
+                                        <button
+                                          onClick={(e) => handleDeleteCommand(e, command)}
+                                          className="p-1 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition-colors"
+                                          title="Delete command"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                    {command.namespace && (
+                                      <div className="mt-1.5">
+                                        <span
+                                          className={`px-1.5 py-0.5 text-xs rounded ${namespaceColors[command.namespace] || namespaceColors.default}`}
+                                        >
+                                          {command.namespace}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           </div>
-                          {command.namespace && (
-                            <div className="mt-1.5">
-                              <span
-                                className={`px-1.5 py-0.5 text-xs rounded ${namespaceColors[command.namespace] || namespaceColors.default}`}
-                              >
-                                {command.namespace}
-                              </span>
-                            </div>
-                          )}
+                        )
+                      })}
+
+                      {/* Pagination controls */}
+                      {showPagination && (
+                        <div className="px-2 py-2 flex items-center justify-between text-xs text-slate-400 border-t border-slate-700/50">
+                          <button
+                            onClick={() => setSourcePage(source, Math.max(1, currentPage - 1))}
+                            disabled={currentPage === 1}
+                            className="px-2 py-1 rounded hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-label="Previous page"
+                          >
+                            &lt; Prev
+                          </button>
+                          <span>Page {currentPage} of {totalPages}</span>
+                          <button
+                            onClick={() => setSourcePage(source, Math.min(totalPages, currentPage + 1))}
+                            disabled={currentPage === totalPages}
+                            className="px-2 py-1 rounded hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-label="Next page"
+                          >
+                            Next &gt;
+                          </button>
                         </div>
-                      ))}
+                      )}
                     </div>
-                  ))}
+                  </div>
                 </div>
               )
             })}
