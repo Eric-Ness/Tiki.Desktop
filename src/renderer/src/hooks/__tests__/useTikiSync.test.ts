@@ -14,21 +14,31 @@ const updateReleaseMock = vi.fn()
 // Track the tikiState value for the mock
 let mockTikiState: TikiState | null = null
 
-// Mock the tiki store
-vi.mock('../../stores/tiki-store', () => ({
-  useTikiStore: vi.fn((selector) => {
-    const state = {
-      setTikiState: setTikiStateMock,
-      setPlan: setPlanMock,
-      setCurrentPlan: setCurrentPlanMock,
-      setQueue: setQueueMock,
-      setReleases: setReleasesMock,
-      updateRelease: updateReleaseMock,
-      tikiState: mockTikiState
-    }
-    return selector(state)
+// Mock the tiki store - must define inline to work with vi.mock hoisting
+vi.mock('../../stores/tiki-store', async () => {
+  // Create a mock store with getState method
+  const createMockState = () => ({
+    setTikiState: setTikiStateMock,
+    setPlan: setPlanMock,
+    setCurrentPlan: setCurrentPlanMock,
+    setQueue: setQueueMock,
+    setReleases: setReleasesMock,
+    updateRelease: updateReleaseMock,
+    tikiState: mockTikiState
   })
-}))
+
+  // Create mock useTikiStore function with getState support
+  const mockFn = vi.fn((selector: (state: ReturnType<typeof createMockState>) => unknown) => selector(createMockState()))
+  // Add getState method for direct state access (used in callbacks to avoid stale closures)
+  // Use Object.assign to satisfy TypeScript while adding the getState property
+  const mockWithGetState = Object.assign(mockFn, {
+    getState: () => createMockState()
+  })
+
+  return {
+    useTikiStore: mockWithGetState
+  }
+})
 
 // Mock window.tikiDesktop
 const mockGetReleases = vi.fn(() => Promise.resolve([]))

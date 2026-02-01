@@ -58,7 +58,6 @@ export function useTikiSync(activeProject: Project | null) {
   const setQueue = useTikiStore((state) => state.setQueue)
   const setReleases = useTikiStore((state) => state.setReleases)
   const updateRelease = useTikiStore((state) => state.updateRelease)
-  const tikiState = useTikiStore((state) => state.tikiState)
 
   // Track whether initial data has been loaded for the current project
   const initialLoadDoneRef = useRef<string | null>(null)
@@ -100,23 +99,27 @@ export function useTikiSync(activeProject: Project | null) {
           // Get plan execution status to check for active work
           const planStatus = getPlanExecutionStatus(plan)
 
+          // IMPORTANT: Get fresh state from store, not from closure (stale closure fix)
+          // The tikiState from useEffect closure may be stale when this callback fires
+          const currentState = useTikiStore.getState().tikiState
+
           // If this is the active issue in state, update currentPlan
-          if (tikiState?.activeIssue === plan.issue.number) {
+          if (currentState?.activeIssue === plan.issue.number) {
             setCurrentPlan(plan)
 
             // Check if plan shows more progress than state - update state if so
-            const stateCompletedCount = tikiState.completedPhases?.length || 0
+            const stateCompletedCount = currentState.completedPhases?.length || 0
             if (planStatus.completedPhases.length > stateCompletedCount) {
               // Plan is ahead of state - update state with plan data
               setTikiState({
-                ...tikiState,
+                ...currentState,
                 currentPhase: planStatus.currentPhase,
                 completedPhases: planStatus.completedPhases,
                 status: planStatus.status,
                 lastActivity: new Date().toISOString()
               })
             }
-          } else if (!tikiState?.activeIssue && planStatus.isActive) {
+          } else if (!currentState?.activeIssue && planStatus.isActive) {
             // Fallback: State shows no active issue, but plan shows active execution
             // This handles the case where Tiki commands don't update state.json
             setCurrentPlan(plan)
@@ -132,7 +135,7 @@ export function useTikiSync(activeProject: Project | null) {
             }
             setTikiState(derivedState)
           }
-          // Note: If tikiState has a DIFFERENT activeIssue, we don't override it
+          // Note: If currentState has a DIFFERENT activeIssue, we don't override it
           // The state file is authoritative when it has an active issue
         }
       }
@@ -169,7 +172,7 @@ export function useTikiSync(activeProject: Project | null) {
       cleanupRelease()
       cleanupSwitched()
     }
-  }, [activeProject, setTikiState, setPlan, setCurrentPlan, setQueue, setReleases, updateRelease, tikiState?.activeIssue, loadInitialData])
+  }, [activeProject, setTikiState, setPlan, setCurrentPlan, setQueue, setReleases, updateRelease, loadInitialData])
 
   return null
 }

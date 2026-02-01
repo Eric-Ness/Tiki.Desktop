@@ -182,7 +182,9 @@ function handleFileChange(filePath: string): void {
 
   if (normalizedPath.includes('/state/current.json')) {
     handleStateChange(filePath)
-  } else if (normalizedPath.includes('/plans/issue-')) {
+  } else if (normalizedPath.includes('/plans/') && normalizedPath.endsWith('.json')) {
+    // Handle all JSON files in plans directory, not just issue-* pattern
+    // This covers: issue-N.json, N.json, N-description.json, etc.
     handlePlanChange(filePath)
   } else if (normalizedPath.includes('/queue/pending.json')) {
     handleQueueChange(filePath)
