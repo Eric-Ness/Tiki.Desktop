@@ -1,5 +1,8 @@
 {
-  "version": "1.12.5",
+  "version": "1.1.0",
   "installedDate": "2026-02-01",
-  "source": "https://github.com/Eric-Ness/Tiki"
+  "source": "https://github.com/Eric-Ness/Tiki",
+  "changelog": {
+    "1.1.0": "Added release-specific hook environment variables (TIKI_RELEASE_VERSION, TIKI_RELEASE_ISSUE_COUNT, TIKI_GIT_TAG)"
+  }
 }
