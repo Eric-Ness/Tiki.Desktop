@@ -169,25 +169,33 @@ If requirements exist AND not --skip-verify:
 
 Handle any failed issues (ship anyway, remove, or abort).
 
-**IMPORTANT: Invoke release-ship to handle version bump, tagging, and archiving:**
+Create git tag (unless --no-tag):
 
-```text
-Skill tool invocation:
-- skill: "tiki:release-ship"
-- args: "${VERSION}"
+```bash
+git tag -a "${VERSION}" -m "Release ${VERSION}"
+git push origin "${VERSION}"
 ```
 
-The release-ship command handles:
-1. **Pre-ship hook execution** - Bumps version in package.json
-2. **Commits version bump** - Stages and commits package.json changes
-3. **Git tag creation** (unless --no-tag was passed)
-4. **Milestone closing** (if linked)
-5. **Release archiving**
-6. **State cleanup** - Moves execution to history
+Close milestone if linked. Archive release file.
 
-**DO NOT manually create git tags or archive releases** - let release-ship handle it to ensure version bump runs.
+Move release execution to history:
 
-If release-ship fails, read `.tiki/prompts/release-yolo/error-recovery.md` for recovery options.
+```javascript
+// Find the release execution
+const releaseExec = state.activeExecutions.find(e => e.type === "release");
+
+// Update final status
+releaseExec.status = "completed";
+releaseExec.completedAt = new Date().toISOString();
+
+// Move from activeExecutions to executionHistory
+state.activeExecutions = state.activeExecutions.filter(e => e.type !== "release");
+state.executionHistory.push(releaseExec);
+
+// Write updated state
+```
+
+Update version.json with changelog entry for completed issues.
 
 ### Step 10: Completion Summary
 

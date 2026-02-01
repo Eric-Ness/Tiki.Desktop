@@ -122,7 +122,36 @@ Custom dark theme with status colors defined in `tailwind.config.js`:
 
 The app interfaces with the Tiki framework through:
 - `.tiki/` directory - Runtime state (state.json, plans/, queue.json, releases/)
-- `.claude/commands/tiki/` - Custom slash commands
+- `.claude/commands/tiki/` - Tiki framework commands (DO NOT EDIT - see below)
 - File watching to sync UI with Tiki execution state
 
 Tiki-specific types are defined in `src/renderer/src/stores/tiki-store.ts` (TikiState, ExecutionPlan, etc.)
+
+## CRITICAL: Tiki Framework Files Are READ-ONLY
+
+**NEVER edit files in `.claude/commands/tiki/`** - these are Tiki framework files that get overwritten when running `/tiki:update-tiki`. Any changes will be lost.
+
+### What NOT to edit:
+- `.claude/commands/tiki/*.md` - Framework slash commands
+- `.tiki/prompts/**/*.md` - Framework prompt templates
+- `.tiki/schemas/*.json` - Framework schemas
+
+### Project-Specific Extensions (USE THESE INSTEAD):
+
+**Lifecycle Hooks** (`.tiki/hooks/`):
+Shell scripts that run at workflow points. Available hooks:
+- `pre-ship`, `post-ship` - Before/after shipping
+- `pre-execute`, `post-execute` - Before/after execution
+- `phase-start`, `phase-complete` - Per-phase hooks
+
+Environment variables available: `TIKI_ISSUE_NUMBER`, `TIKI_ISSUE_TITLE`, `TIKI_PHASE_NUMBER`, `TIKI_COMMIT_SHA`
+
+**Custom Commands** (`.tiki/commands/`):
+Project-specific slash commands following Claude Code command format.
+
+### Example: Version Bump Hook
+
+This project uses `.tiki/hooks/pre-ship` to bump package.json version during release shipping. The hook:
+1. Detects release context from `.tiki/state/current.json`
+2. Only bumps on the LAST issue in a release
+3. Uses the release version (e.g., v1.0.15) from state

@@ -6,10 +6,8 @@ This prompt is loaded by commands that run lifecycle hooks.
 
 | Hook Name | Trigger Point | Environment Variables |
 |-----------|---------------|----------------------|
-| pre-ship | Before /tiki:ship commits | TIKI_ISSUE_NUMBER, TIKI_ISSUE_TITLE |
-| pre-ship | Before /tiki:release-ship | TIKI_ISSUE_NUMBER, TIKI_RELEASE_VERSION |
-| post-ship | After successful ship | TIKI_ISSUE_NUMBER, TIKI_ISSUE_TITLE, TIKI_COMMIT_SHA |
-| post-ship | After /tiki:release-ship | TIKI_RELEASE_VERSION, TIKI_GIT_TAG |
+| pre-ship | Before /tiki:ship commits | ISSUE_NUMBER, ISSUE_TITLE |
+| post-ship | After successful ship | ISSUE_NUMBER, ISSUE_TITLE, COMMIT_SHA |
 | pre-execute | Before /tiki:execute starts | ISSUE_NUMBER, ISSUE_TITLE, TOTAL_PHASES |
 | post-execute | After all phases complete | ISSUE_NUMBER, ISSUE_TITLE, PHASES_COMPLETED |
 | pre-commit | Before /tiki:commit | ISSUE_NUMBER, ISSUE_TITLE, PHASE_NUMBER |

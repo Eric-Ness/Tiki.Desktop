@@ -1,16 +1,66 @@
 #!/bin/bash
 # Pre-ship hook for Tiki.Desktop
-# Bumps version only during release ship (not individual issue ship)
+# Bumps version when shipping the LAST issue in a release
+# Uses standard Tiki env vars: TIKI_ISSUE_NUMBER
 set -e
 
-# Only bump version for release ships
-if [ -z "$TIKI_RELEASE_VERSION" ]; then
-    echo "Pre-ship: Skipping version bump (not a release ship)"
+STATE_FILE=".tiki/state/current.json"
+ISSUE_NUM="${TIKI_ISSUE_NUMBER:-}"
+
+echo "Pre-ship hook running for issue #$ISSUE_NUM"
+
+# Check if we're in a release context by reading state file
+if [ ! -f "$STATE_FILE" ]; then
+    echo "No state file found, skipping version bump"
+    exit 0
+fi
+
+# Find active release execution in state
+RELEASE_INFO=$(node -e "
+const fs = require('fs');
+const state = JSON.parse(fs.readFileSync('$STATE_FILE', 'utf8'));
+const releaseExec = (state.activeExecutions || []).find(e => e.type === 'release');
+if (!releaseExec) {
+    console.log('NO_RELEASE');
+} else {
+    const issueOrder = releaseExec.issueOrder || [];
+    const completedIssues = releaseExec.completedIssues || [];
+    const currentIssue = $ISSUE_NUM;
+    const lastIssue = issueOrder[issueOrder.length - 1];
+    const isLast = (currentIssue === lastIssue);
+    console.log(JSON.stringify({
+        version: releaseExec.release,
+        isLast: isLast,
+        current: currentIssue,
+        last: lastIssue,
+        completed: completedIssues.length,
+        total: issueOrder.length
+    }));
+}
+" 2>/dev/null || echo "ERROR")
+
+if [ "$RELEASE_INFO" = "NO_RELEASE" ] || [ "$RELEASE_INFO" = "ERROR" ]; then
+    echo "Not in a release context, skipping version bump"
+    exit 0
+fi
+
+# Parse release info
+IS_LAST=$(echo "$RELEASE_INFO" | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).isLast")
+RELEASE_VERSION=$(echo "$RELEASE_INFO" | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version")
+COMPLETED=$(echo "$RELEASE_INFO" | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).completed")
+TOTAL=$(echo "$RELEASE_INFO" | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).total")
+
+echo "Release: $RELEASE_VERSION (issue $((COMPLETED + 1))/$TOTAL)"
+
+# Only bump version on the LAST issue in the release
+if [ "$IS_LAST" != "true" ]; then
+    echo "Not the last issue in release, skipping version bump"
+    echo "Version will be bumped when shipping issue #$(echo "$RELEASE_INFO" | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).last")"
     exit 0
 fi
 
 echo "================================================"
-echo "Pre-ship: Bumping version for release $TIKI_RELEASE_VERSION"
+echo "LAST ISSUE - Bumping version for release $RELEASE_VERSION"
 echo "================================================"
 
 # Check if package.json exists
@@ -19,27 +69,27 @@ if [ ! -f "package.json" ]; then
     exit 1
 fi
 
-# Extract version number from release (v1.0.11 -> 1.0.11)
-RELEASE_VERSION="${TIKI_RELEASE_VERSION#v}"
-echo "Release version: $RELEASE_VERSION"
+# Extract version number from release (v1.0.14 -> 1.0.14)
+VERSION="${RELEASE_VERSION#v}"
+echo "Target version: $VERSION"
 
 # Read current version
 CURRENT=$(node -p "require('./package.json').version" 2>/dev/null)
-echo "Current package.json version: $CURRENT"
+echo "Current version: $CURRENT"
 
 # Check if already at correct version
-if [ "$CURRENT" = "$RELEASE_VERSION" ]; then
-    echo "Version already at $RELEASE_VERSION - no bump needed"
+if [ "$CURRENT" = "$VERSION" ]; then
+    echo "Version already at $VERSION - no bump needed"
     exit 0
 fi
 
 # Update package.json to match release version
-npm version "$RELEASE_VERSION" --no-git-tag-version --allow-same-version
+npm version "$VERSION" --no-git-tag-version --allow-same-version
 
 # Stage the changed files for the ship commit
 git add package.json package-lock.json
 
 echo ""
-echo "Version bumped: $CURRENT -> $RELEASE_VERSION"
+echo "Version bumped: $CURRENT -> $VERSION"
 echo "Files staged for commit: package.json, package-lock.json"
 echo "================================================"
