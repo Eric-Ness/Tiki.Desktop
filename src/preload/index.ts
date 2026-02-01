@@ -1388,6 +1388,48 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
     openInEditor: (filePath: string) => ipcRenderer.invoke('code:open-in-editor', { filePath })
   },
 
+  // Files API (for Development Layout file operations)
+  files: {
+    listDirectory: (dirPath: string) =>
+      ipcRenderer.invoke('files:list-directory', { dirPath }),
+
+    writeFile: (filePath: string, content: string) =>
+      ipcRenderer.invoke('files:write-file', { filePath, content }),
+
+    createFile: (filePath: string, content?: string) =>
+      ipcRenderer.invoke('files:create-file', { filePath, content }),
+
+    createDirectory: (dirPath: string) =>
+      ipcRenderer.invoke('files:create-directory', { dirPath }),
+
+    rename: (oldPath: string, newPath: string) =>
+      ipcRenderer.invoke('files:rename', { oldPath, newPath }),
+
+    delete: (targetPath: string) =>
+      ipcRenderer.invoke('files:delete', { targetPath }),
+
+    stat: (filePath: string) =>
+      ipcRenderer.invoke('files:stat', { filePath }),
+
+    watchStart: (dirPath: string) =>
+      ipcRenderer.invoke('files:watch-start', { dirPath }),
+
+    watchStop: (watcherId: string) =>
+      ipcRenderer.invoke('files:watch-stop', { watcherId }),
+
+    onChanged: (
+      callback: (event: { type: 'add' | 'unlink' | 'addDir' | 'unlinkDir' | 'change'; path: string }) => void
+    ) => {
+      const handler = (
+        _: unknown,
+        event: { type: 'add' | 'unlink' | 'addDir' | 'unlinkDir' | 'change'; path: string }
+      ) => callback(event)
+      ipcRenderer.on('files:changed', handler)
+      // Return unsubscribe function
+      return () => ipcRenderer.removeListener('files:changed', handler)
+    }
+  },
+
   // Heatmap API (for codebase heat map visualization)
   heatmap: {
     generate: (cwd: string, metric: HeatMetricPreload, period: TimePeriodPreload) =>
@@ -1971,6 +2013,63 @@ declare global {
         }>
         getLanguage: (filePath: string) => Promise<string>
         openInEditor: (filePath: string) => Promise<{ success: boolean }>
+      }
+      files: {
+        listDirectory: (dirPath: string) => Promise<{
+          success: boolean
+          entries?: Array<{
+            name: string
+            path: string
+            type: 'file' | 'directory'
+          }>
+          error?: string
+        }>
+        writeFile: (filePath: string, content: string) => Promise<{
+          success: boolean
+          error?: string
+        }>
+        createFile: (filePath: string, content?: string) => Promise<{
+          success: boolean
+          error?: string
+        }>
+        createDirectory: (dirPath: string) => Promise<{
+          success: boolean
+          error?: string
+        }>
+        rename: (oldPath: string, newPath: string) => Promise<{
+          success: boolean
+          error?: string
+        }>
+        delete: (targetPath: string) => Promise<{
+          success: boolean
+          error?: string
+        }>
+        stat: (filePath: string) => Promise<{
+          success: boolean
+          stats?: {
+            size: number
+            isDirectory: boolean
+            isFile: boolean
+            mtime: string
+            ctime: string
+          }
+          error?: string
+        }>
+        watchStart: (dirPath: string) => Promise<{
+          success: boolean
+          watcherId?: string
+          error?: string
+        }>
+        watchStop: (watcherId: string) => Promise<{
+          success: boolean
+          error?: string
+        }>
+        onChanged: (
+          callback: (event: {
+            type: 'add' | 'unlink' | 'addDir' | 'unlinkDir' | 'change'
+            path: string
+          }) => void
+        ) => () => void
       }
       heatmap: {
         generate: (

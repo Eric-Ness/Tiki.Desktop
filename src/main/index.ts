@@ -31,6 +31,7 @@ import { registerLearningHandlers } from './ipc/learning'
 import { registerHooksHandlers } from './ipc/hooks'
 import { registerCommandsHandlers } from './ipc/commands'
 import { registerClaudeStatsHandlers } from './ipc/claude-stats'
+import { registerFilesHandlers, stopAllFileWatchers } from './ipc/files'
 import { setMainWindow as setSettingsWindow } from './services/settings-store'
 import { setMainWindow as setNotificationWindow } from './services/notification-service'
 import { setUpdateWindow, initAutoUpdater, checkForUpdates } from './services/update-service'
@@ -115,6 +116,7 @@ app.whenReady().then(() => {
   registerHooksHandlers()
   registerCommandsHandlers()
   registerClaudeStatsHandlers()
+  registerFilesHandlers()
 
   createWindow()
 
@@ -155,12 +157,13 @@ app.on('window-all-closed', () => {
   }
 })
 
-app.on('before-quit', () => {
+app.on('before-quit', async () => {
   // Save terminal state before quitting (for session restoration)
   saveTerminalStateImmediate()
   cleanupAllTerminals()
   stopWatching()
   stopAllPolling()
+  await stopAllFileWatchers()
 })
 
 // IPC Handlers - will be expanded in future issues
