@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import { useTikiStore, TikiState, ExecutionPlan, Release, Project } from '../stores/tiki-store'
 
 /**
@@ -15,12 +15,28 @@ export function useTikiSync(activeProject: Project | null) {
   const updateRelease = useTikiStore((state) => state.updateRelease)
   const tikiState = useTikiStore((state) => state.tikiState)
 
+  // Track whether initial data has been loaded for the current project
+  const initialLoadDoneRef = useRef<string | null>(null)
+
+  // Function to load all initial data from the file watcher
+  const loadInitialData = useCallback(async () => {
+    const [state, releases, queue] = await Promise.all([
+      window.tikiDesktop.tiki.getState(),
+      window.tikiDesktop.tiki.getReleases(),
+      window.tikiDesktop.tiki.getQueue()
+    ])
+    setTikiState(state as TikiState | null)
+    setReleases(releases as Release[])
+    setQueue((queue as unknown[]) || [])
+  }, [setTikiState, setReleases, setQueue])
+
   useEffect(() => {
     // If no active project, clear state and don't set up listeners
     if (!activeProject) {
       setTikiState(null)
       setReleases([])
       setQueue([])
+      initialLoadDoneRef.current = null
       return
     }
 
@@ -59,14 +75,13 @@ export function useTikiSync(activeProject: Project | null) {
       }
     })
 
-    // Load initial state
-    window.tikiDesktop.tiki.getState().then((state) => {
-      setTikiState(state as TikiState | null)
-    })
-
-    // Load initial releases
-    window.tikiDesktop.tiki.getReleases().then((releases) => {
-      setReleases(releases as Release[])
+    // Listen for project switch completion - this is when the file watcher is ready
+    const cleanupSwitched = window.tikiDesktop.projects.onSwitched(({ path }) => {
+      // Only load if this is for our active project and we haven't loaded yet
+      if (path === activeProject.path && initialLoadDoneRef.current !== path) {
+        initialLoadDoneRef.current = path
+        loadInitialData()
+      }
     })
 
     return () => {
@@ -74,8 +89,9 @@ export function useTikiSync(activeProject: Project | null) {
       cleanupPlan()
       cleanupQueue()
       cleanupRelease()
+      cleanupSwitched()
     }
-  }, [activeProject, setTikiState, setPlan, setCurrentPlan, setQueue, setReleases, updateRelease, tikiState?.activeIssue])
+  }, [activeProject, setTikiState, setPlan, setCurrentPlan, setQueue, setReleases, updateRelease, tikiState?.activeIssue, loadInitialData])
 
   return null
 }
