@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTikiStore } from '../../stores/tiki-store'
+import { logger } from '../../lib/logger'
 
 type TemplateCategory = 'issue_type' | 'component' | 'workflow' | 'custom'
 type VariableType = 'string' | 'file' | 'component' | 'number'
@@ -182,7 +183,7 @@ export function ApplyTemplateDialog({
       setPreviewPhases(result.phases)
       setStep('preview')
     } catch (err) {
-      console.error('Failed to preview template:', err)
+      logger.error('Failed to preview template:', err)
       setError(err instanceof Error ? err.message : 'Failed to preview template')
     }
   }
@@ -204,7 +205,7 @@ export function ApplyTemplateDialog({
       onApplied?.(previewPhases)
       onClose()
     } catch (err) {
-      console.error('Failed to apply template:', err)
+      logger.error('Failed to apply template:', err)
       setError(err instanceof Error ? err.message : 'Failed to apply template')
     } finally {
       setApplying(false)

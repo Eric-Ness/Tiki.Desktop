@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTikiStore } from '../../stores/tiki-store'
+import { logger } from '../../lib/logger'
 
 type TemplateCategory = 'issue_type' | 'component' | 'workflow' | 'custom'
 
@@ -114,7 +115,7 @@ export function TemplateList({ onSelect, onCreateNew, onImport }: TemplateListPr
 
       setTemplates(filtered)
     } catch (err) {
-      console.error('Failed to load templates:', err)
+      logger.error('Failed to load templates:', err)
       setTemplates([])
     } finally {
       setLoading(false)

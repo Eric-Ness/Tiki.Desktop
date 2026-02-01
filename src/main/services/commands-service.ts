@@ -1,6 +1,7 @@
 import { readdir, readFile, writeFile, unlink, stat, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join, basename, dirname, relative } from 'path'
+import { logger } from './logger'
 
 export type CommandSource = 'claude' | 'tiki'
 
@@ -112,7 +113,7 @@ async function listCommandsFromDir(
 
     return commands
   } catch (error) {
-    console.error(`Failed to list commands from ${source}:`, error)
+    logger.error(`Failed to list commands from ${source}:`, error)
     return []
   }
 }
@@ -183,7 +184,7 @@ export async function readCommand(name: string, cwd?: string): Promise<Command |
           content
         }
       } catch (error) {
-        console.error(`Failed to read command ${name}:`, error)
+        logger.error(`Failed to read command ${name}:`, error)
       }
     }
   }
@@ -230,7 +231,7 @@ export async function writeCommand(
     await writeFile(commandPath, content, 'utf-8')
     return true
   } catch (error) {
-    console.error(`Failed to write command ${name}:`, error)
+    logger.error(`Failed to write command ${name}:`, error)
     return false
   }
 }
@@ -252,7 +253,7 @@ export async function deleteCommand(name: string, cwd?: string): Promise<boolean
         await unlink(commandPath)
         return true
       } catch (error) {
-        console.error(`Failed to delete command ${name}:`, error)
+        logger.error(`Failed to delete command ${name}:`, error)
         return false
       }
     }
@@ -276,7 +277,7 @@ export async function getNamespaces(cwd?: string): Promise<string[]> {
         const entries = await readdir(commandsDir, { withFileTypes: true })
         entries.filter((e) => e.isDirectory()).forEach((e) => namespaces.add(e.name))
       } catch (error) {
-        console.error(`Failed to get namespaces from ${source}:`, error)
+        logger.error(`Failed to get namespaces from ${source}:`, error)
       }
     }
   }

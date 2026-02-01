@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Release, ReleaseIssue, Requirement, useTikiStore } from '../../stores/tiki-store'
 import { Trash2, Plus, X } from 'lucide-react'
 import { RequirementCoverageMatrix } from './RequirementCoverageMatrix'
+import { logger } from '../../lib/logger'
 
 interface EditReleaseDialogProps {
   isOpen: boolean
@@ -86,7 +87,7 @@ export function EditReleaseDialog({ isOpen, release, onClose, onSaved, onDeleted
       setActiveTab('settings')
 
       // Load requirements for the coverage matrix
-      window.tikiDesktop.tiki.getRequirements().then(setRequirements).catch(console.error)
+      window.tikiDesktop.tiki.getRequirements().then(setRequirements).catch((err) => logger.error('Failed to load requirements:', err))
     }
   }, [isOpen, release])
 
@@ -186,7 +187,7 @@ export function EditReleaseDialog({ isOpen, release, onClose, onSaved, onDeleted
       onSaved?.()
       onClose()
     } catch (err) {
-      console.error('Failed to update release:', err)
+      logger.error('Failed to update release:', err)
       setError(err instanceof Error ? err.message : 'Failed to update release')
     } finally {
       setLoading(false)
@@ -213,7 +214,7 @@ export function EditReleaseDialog({ isOpen, release, onClose, onSaved, onDeleted
       onDeleted?.()
       onClose()
     } catch (err) {
-      console.error('Failed to delete release:', err)
+      logger.error('Failed to delete release:', err)
       setError(err instanceof Error ? err.message : 'Failed to delete release')
     } finally {
       setDeleting(false)

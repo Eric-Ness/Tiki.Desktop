@@ -9,6 +9,9 @@ import {
   notifyIssuePlanned,
   notifyIssueShipped
 } from './notification-service'
+import { logger } from './logger'
+
+const log = logger.scoped('FileWatcher')
 
 let watcher: chokidar.FSWatcher | null = null
 let mainWindow: BrowserWindow | null = null
@@ -207,7 +210,7 @@ export function startWatching(path: string): void {
   const tikiPath = join(path, '.tiki')
 
   if (!existsSync(tikiPath)) {
-    console.log('No .tiki directory found at', tikiPath)
+    log.debug('No .tiki directory found at', tikiPath)
     return
   }
 
@@ -241,16 +244,16 @@ export function startWatching(path: string): void {
   })
 
   watcher.on('error', (error) => {
-    console.error('File watcher error:', error)
+    log.error('File watcher error:', error)
   })
 
   // Mark initial scan complete after watcher is ready
   watcher.on('ready', () => {
     isInitialScan = false
-    console.log('File watcher ready, notifications enabled')
+    log.debug('File watcher ready, notifications enabled')
   })
 
-  console.log('Started watching .tiki directory at', tikiPath)
+  log.debug('Started watching .tiki directory at', tikiPath)
 }
 
 export function stopWatching(): void {
@@ -357,7 +360,7 @@ export async function getReleases(): Promise<unknown[]> {
 
     return releases
   } catch (error) {
-    console.error('Error reading releases:', error)
+    log.error('Error reading releases:', error)
     return []
   }
 }
@@ -441,7 +444,7 @@ export async function createRelease(
     await writeFile(releaseFile, JSON.stringify(release, null, 2))
     return { success: true }
   } catch (error) {
-    console.error('Error creating release:', error)
+    log.error('Error creating release:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create release'
@@ -502,7 +505,7 @@ export async function updateRelease(
 
     return { success: true }
   } catch (error) {
-    console.error('Error updating release:', error)
+    log.error('Error updating release:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update release'
@@ -546,7 +549,7 @@ export async function deleteRelease(version: string): Promise<DeleteReleaseResul
 
     return { success: true }
   } catch (error) {
-    console.error('Error deleting release:', error)
+    log.error('Error deleting release:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to delete release'

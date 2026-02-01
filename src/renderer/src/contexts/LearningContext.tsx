@@ -4,6 +4,7 @@ import type {
   LearningConceptExplanation,
   LearningPhaseExplanation
 } from '../../../preload'
+import { logger } from '../lib/logger'
 
 // Re-export types for convenience
 export type { LearningProgress, LearningConceptExplanation, LearningPhaseExplanation }
@@ -49,7 +50,7 @@ export function LearningProvider({ children }: LearningProviderProps) {
         const loaded = await window.tikiDesktop.learning.getProgress()
         setProgress(loaded)
       } catch (err) {
-        console.error('Failed to load learning progress:', err)
+        logger.error('Failed to load learning progress:', err)
       } finally {
         setLoading(false)
       }
@@ -64,7 +65,7 @@ export function LearningProvider({ children }: LearningProviderProps) {
       const loaded = await window.tikiDesktop.learning.getProgress()
       setProgress(loaded)
     } catch (err) {
-      console.error('Failed to refresh learning progress:', err)
+      logger.error('Failed to refresh learning progress:', err)
       throw err
     }
   }, [])
@@ -78,7 +79,7 @@ export function LearningProvider({ children }: LearningProviderProps) {
         prev ? { ...prev, learningModeEnabled: newValue } : prev
       )
     } catch (err) {
-      console.error('Failed to toggle learning mode:', err)
+      logger.error('Failed to toggle learning mode:', err)
       throw err
     }
   }, [learningModeEnabled])
@@ -92,7 +93,7 @@ export function LearningProvider({ children }: LearningProviderProps) {
         prev ? { ...prev, expertModeEnabled: newValue } : prev
       )
     } catch (err) {
-      console.error('Failed to toggle expert mode:', err)
+      logger.error('Failed to toggle expert mode:', err)
       throw err
     }
   }, [expertModeEnabled])
@@ -110,7 +111,7 @@ export function LearningProvider({ children }: LearningProviderProps) {
         }
       })
     } catch (err) {
-      console.error('Failed to mark concept as seen:', err)
+      logger.error('Failed to mark concept as seen:', err)
       throw err
     }
   }, [])
@@ -120,7 +121,7 @@ export function LearningProvider({ children }: LearningProviderProps) {
     try {
       return await window.tikiDesktop.learning.shouldShow(conceptId)
     } catch (err) {
-      console.error('Failed to check if explanation should show:', err)
+      logger.error('Failed to check if explanation should show:', err)
       return false
     }
   }, [])
@@ -130,7 +131,7 @@ export function LearningProvider({ children }: LearningProviderProps) {
     try {
       return await window.tikiDesktop.learning.getExplanation(conceptId)
     } catch (err) {
-      console.error('Failed to get explanation:', err)
+      logger.error('Failed to get explanation:', err)
       return null
     }
   }, [])
@@ -140,7 +141,7 @@ export function LearningProvider({ children }: LearningProviderProps) {
     try {
       return await window.tikiDesktop.learning.getPhaseExplanation(phase)
     } catch (err) {
-      console.error('Failed to get phase explanation:', err)
+      logger.error('Failed to get phase explanation:', err)
       // Return a default explanation on error
       return {
         whyThisPhase: 'Unable to load explanation',

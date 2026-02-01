@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { logger } from '../../lib/logger'
 import { useTikiStore, type Project, type Execution } from '../../stores/tiki-store'
 import { IssueList } from '../sidebar/IssueList'
 import { ReleaseList } from '../sidebar/ReleaseList'
@@ -198,7 +199,7 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
         )
       }, 100)
     } catch (error) {
-      console.error('Failed to start Claude Code:', error)
+      logger.error('Failed to start Claude Code:', error)
     }
   }, [cwd])
 
@@ -233,7 +234,7 @@ export function Sidebar({ cwd, onProjectSwitch }: SidebarProps) {
         )
       }, 100)
     } catch (error) {
-      console.error('Failed to start Tiki update:', error)
+      logger.error('Failed to start Tiki update:', error)
     }
   }, [cwd])
 

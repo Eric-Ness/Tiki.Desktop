@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { logger } from '../../lib/logger'
 import { useTikiStore } from '../../stores/tiki-store'
 import { useLearning, type PhaseExplanation as PhaseExplanationData } from '../../contexts/LearningContext'
 import { PhaseChanges } from '../diff'
@@ -123,7 +124,7 @@ export function PhaseDetail({ phase }: PhaseDetailProps) {
         )
         setHasTrackedCommits(commits.length > 0)
       } catch (err) {
-        console.error('Failed to check phase commits:', err)
+        logger.error('Failed to check phase commits:', err)
         setHasTrackedCommits(false)
       }
     }
@@ -154,7 +155,7 @@ export function PhaseDetail({ phase }: PhaseDetailProps) {
         )
         setFailureAnalysis(analysis)
       } catch (err) {
-        console.error('Failed to analyze failure:', err)
+        logger.error('Failed to analyze failure:', err)
         setAnalysisError(err instanceof Error ? err.message : 'Failed to analyze failure')
       } finally {
         setIsAnalyzing(false)
@@ -183,7 +184,7 @@ export function PhaseDetail({ phase }: PhaseDetailProps) {
       )
       setFailureAnalysis(analysis)
     } catch (err) {
-      console.error('Failed to analyze failure:', err)
+      logger.error('Failed to analyze failure:', err)
       setAnalysisError(err instanceof Error ? err.message : 'Failed to analyze failure')
     } finally {
       setIsAnalyzing(false)
@@ -242,7 +243,7 @@ export function PhaseDetail({ phase }: PhaseDetailProps) {
               }
             }
           } catch (err) {
-            console.error('Failed to get execution status:', err)
+            logger.error('Failed to get execution status:', err)
             clearInterval(pollInterval)
           }
         }, 1000)
@@ -251,7 +252,7 @@ export function PhaseDetail({ phase }: PhaseDetailProps) {
         setTimeout(() => clearInterval(pollInterval), 300000)
       }
     } catch (err) {
-      console.error('Failed to execute strategy:', err)
+      logger.error('Failed to execute strategy:', err)
       setExecution({
         id: `error-${Date.now()}`,
         strategyId: strategyToExecute.id,
@@ -277,7 +278,7 @@ export function PhaseDetail({ phase }: PhaseDetailProps) {
         prev ? { ...prev, outcome: 'cancelled', completedAt: Date.now() } : null
       )
     } catch (err) {
-      console.error('Failed to cancel execution:', err)
+      logger.error('Failed to cancel execution:', err)
     }
   }, [execution])
 

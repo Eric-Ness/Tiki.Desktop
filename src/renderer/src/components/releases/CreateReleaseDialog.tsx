@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTikiStore } from '../../stores/tiki-store'
+import { logger } from '../../lib/logger'
 
 interface IssueRecommendation {
   number: number
@@ -144,7 +145,7 @@ export function CreateReleaseDialog({ isOpen, onClose, onCreated }: CreateReleas
       )
       setSelectedIssues(recommended)
     } catch (err) {
-      console.error('LLM recommendation error:', err)
+      logger.error('LLM recommendation error:', err)
       setError('Failed to get LLM recommendations')
     } finally {
       setLlmLoading(false)
@@ -205,7 +206,7 @@ export function CreateReleaseDialog({ isOpen, onClose, onCreated }: CreateReleas
       onCreated?.()
       onClose()
     } catch (err) {
-      console.error('Failed to create release:', err)
+      logger.error('Failed to create release:', err)
       setError(err instanceof Error ? err.message : 'Failed to create release')
     } finally {
       setLoading(false)

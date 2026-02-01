@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
+import { logger } from './logger'
 
 export interface PersistedTerminal {
   id: string
@@ -27,7 +28,7 @@ export class TerminalPersistenceService {
     try {
       fs.writeFileSync(this.storagePath, JSON.stringify(state, null, 2))
     } catch (error) {
-      console.error('Failed to save terminal state:', error)
+      logger.error('Failed to save terminal state:', error)
     }
   }
 
@@ -75,7 +76,7 @@ export class TerminalPersistenceService {
         savedAt: parsed.savedAt || new Date().toISOString()
       }
     } catch (error) {
-      console.error('Failed to load terminal state:', error)
+      logger.error('Failed to load terminal state:', error)
       return null
     }
   }
@@ -86,7 +87,7 @@ export class TerminalPersistenceService {
         fs.unlinkSync(this.storagePath)
       }
     } catch (error) {
-      console.error('Failed to clear terminal state:', error)
+      logger.error('Failed to clear terminal state:', error)
     }
   }
 }

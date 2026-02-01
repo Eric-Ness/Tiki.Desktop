@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTikiStore } from '../../stores/tiki-store'
+import { logger } from '../../lib/logger'
 
 type TemplateCategory = 'issue_type' | 'component' | 'workflow' | 'custom'
 type VariableType = 'string' | 'file' | 'component' | 'number'
@@ -145,7 +146,7 @@ export function CreateTemplateDialog({
           setDescription(plan.issue.title)
         }
       } catch (err) {
-        console.error('Failed to extract variables:', err)
+        logger.error('Failed to extract variables:', err)
       } finally {
         setExtracting(false)
       }
@@ -297,7 +298,7 @@ export function CreateTemplateDialog({
       onCreated?.()
       onClose()
     } catch (err) {
-      console.error('Failed to create template:', err)
+      logger.error('Failed to create template:', err)
       setError(err instanceof Error ? err.message : 'Failed to create template')
     } finally {
       setSaving(false)

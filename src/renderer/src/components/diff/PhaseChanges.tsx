@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { ChangeSummary } from './ChangeSummary'
 import { FileDiffList, FileChange } from './FileDiffList'
 import { DiffView } from './DiffView'
+import { logger } from '../../lib/logger'
 
 interface DiffStats {
   files: FileChange[]
@@ -80,7 +81,7 @@ export function PhaseChanges({ fromRef, toRef, cwd }: PhaseChangesProps) {
         )
         setFileDiff(diff)
       } catch (err) {
-        console.error('Failed to load file diff:', err)
+        logger.error('Failed to load file diff:', err)
         setFileDiff('')
       } finally {
         setLoadingDiff(false)

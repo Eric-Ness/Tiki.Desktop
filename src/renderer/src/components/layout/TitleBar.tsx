@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { logger } from '../../lib/logger'
 import { useTikiStore } from '../../stores/tiki-store'
 import {
   WorkspaceSelector,
@@ -63,7 +64,7 @@ export function TitleBar() {
       setWorkspaces(snapshots as WorkspaceSnapshotData[])
       setStorageInfo(storage)
     } catch (error) {
-      console.error('Failed to load workspaces:', error)
+      logger.error('Failed to load workspaces:', error)
     } finally {
       setWorkspaceLoading(false)
     }
@@ -103,7 +104,7 @@ export function TitleBar() {
       setSaveDialogOpen(false)
       await loadWorkspaces()
     } catch (error) {
-      console.error('Failed to save workspace:', error)
+      logger.error('Failed to save workspace:', error)
     } finally {
       setSavingWorkspace(false)
     }
@@ -129,7 +130,7 @@ export function TitleBar() {
       setRestoreDialogOpen(false)
       setSelectedWorkspace(null)
     } catch (error) {
-      console.error('Failed to restore workspace:', error)
+      logger.error('Failed to restore workspace:', error)
     } finally {
       setRestoringWorkspace(false)
     }
@@ -151,7 +152,7 @@ export function TitleBar() {
       await window.tikiDesktop.workspace.rename(id, name)
       await loadWorkspaces()
     } catch (error) {
-      console.error('Failed to rename workspace:', error)
+      logger.error('Failed to rename workspace:', error)
     }
   }
 
@@ -163,7 +164,7 @@ export function TitleBar() {
       }
       await loadWorkspaces()
     } catch (error) {
-      console.error('Failed to delete workspace:', error)
+      logger.error('Failed to delete workspace:', error)
     }
   }
 

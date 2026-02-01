@@ -3,6 +3,9 @@ import { BrowserWindow, app } from 'electron'
 import { cleanupAllTerminals, saveTerminalStateImmediate } from './terminal-manager'
 import { stopWatching } from './file-watcher'
 import { stopAllPolling } from '../ipc/workflow'
+import { logger } from './logger'
+
+const log = logger.scoped('AutoUpdater')
 
 export type UpdateStatus =
   | { type: 'checking' }
@@ -30,20 +33,20 @@ function sendStatus(status: UpdateStatus): void {
 }
 
 export function initAutoUpdater(): void {
-  console.log('[AutoUpdater] Initializing...')
-  console.log('[AutoUpdater] Platform:', process.platform)
-  console.log('[AutoUpdater] app.isPackaged:', app.isPackaged)
-  console.log('[AutoUpdater] App version:', app.getVersion())
+  log.debug('Initializing...')
+  log.debug('Platform:', process.platform)
+  log.debug('app.isPackaged:', app.isPackaged)
+  log.debug('App version:', app.getVersion())
 
   // Skip on macOS (requires code signing)
   if (process.platform === 'darwin') {
-    console.log('[AutoUpdater] Skipping on macOS (code signing required)')
+    log.debug('Skipping on macOS (code signing required)')
     return
   }
 
   // electron-updater only works in packaged builds
   if (!app.isPackaged) {
-    console.log('[AutoUpdater] Skipping initialization - app is not packaged (dev mode)')
+    log.debug('Skipping initialization - app is not packaged (dev mode)')
     return
   }
 
@@ -51,19 +54,20 @@ export function initAutoUpdater(): void {
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
 
-  // Enable logging for debugging
-  autoUpdater.logger = console
+  // Enable logging for debugging - use null to disable electron-updater's own logging
+  // Our scoped logger handles all logging now
+  autoUpdater.logger = null
 
-  console.log('[AutoUpdater] Configuration complete')
+  log.debug('Configuration complete')
 
   // Event handlers
   autoUpdater.on('checking-for-update', () => {
-    console.log('[AutoUpdater] Checking for updates...')
+    log.debug('Checking for updates...')
     sendStatus({ type: 'checking' })
   })
 
   autoUpdater.on('update-available', (info: UpdateInfo) => {
-    console.log('[AutoUpdater] Update available:', info.version)
+    log.info('Update available:', info.version)
     sendStatus({
       type: 'available',
       version: info.version,
@@ -72,12 +76,12 @@ export function initAutoUpdater(): void {
   })
 
   autoUpdater.on('update-not-available', () => {
-    console.log('[AutoUpdater] No updates available')
+    log.debug('No updates available')
     sendStatus({ type: 'not-available' })
   })
 
   autoUpdater.on('download-progress', (progress) => {
-    console.log(`[AutoUpdater] Download progress: ${progress.percent.toFixed(1)}%`)
+    log.debug(`Download progress: ${progress.percent.toFixed(1)}%`)
     sendStatus({
       type: 'downloading',
       percent: progress.percent,
@@ -88,20 +92,20 @@ export function initAutoUpdater(): void {
   })
 
   autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
-    console.log('[AutoUpdater] Update downloaded:', info.version)
+    log.info('Update downloaded:', info.version)
     sendStatus({ type: 'downloaded', version: info.version })
   })
 
   autoUpdater.on('error', (error) => {
-    console.error('[AutoUpdater] Error:', error.message)
+    log.error('Error:', error.message)
     sendStatus({ type: 'error', message: error.message })
   })
 }
 
 export async function checkForUpdates(): Promise<CheckResult> {
-  console.log('[AutoUpdater] checkForUpdates() called')
-  console.log('[AutoUpdater] app.isPackaged:', app.isPackaged)
-  console.log('[AutoUpdater] Current version:', app.getVersion())
+  log.debug('checkForUpdates() called')
+  log.debug('app.isPackaged:', app.isPackaged)
+  log.debug('Current version:', app.getVersion())
 
   if (process.platform === 'darwin') {
     const error = 'Auto-updates not available on macOS (requires code signing)'
@@ -112,7 +116,7 @@ export async function checkForUpdates(): Promise<CheckResult> {
   // electron-updater only works in packaged builds
   if (!app.isPackaged) {
     const error = 'Auto-updates only work in the installed app, not in development mode. Please install the app from a release build.'
-    console.log('[AutoUpdater]', error)
+    log.debug(error)
     sendStatus({ type: 'error', message: error })
     return { success: false, error }
   }
@@ -133,7 +137,7 @@ export async function checkForUpdates(): Promise<CheckResult> {
       if (resolved) return
       resolved = true
       cleanup()
-      console.log('[AutoUpdater] Check complete: update available', info.version)
+      log.debug('Check complete: update available', info.version)
       resolve({ success: true, status: 'available', version: info.version })
     }
 
@@ -141,7 +145,7 @@ export async function checkForUpdates(): Promise<CheckResult> {
       if (resolved) return
       resolved = true
       cleanup()
-      console.log('[AutoUpdater] Check complete: no update available')
+      log.debug('Check complete: no update available')
       resolve({ success: true, status: 'not-available' })
     }
 
@@ -149,7 +153,7 @@ export async function checkForUpdates(): Promise<CheckResult> {
       if (resolved) return
       resolved = true
       cleanup()
-      console.error('[AutoUpdater] Check failed with error:', error.message)
+      log.error('Check failed with error:', error.message)
       resolve({ success: false, error: error.message })
     }
 
@@ -158,7 +162,7 @@ export async function checkForUpdates(): Promise<CheckResult> {
       resolved = true
       cleanup()
       const error = 'Update check timed out. Please check your internet connection and try again.'
-      console.error('[AutoUpdater] Check timed out after', UPDATE_CHECK_TIMEOUT, 'ms')
+      log.error('Check timed out after', UPDATE_CHECK_TIMEOUT, 'ms')
       sendStatus({ type: 'error', message: error })
       resolve({ success: false, error })
     }, UPDATE_CHECK_TIMEOUT)
@@ -167,16 +171,16 @@ export async function checkForUpdates(): Promise<CheckResult> {
     autoUpdater.once('update-not-available', onNotAvailable)
     autoUpdater.once('error', onError)
 
-    console.log('[AutoUpdater] Starting update check...')
-    console.log('[AutoUpdater] Feed URL:', autoUpdater.getFeedURL())
+    log.debug('Starting update check...')
+    log.debug('Feed URL:', autoUpdater.getFeedURL())
     autoUpdater.checkForUpdates().then((result) => {
-      console.log('[AutoUpdater] checkForUpdates() returned:', result?.updateInfo?.version || 'no update info')
+      log.debug('checkForUpdates() returned:', result?.updateInfo?.version || 'no update info')
     }).catch((error) => {
       if (resolved) return
       resolved = true
       cleanup()
       const message = error instanceof Error ? error.message : 'Unknown error'
-      console.error('[AutoUpdater] checkForUpdates() threw:', message)
+      log.error('checkForUpdates() threw:', message)
       sendStatus({ type: 'error', message })
       resolve({ success: false, error: message })
     })
@@ -201,28 +205,28 @@ export async function installUpdate(): Promise<void> {
     return
   }
 
-  console.log('[AutoUpdater] Preparing to install update...')
+  log.info('Preparing to install update...')
 
   // Save terminal state first (preserve user's session for after update)
-  console.log('[AutoUpdater] Saving terminal state...')
+  log.debug('Saving terminal state...')
   saveTerminalStateImmediate()
 
   // Stop all background processes
-  console.log('[AutoUpdater] Stopping file watcher...')
+  log.debug('Stopping file watcher...')
   stopWatching()
 
-  console.log('[AutoUpdater] Stopping workflow polling...')
+  log.debug('Stopping workflow polling...')
   stopAllPolling()
 
   // Force cleanup all terminal processes
   // This is critical on Windows where PTY processes may not respond to SIGTERM quickly
-  console.log('[AutoUpdater] Cleaning up terminal processes...')
+  log.debug('Cleaning up terminal processes...')
   cleanupAllTerminals()
 
   // Brief delay to allow cleanup to complete
   // This gives node-pty time to clean up child processes
   await new Promise((resolve) => setTimeout(resolve, 100))
 
-  console.log('[AutoUpdater] Calling quitAndInstall...')
+  log.debug('Calling quitAndInstall...')
   autoUpdater.quitAndInstall(false, true)
 }

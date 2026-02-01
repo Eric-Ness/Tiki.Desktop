@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { logger } from '../../lib/logger'
 import { GitHubIssue, useTikiStore, CachedPrediction, CachedPatternMatch } from '../../stores/tiki-store'
 import { IssueActions } from '../issues'
 import { PRPreview } from './PRPreview'
@@ -152,7 +153,7 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
         const commits = await window.tikiDesktop.rollback.getIssueCommits(projectPath, number)
         setHasTrackedCommits(commits.length > 0)
       } catch (error) {
-        console.error('Failed to check issue commits:', error)
+        logger.error('Failed to check issue commits:', error)
         setHasTrackedCommits(false)
       }
     }
@@ -216,7 +217,7 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
         }))
         setPatternMatchesInStore(number, cachedMatches)
       } catch (error) {
-        console.error('Failed to check patterns:', error)
+        logger.error('Failed to check patterns:', error)
         setPatternMatches([])
       }
       setCheckingPatterns(false)
@@ -247,7 +248,7 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
       )
 
       // Show success notification (you could add a toast here)
-      console.log(
+      logger.debug(
         `Applied ${result.appliedMeasures.length} preventive measures`,
         result.appliedMeasures.map((m) => m.description)
       )
@@ -255,7 +256,7 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
       // Optionally dismiss the warning after applying
       setPatternsDismissed(true)
     } catch (error) {
-      console.error('Failed to apply prevention measures:', error)
+      logger.error('Failed to apply prevention measures:', error)
     }
   }, [cwd, activeProject?.path, plan, patternMatches])
 
@@ -267,7 +268,7 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
   // Handle view pattern details (could navigate to pattern dashboard)
   const handleViewPatternDetails = useCallback((pattern: FailurePatternPreload) => {
     // For now, log the pattern - could open a modal or navigate to dashboard
-    console.log('View pattern details:', pattern)
+    logger.debug('View pattern details:', pattern)
   }, [])
 
   // Get all suggested measures from matches
@@ -317,7 +318,7 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
       try {
         await window.tikiDesktop.github.openInBrowser(number, cwd)
       } catch (error) {
-        console.error('Failed to open issue in browser:', error)
+        logger.error('Failed to open issue in browser:', error)
       }
     }
   }
@@ -500,11 +501,11 @@ export function IssueDetail({ issue, cwd }: IssueDetailProps) {
                     measures={allSuggestedMeasures}
                     onApply={async (measure) => {
                       // Apply individual measure
-                      console.log('Apply measure:', measure)
+                      logger.debug('Apply measure:', measure)
                     }}
                     onDismiss={(measure) => {
                       // Dismiss individual measure
-                      console.log('Dismiss measure:', measure)
+                      logger.debug('Dismiss measure:', measure)
                     }}
                   />
                 </div>

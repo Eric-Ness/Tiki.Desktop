@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTikiStore } from '../../stores/tiki-store'
 import { RollbackDialog } from './RollbackDialog'
 import type { Checkpoint } from '../../../../preload'
+import { logger } from '../../lib/logger'
 
 interface CheckpointManagerProps {
   isOpen: boolean
@@ -257,7 +258,7 @@ export function CheckpointManager({ isOpen, onClose }: CheckpointManagerProps) {
       // Sort by most recent first
       setCheckpoints(list.sort((a, b) => b.createdAt - a.createdAt))
     } catch (err) {
-      console.error('Failed to load checkpoints:', err)
+      logger.error('Failed to load checkpoints:', err)
       setError(err instanceof Error ? err.message : 'Failed to load checkpoints')
     } finally {
       setLoading(false)
@@ -316,7 +317,7 @@ export function CheckpointManager({ isOpen, onClose }: CheckpointManagerProps) {
       setViewMode('list')
       // Checkpoints will be updated via the subscription
     } catch (err) {
-      console.error('Failed to create checkpoint:', err)
+      logger.error('Failed to create checkpoint:', err)
       setError(err instanceof Error ? err.message : 'Failed to create checkpoint')
     } finally {
       setCreating(false)
@@ -333,7 +334,7 @@ export function CheckpointManager({ isOpen, onClose }: CheckpointManagerProps) {
       await window.tikiDesktop.rollback.deleteCheckpoint(activeProject.path, checkpoint.id)
       // Checkpoints will be updated via the subscription
     } catch (err) {
-      console.error('Failed to delete checkpoint:', err)
+      logger.error('Failed to delete checkpoint:', err)
       setError(err instanceof Error ? err.message : 'Failed to delete checkpoint')
     } finally {
       setDeleting(null)

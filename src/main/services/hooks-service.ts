@@ -3,6 +3,7 @@ import { promisify } from 'util'
 import { readdir, readFile, writeFile, unlink, stat, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join, basename } from 'path'
+import { logger } from './logger'
 
 const execFileAsync = promisify(execFile)
 
@@ -101,7 +102,7 @@ export async function listHooks(cwd?: string): Promise<Hook[]> {
 
     return hooks.sort((a, b) => a.name.localeCompare(b.name))
   } catch (error) {
-    console.error('Failed to list hooks:', error)
+    logger.error('Failed to list hooks:', error)
     return []
   }
 }
@@ -127,7 +128,7 @@ export async function readHook(name: string, cwd?: string): Promise<Hook | null>
       content
     }
   } catch (error) {
-    console.error(`Failed to read hook ${name}:`, error)
+    logger.error(`Failed to read hook ${name}:`, error)
     return null
   }
 }
@@ -144,7 +145,7 @@ export async function writeHook(name: string, content: string, cwd?: string): Pr
     await writeFile(hookPath, content, 'utf-8')
     return true
   } catch (error) {
-    console.error(`Failed to write hook ${name}:`, error)
+    logger.error(`Failed to write hook ${name}:`, error)
     return false
   }
 }
@@ -164,7 +165,7 @@ export async function deleteHook(name: string, cwd?: string): Promise<boolean> {
     await unlink(hookPath)
     return true
   } catch (error) {
-    console.error(`Failed to delete hook ${name}:`, error)
+    logger.error(`Failed to delete hook ${name}:`, error)
     return false
   }
 }

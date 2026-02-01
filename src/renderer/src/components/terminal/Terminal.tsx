@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
 import { useSettingsCategory, TerminalSettings } from '../../hooks/useSettings'
+import { logger } from '../../lib/logger'
 
 interface RestoredTerminalInfo {
   id: string
@@ -55,7 +56,7 @@ export function Terminal({ terminalId, onReady, restoredInfo }: TerminalProps) {
         window.tikiDesktop.terminal.resize(terminalId, cols, rows)
       } catch (e) {
         // Terminal may not be fully initialized
-        console.debug('Terminal resize skipped:', e)
+        logger.debug('Terminal resize skipped:', e)
       }
     }
   }, [terminalId])
@@ -160,7 +161,7 @@ export function Terminal({ terminalId, onReady, restoredInfo }: TerminalProps) {
         isTerminalReadyRef.current = true
       } catch (e) {
         // Terminal may not be fully ready, will be resized on next resize event
-        console.debug('Initial terminal fit skipped:', e)
+        logger.debug('Initial terminal fit skipped:', e)
       }
       onReady?.()
     })
@@ -208,7 +209,7 @@ export function Terminal({ terminalId, onReady, restoredInfo }: TerminalProps) {
             window.tikiDesktop.terminal.resize(terminalId, cols, rows)
           }
         } catch (e) {
-          console.debug('Terminal settings resize skipped:', e)
+          logger.debug('Terminal settings resize skipped:', e)
         }
       })
     }
@@ -236,7 +237,7 @@ export function Terminal({ terminalId, onReady, restoredInfo }: TerminalProps) {
         const { cols, rows } = terminal
         window.tikiDesktop.terminal.resize(terminalId, cols, rows)
       } catch (e) {
-        console.debug('Terminal initial size skipped:', e)
+        logger.debug('Terminal initial size skipped:', e)
       }
     }
 

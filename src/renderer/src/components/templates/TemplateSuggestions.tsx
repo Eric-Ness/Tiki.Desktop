@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTikiStore } from '../../stores/tiki-store'
+import { logger } from '../../lib/logger'
 
 type TemplateCategory = 'issue_type' | 'component' | 'workflow' | 'custom'
 type VariableType = 'string' | 'file' | 'component' | 'number'
@@ -102,7 +103,7 @@ export function TemplateSuggestions({
         // Only show top 3 suggestions
         setSuggestions(result.slice(0, 3))
       } catch (err) {
-        console.error('Failed to fetch template suggestions:', err)
+        logger.error('Failed to fetch template suggestions:', err)
         setError(err instanceof Error ? err.message : 'Failed to fetch suggestions')
       } finally {
         setLoading(false)

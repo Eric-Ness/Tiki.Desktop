@@ -3,6 +3,7 @@ import { Terminal } from './Terminal'
 import { TerminalSplitContainer } from './TerminalSplitContainer'
 import { useTikiStore, TerminalTab } from '../../stores/tiki-store'
 import { useTerminalShortcuts } from '../../hooks/useTerminalShortcuts'
+import { logger } from '../../lib/logger'
 
 interface TerminalTabsProps {
   cwd: string
@@ -143,7 +144,7 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
         }
       })
     } catch (error) {
-      console.error('Failed to create terminal:', error)
+      logger.error('Failed to create terminal:', error)
     }
   }, [cwd, terminals.length])
 
@@ -206,7 +207,7 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
       // If restoration failed or no persisted state, create a new terminal
       createTerminal()
     } catch (error) {
-      console.error('Failed to restore terminal session:', error)
+      logger.error('Failed to restore terminal session:', error)
       // On error, still try to create a terminal
       createTerminal()
     }
@@ -245,7 +246,7 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
       try {
         await window.tikiDesktop.terminal.kill(tabId)
       } catch (error) {
-        console.error('Failed to kill terminal:', error)
+        logger.error('Failed to kill terminal:', error)
       }
 
       // Get current state to check if this is the last terminal
@@ -270,7 +271,7 @@ export function TerminalTabs({ cwd }: TerminalTabsProps) {
               activeTerminal: ptyId
             }))
           } catch (error) {
-            console.error('Failed to create replacement terminal:', error)
+            logger.error('Failed to create replacement terminal:', error)
           }
         }, 0)
       } else {
