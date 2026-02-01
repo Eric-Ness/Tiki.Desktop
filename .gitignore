@@ -50,6 +50,8 @@ coverage/
 .tiki/context/
 .tiki/debug/
 .tiki/tmp/
+.tiki/backups/
+.tiki/cache/
 .tiki/releases/archive/
 
 # Temp files
