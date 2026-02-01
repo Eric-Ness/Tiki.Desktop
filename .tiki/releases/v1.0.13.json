@@ -1,0 +1,32 @@
+{
+  "version": "v1.0.13",
+  "createdAt": "2026-02-01T14:59:45.463Z",
+  "status": "shipped",
+  "requirementsEnabled": false,
+  "githubMilestone": null,
+  "issues": [
+    {
+      "number": 106,
+      "title": "Releases are not listed on initial page load!",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": 2,
+      "totalPhases": 2,
+      "completedAt": "2026-02-01T15:15:00.000Z"
+    },
+    {
+      "number": 105,
+      "title": "On Page load two terminals Are open",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": 3,
+      "totalPhases": 3,
+      "completedAt": "2026-02-01T15:20:00.000Z"
+    }
+  ],
+  "requirements": {
+    "total": 0,
+    "implemented": 0,
+    "verified": 0
+  }
+}

@@ -33,9 +33,10 @@ If no version (and not --continue): show usage and exit.
 
 If `--continue` flag present:
 
-1. Read `.tiki/prompts/release-yolo/resume.md`
-2. Follow resume workflow
-3. Continue from saved position
+1. Read main state at `.tiki/state/current.json`
+2. Look for execution with `type: "release"` in `activeExecutions` array
+3. If found, read `.tiki/prompts/release-yolo/resume.md` and follow resume workflow
+4. Continue from saved position in the release execution object
 
 ### Step 3: Load Release
 
@@ -77,22 +78,32 @@ Otherwise, confirm with user before proceeding.
 
 ### Step 6: Initialize State
 
-Create `.tiki/state/yolo.json`:
+Add release execution to `.tiki/state/current.json` activeExecutions array:
 
-```json
-{
-  "release": "v1.1",
-  "status": "in_progress",
-  "startedAt": "ISO timestamp",
+```javascript
+// Generate execution ID with release-specific format
+const executionId = `exec-release-${VERSION.replace(/\./g, '-')}-${uuid.substring(0, 8)}`;
+
+// Add to activeExecutions in main state
+const releaseExecution = {
+  "id": executionId,
+  "type": "release",
+  "status": "executing",
+  "release": VERSION,
   "currentIssue": null,
-  "currentPhase": null,
+  "issueOrder": [34, 36, 20],  // From dependency order calculation
   "completedIssues": [],
   "failedIssues": [],
-  "issueOrder": [34, 36, 20],
   "flags": { "skipVerify": false, "noTag": false },
-  "errorHistory": []
-}
+  "startedAt": new Date().toISOString(),
+  "lastActivity": new Date().toISOString()
+};
+
+// Read current state, add execution, write back
+state.activeExecutions.push(releaseExecution);
 ```
+
+If main state doesn't exist, create with schema v2 structure first.
 
 ### Step 7: Issue Processing Loop
 
@@ -105,24 +116,47 @@ For each issue in dependency order (starting from --from position if provided):
 ## Issue {index}/{total}: #{number} - {title}
 ```
 
-#### 7b: Plan Stage
+#### 7b: Update Release Execution State
+
+Update the release execution in `activeExecutions`:
+
+```javascript
+// Find and update release execution
+const releaseExec = state.activeExecutions.find(e => e.type === "release");
+releaseExec.currentIssue = issueNumber;
+releaseExec.lastActivity = new Date().toISOString();
+// Write state
+```
+
+#### 7c: Plan Stage
 
 If no plan exists:
 
 1. Read `.tiki/prompts/release-yolo/plan-stage.md`
 2. Follow planning workflow
 
-#### 7c: Execute Stage
+#### 7d: Execute Stage
 
 1. Read `.tiki/prompts/release-yolo/execute-stage.md`
-2. Invoke `/tiki:execute {number}`
-3. If failure, read `.tiki/prompts/release-yolo/error-recovery.md`
+2. Invoke `/tiki:execute {number}` using the Skill tool
+3. **Validation Checkpoint**: After execute returns, verify state was updated:
+   - Read `.tiki/state/current.json`
+   - Check that `activeExecutions` contains an execution for this issue OR `executionHistory` contains a completed execution for this issue
+   - Check that the issue execution has `currentPhase > 0` OR `completedPhases` is non-empty
+   - If validation fails: display warning and offer recovery options (Retry execute, Manual state update, Continue anyway)
+4. If failure, read `.tiki/prompts/release-yolo/error-recovery.md`
 
-#### 7d: Ship Stage
+#### 7e: Ship Stage
 
 1. Read `.tiki/prompts/release-yolo/ship-stage.md`
 2. Invoke `/tiki:ship {number}`
-3. Update state: add to completedIssues
+3. Update release execution state:
+   ```javascript
+   releaseExec.completedIssues.push(issueNumber);
+   releaseExec.currentIssue = null;
+   releaseExec.lastActivity = new Date().toISOString();
+   ```
+4. The individual issue's execution (if any) moves to `executionHistory`
 
 ### Step 8: Requirement Verification
 
@@ -131,35 +165,7 @@ If requirements exist AND not --skip-verify:
 1. Read `.tiki/prompts/release-yolo/verification.md`
 2. Follow verification workflow
 
-### Step 9: Run Pre-Ship Hook
-
-**Before creating the release tag**, check for and execute the pre-ship hook:
-
-1. Check if `.tiki/hooks/pre-ship` exists
-2. If it exists, run it with bash (on Windows, use Git Bash):
-
-```bash
-# On Windows
-bash .tiki/hooks/pre-ship
-
-# Set environment variables
-export TIKI_RELEASE_VERSION="${VERSION}"
-```
-
-3. If the hook modifies files (e.g., bumps version), commit the changes:
-
-```bash
-git add -A
-git commit -m "chore: bump version for ${VERSION}" --allow-empty
-```
-
-4. Push the commit before tagging:
-
-```bash
-git push origin HEAD
-```
-
-### Step 10: Ship Release
+### Step 9: Ship Release
 
 Handle any failed issues (ship anyway, remove, or abort).
 
@@ -170,11 +176,28 @@ git tag -a "${VERSION}" -m "Release ${VERSION}"
 git push origin "${VERSION}"
 ```
 
-Close milestone if linked. Archive release file. Clean up yolo state.
+Close milestone if linked. Archive release file.
+
+Move release execution to history:
+
+```javascript
+// Find the release execution
+const releaseExec = state.activeExecutions.find(e => e.type === "release");
+
+// Update final status
+releaseExec.status = "completed";
+releaseExec.completedAt = new Date().toISOString();
+
+// Move from activeExecutions to executionHistory
+state.activeExecutions = state.activeExecutions.filter(e => e.type !== "release");
+state.executionHistory.push(releaseExec);
+
+// Write updated state
+```
 
 Update version.json with changelog entry for completed issues.
 
-### Step 11: Completion Summary
+### Step 10: Completion Summary
 
 ```text
 ## Release {version} Shipped!
