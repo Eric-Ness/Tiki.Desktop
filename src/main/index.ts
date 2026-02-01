@@ -30,6 +30,7 @@ import { registerWorkspaceHandlers } from './ipc/workspace'
 import { registerLearningHandlers } from './ipc/learning'
 import { registerHooksHandlers } from './ipc/hooks'
 import { registerCommandsHandlers } from './ipc/commands'
+import { registerClaudeStatsHandlers } from './ipc/claude-stats'
 import { setMainWindow as setSettingsWindow } from './services/settings-store'
 import { setMainWindow as setNotificationWindow } from './services/notification-service'
 import { setUpdateWindow, initAutoUpdater, checkForUpdates } from './services/update-service'
@@ -113,6 +114,7 @@ app.whenReady().then(() => {
   registerLearningHandlers()
   registerHooksHandlers()
   registerCommandsHandlers()
+  registerClaudeStatsHandlers()
 
   createWindow()
 

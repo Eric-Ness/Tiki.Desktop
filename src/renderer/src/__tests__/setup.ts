@@ -121,6 +121,27 @@ if (isBrowserEnv) {
         }),
         getDailyUsage: vi.fn().mockResolvedValue([])
       },
+      claudeStats: {
+        isAvailable: vi.fn().mockResolvedValue(true),
+        getPlanUsage: vi.fn().mockResolvedValue({
+          sessionTokens: 0,
+          sessionLimit: 500000,
+          sessionPercent: 0,
+          sessionResetTime: new Date(),
+          weeklyTokens: 0,
+          weeklyLimit: 3500000,
+          weeklyPercent: 0,
+          weeklyResetTime: new Date(),
+          totalInputTokens: 0,
+          totalOutputTokens: 0,
+          totalCacheReadTokens: 0,
+          totalCacheCreationTokens: 0,
+          lastUpdated: new Date().toISOString().split('T')[0],
+          dataSource: 'jsonl'
+        }),
+        getRaw: vi.fn().mockResolvedValue(null),
+        getDailyTokens: vi.fn().mockResolvedValue([])
+      },
       search: {
         query: vi.fn().mockResolvedValue([]),
         indexContent: vi.fn().mockResolvedValue(undefined),

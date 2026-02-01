@@ -1089,6 +1089,15 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
     getDailyUsage: (days?: number) => ipcRenderer.invoke('usage:get-daily-usage', days)
   },
 
+  // Claude Stats API (reads from ~/.claude/stats-cache.json)
+  claudeStats: {
+    getPlanUsage: (options?: { sessionLimit?: number; weeklyLimit?: number }) =>
+      ipcRenderer.invoke('claude-stats:get-plan-usage', options),
+    getRaw: () => ipcRenderer.invoke('claude-stats:get-raw'),
+    getDailyTokens: (days?: number) => ipcRenderer.invoke('claude-stats:get-daily-tokens', days),
+    isAvailable: () => ipcRenderer.invoke('claude-stats:is-available')
+  },
+
   // Knowledge API (for .tiki/knowledge/)
   knowledge: {
     list: (
@@ -1687,6 +1696,30 @@ declare global {
         getIssueUsage: (issueNumber: number) => Promise<UsageSummary>
         getSessionUsage: (sessionId: string) => Promise<UsageSummary>
         getDailyUsage: (days?: number) => Promise<DailyUsage[]>
+      }
+      claudeStats: {
+        getPlanUsage: (options?: { sessionLimit?: number; weeklyLimit?: number }) => Promise<{
+          sessionTokens: number
+          sessionLimit: number
+          sessionPercent: number
+          sessionResetTime: Date
+          weeklyTokens: number
+          weeklyLimit: number
+          weeklyPercent: number
+          weeklyResetTime: Date
+          totalInputTokens: number
+          totalOutputTokens: number
+          totalCacheReadTokens: number
+          totalCacheCreationTokens: number
+          lastUpdated: string
+          dataSource: 'claude-stats' | 'jsonl' | 'none'
+        }>
+        getRaw: () => Promise<unknown>
+        getDailyTokens: (days?: number) => Promise<Array<{
+          date: string
+          tokensByModel: Record<string, number>
+        }>>
+        isAvailable: () => Promise<boolean>
       }
       knowledge: {
         list: (

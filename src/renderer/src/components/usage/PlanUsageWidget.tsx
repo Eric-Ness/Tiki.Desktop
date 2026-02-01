@@ -2,37 +2,14 @@ import { useState, useEffect } from 'react'
 import { logger } from '../../lib/logger'
 
 interface ClaudePlanUsage {
-  sessionTokens: number
-  sessionLimit: number
-  sessionPercent: number
-  sessionResetTime: Date
   weeklyTokens: number
   weeklyLimit: number
   weeklyPercent: number
-  weeklyResetTime: Date
   totalInputTokens: number
   totalOutputTokens: number
   totalCacheReadTokens: number
-  totalCacheCreationTokens: number
   lastUpdated: string
-  dataSource: 'claude-stats' | 'none'
-}
-
-function formatTimeRemaining(resetTime: Date): string {
-  const ms = new Date(resetTime).getTime() - Date.now()
-  if (ms <= 0) return 'now'
-
-  const hours = Math.floor(ms / (1000 * 60 * 60))
-  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60))
-
-  if (hours > 24) {
-    const days = Math.floor(hours / 24)
-    return `${days}d ${hours % 24}h`
-  }
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`
-  }
-  return `${minutes}m`
+  dataSource: 'claude-stats' | 'jsonl' | 'none'
 }
 
 function formatTokenCount(tokens: number): string {
@@ -58,7 +35,16 @@ export function PlanUsageWidget() {
 
         if (available) {
           const data = await window.tikiDesktop.claudeStats.getPlanUsage()
-          setUsage(data)
+          setUsage({
+            weeklyTokens: data.weeklyTokens,
+            weeklyLimit: data.weeklyLimit,
+            weeklyPercent: data.weeklyPercent,
+            totalInputTokens: data.totalInputTokens,
+            totalOutputTokens: data.totalOutputTokens,
+            totalCacheReadTokens: data.totalCacheReadTokens,
+            lastUpdated: data.lastUpdated,
+            dataSource: data.dataSource
+          })
         }
       } catch (err) {
         logger.error('Failed to fetch Claude stats:', err)
@@ -81,11 +67,7 @@ export function PlanUsageWidget() {
   }
 
   if (!usage) {
-    return (
-      <div className="text-xs text-slate-500 animate-pulse">
-        Loading...
-      </div>
-    )
+    return <div className="text-xs text-slate-500 animate-pulse">Loading...</div>
   }
 
   const getUsageColor = (percent: number) => {
@@ -105,17 +87,17 @@ export function PlanUsageWidget() {
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-300 transition-colors"
-        title="Claude Max plan usage (from ~/.claude/stats-cache.json)"
+        title="Claude Max weekly usage (from ~/.claude/stats-cache.json)"
       >
         <div className="flex items-center gap-1.5">
           <div className="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden">
             <div
-              className={`h-full ${getUsageColor(usage.sessionPercent)} transition-all`}
-              style={{ width: `${usage.sessionPercent}%` }}
+              className={`h-full ${getUsageColor(usage.weeklyPercent)} transition-all`}
+              style={{ width: `${usage.weeklyPercent}%` }}
             />
           </div>
-          <span className={getUsageTextColor(usage.sessionPercent)}>
-            {usage.sessionPercent.toFixed(0)}%
+          <span className={getUsageTextColor(usage.weeklyPercent)}>
+            {usage.weeklyPercent.toFixed(0)}%
           </span>
         </div>
         <svg
@@ -133,29 +115,7 @@ export function PlanUsageWidget() {
         <div className="absolute bottom-full right-0 mb-2 w-72 bg-background-secondary border border-border rounded-lg shadow-xl p-3 z-50">
           <div className="flex items-center justify-between mb-3">
             <div className="text-xs font-medium text-slate-200">Claude Max Usage</div>
-            {usage.dataSource === 'claude-stats' && (
-              <div className="text-[10px] text-emerald-500">Live</div>
-            )}
-          </div>
-
-          {/* Session Usage (Today) */}
-          <div className="mb-3">
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span className="text-slate-400">Today</span>
-              <span className={getUsageTextColor(usage.sessionPercent)}>
-                {formatTokenCount(usage.sessionTokens)} / {formatTokenCount(usage.sessionLimit)}
-              </span>
-            </div>
-            <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-              <div
-                className={`h-full ${getUsageColor(usage.sessionPercent)} transition-all`}
-                style={{ width: `${usage.sessionPercent}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between text-xs mt-1 text-slate-500">
-              <span>{usage.sessionPercent.toFixed(1)}% used</span>
-              <span>Resets in {formatTimeRemaining(usage.sessionResetTime)}</span>
-            </div>
+            <div className="text-[10px] text-emerald-500">Live</div>
           </div>
 
           {/* Weekly Usage */}
@@ -174,7 +134,7 @@ export function PlanUsageWidget() {
             </div>
             <div className="flex items-center justify-between text-xs mt-1 text-slate-500">
               <span>{usage.weeklyPercent.toFixed(1)}% used</span>
-              <span>Resets {formatTimeRemaining(usage.weeklyResetTime)}</span>
+              <span>Rolling 7-day window</span>
             </div>
           </div>
 
@@ -204,9 +164,7 @@ export function PlanUsageWidget() {
             <div className="text-[10px] text-slate-500">
               Source: ~/.claude/stats-cache.json
             </div>
-            <div className="text-[10px] text-slate-500">
-              Last updated: {usage.lastUpdated}
-            </div>
+            <div className="text-[10px] text-slate-500">Last updated: {usage.lastUpdated}</div>
           </div>
         </div>
       )}

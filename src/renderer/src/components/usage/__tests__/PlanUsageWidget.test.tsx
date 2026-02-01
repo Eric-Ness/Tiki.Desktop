@@ -3,43 +3,33 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PlanUsageWidget } from '../PlanUsageWidget'
 
-const mockUsageSummary = {
-  totalInputTokens: 50000,
-  totalOutputTokens: 25000,
-  estimatedCost: 1.25,
-  recordCount: 10
-}
-
-const mockWeeklyUsageSummary = {
-  totalInputTokens: 200000,
-  totalOutputTokens: 100000,
-  estimatedCost: 5.0,
-  recordCount: 50
+const mockPlanUsage = {
+  sessionTokens: 75000,
+  sessionLimit: 500000,
+  sessionPercent: 15,
+  sessionResetTime: new Date(Date.now() + 3 * 60 * 60 * 1000),
+  weeklyTokens: 750000,
+  weeklyLimit: 3500000,
+  weeklyPercent: 21.4,
+  weeklyResetTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+  totalInputTokens: 1900000,
+  totalOutputTokens: 1300000,
+  totalCacheReadTokens: 1742000000,
+  totalCacheCreationTokens: 100000,
+  lastUpdated: '2026-01-31',
+  dataSource: 'claude-stats' as const
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
 
-  // Mock window.tikiDesktop.usage
   window.tikiDesktop = {
     ...window.tikiDesktop,
-    usage: {
-      getSummary: vi.fn().mockImplementation((since: string) => {
-        const sinceDate = new Date(since)
-        const now = new Date()
-        const daysDiff = (now.getTime() - sinceDate.getTime()) / (1000 * 60 * 60 * 24)
-
-        if (daysDiff > 1) {
-          return Promise.resolve(mockWeeklyUsageSummary)
-        }
-        return Promise.resolve(mockUsageSummary)
-      }),
-      addRecord: vi.fn(),
-      getRecords: vi.fn(),
-      clear: vi.fn(),
-      getIssueUsage: vi.fn(),
-      getSessionUsage: vi.fn(),
-      getDailyUsage: vi.fn()
+    claudeStats: {
+      isAvailable: vi.fn().mockResolvedValue(true),
+      getPlanUsage: vi.fn().mockResolvedValue(mockPlanUsage),
+      getRaw: vi.fn().mockResolvedValue(null),
+      getDailyTokens: vi.fn().mockResolvedValue([])
     }
   } as unknown as typeof window.tikiDesktop
 })
@@ -50,13 +40,31 @@ describe('PlanUsageWidget', () => {
       render(<PlanUsageWidget />)
 
       await waitFor(() => {
-        expect(screen.getByText(/15%/)).toBeInTheDocument()
+        expect(screen.getByText(/21%/)).toBeInTheDocument()
       })
     })
 
-    it('should render expand/collapse button', () => {
+    it('should render expand/collapse button', async () => {
       render(<PlanUsageWidget />)
-      expect(screen.getByRole('button')).toBeInTheDocument()
+
+      await waitFor(() => {
+        expect(screen.getByRole('button')).toBeInTheDocument()
+      })
+    })
+
+    it('should show "No stats" when Claude stats unavailable', async () => {
+      window.tikiDesktop.claudeStats.isAvailable = vi.fn().mockResolvedValue(false)
+
+      render(<PlanUsageWidget />)
+
+      await waitFor(() => {
+        expect(screen.getByText('No stats')).toBeInTheDocument()
+      })
+    })
+
+    it('should show loading state initially', () => {
+      render(<PlanUsageWidget />)
+      expect(screen.getByText('Loading...')).toBeInTheDocument()
     })
   })
 
@@ -65,23 +73,15 @@ describe('PlanUsageWidget', () => {
       const user = userEvent.setup()
       render(<PlanUsageWidget />)
 
-      const button = screen.getByRole('button')
-      await user.click(button)
-
       await waitFor(() => {
-        expect(screen.getByText('Claude Plan Usage')).toBeInTheDocument()
+        expect(screen.getByRole('button')).toBeInTheDocument()
       })
-    })
-
-    it('should show session usage section when expanded', async () => {
-      const user = userEvent.setup()
-      render(<PlanUsageWidget />)
 
       const button = screen.getByRole('button')
       await user.click(button)
 
       await waitFor(() => {
-        expect(screen.getByText('Session')).toBeInTheDocument()
+        expect(screen.getByText('Claude Max Usage')).toBeInTheDocument()
       })
     })
 
@@ -89,24 +89,50 @@ describe('PlanUsageWidget', () => {
       const user = userEvent.setup()
       render(<PlanUsageWidget />)
 
+      await waitFor(() => {
+        expect(screen.getByRole('button')).toBeInTheDocument()
+      })
+
       const button = screen.getByRole('button')
       await user.click(button)
 
       await waitFor(() => {
         expect(screen.getByText('Weekly')).toBeInTheDocument()
+        expect(screen.getByText('Rolling 7-day window')).toBeInTheDocument()
       })
     })
 
-    it('should show cost estimates when expanded', async () => {
+    it('should show all-time totals when expanded', async () => {
       const user = userEvent.setup()
       render(<PlanUsageWidget />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button')).toBeInTheDocument()
+      })
 
       const button = screen.getByRole('button')
       await user.click(button)
 
       await waitFor(() => {
-        expect(screen.getByText('Est. Cost (Session)')).toBeInTheDocument()
-        expect(screen.getByText('Est. Cost (Weekly)')).toBeInTheDocument()
+        expect(screen.getByText('All-Time Totals')).toBeInTheDocument()
+        expect(screen.getByText('Input tokens')).toBeInTheDocument()
+        expect(screen.getByText('Output tokens')).toBeInTheDocument()
+      })
+    })
+
+    it('should show Live indicator when expanded', async () => {
+      const user = userEvent.setup()
+      render(<PlanUsageWidget />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button')).toBeInTheDocument()
+      })
+
+      const button = screen.getByRole('button')
+      await user.click(button)
+
+      await waitFor(() => {
+        expect(screen.getByText('Live')).toBeInTheDocument()
       })
     })
 
@@ -114,71 +140,52 @@ describe('PlanUsageWidget', () => {
       const user = userEvent.setup()
       render(<PlanUsageWidget />)
 
+      await waitFor(() => {
+        expect(screen.getByRole('button')).toBeInTheDocument()
+      })
+
       const button = screen.getByRole('button')
       await user.click(button)
 
       await waitFor(() => {
-        expect(screen.getByText('Claude Plan Usage')).toBeInTheDocument()
+        expect(screen.getByText('Claude Max Usage')).toBeInTheDocument()
       })
 
       await user.click(button)
 
       await waitFor(() => {
-        expect(screen.queryByText('Claude Plan Usage')).not.toBeInTheDocument()
+        expect(screen.queryByText('Claude Max Usage')).not.toBeInTheDocument()
       })
     })
   })
 
-  describe('Usage calculations', () => {
-    it('should display session usage percentage correctly', async () => {
+  describe('API calls', () => {
+    it('should check availability on mount', async () => {
       render(<PlanUsageWidget />)
 
-      // 75000 tokens (50k input + 25k output) out of 500000 = 15%
       await waitFor(() => {
-        expect(screen.getByText(/15%/)).toBeInTheDocument()
+        expect(window.tikiDesktop.claudeStats.isAvailable).toHaveBeenCalled()
       })
     })
 
-    it('should show reset time information', async () => {
-      const user = userEvent.setup()
+    it('should fetch plan usage when available', async () => {
       render(<PlanUsageWidget />)
 
-      const button = screen.getByRole('button')
-      await user.click(button)
-
       await waitFor(() => {
-        expect(screen.getByText(/Resets in/)).toBeInTheDocument()
+        expect(window.tikiDesktop.claudeStats.getPlanUsage).toHaveBeenCalled()
       })
     })
 
-    it('should show weekly reset information', async () => {
-      const user = userEvent.setup()
-      render(<PlanUsageWidget />)
+    it('should not fetch plan usage when unavailable', async () => {
+      window.tikiDesktop.claudeStats.isAvailable = vi.fn().mockResolvedValue(false)
 
-      const button = screen.getByRole('button')
-      await user.click(button)
-
-      await waitFor(() => {
-        expect(screen.getByText('Resets Monday')).toBeInTheDocument()
-      })
-    })
-  })
-
-  describe('Usage API calls', () => {
-    it('should call usage API on mount', async () => {
       render(<PlanUsageWidget />)
 
       await waitFor(() => {
-        expect(window.tikiDesktop.usage.getSummary).toHaveBeenCalled()
+        expect(window.tikiDesktop.claudeStats.isAvailable).toHaveBeenCalled()
       })
-    })
 
-    it('should call usage API for both session and weekly', async () => {
-      render(<PlanUsageWidget />)
-
-      await waitFor(() => {
-        expect(window.tikiDesktop.usage.getSummary).toHaveBeenCalledTimes(2)
-      })
+      expect(window.tikiDesktop.claudeStats.getPlanUsage).not.toHaveBeenCalled()
     })
   })
 
@@ -187,17 +194,15 @@ describe('PlanUsageWidget', () => {
       render(<PlanUsageWidget />)
 
       await waitFor(() => {
-        const percentText = screen.getByText(/15%/)
+        const percentText = screen.getByText(/21%/)
         expect(percentText).toHaveClass('text-emerald-400')
       })
     })
 
     it('should show amber color for medium usage (70-90%)', async () => {
-      window.tikiDesktop.usage.getSummary = vi.fn().mockResolvedValue({
-        totalInputTokens: 300000,
-        totalOutputTokens: 100000,
-        estimatedCost: 10.0,
-        recordCount: 100
+      window.tikiDesktop.claudeStats.getPlanUsage = vi.fn().mockResolvedValue({
+        ...mockPlanUsage,
+        weeklyPercent: 80
       })
 
       render(<PlanUsageWidget />)
@@ -209,18 +214,52 @@ describe('PlanUsageWidget', () => {
     })
 
     it('should show red color for high usage (>90%)', async () => {
-      window.tikiDesktop.usage.getSummary = vi.fn().mockResolvedValue({
-        totalInputTokens: 400000,
-        totalOutputTokens: 100000,
-        estimatedCost: 12.5,
-        recordCount: 120
+      window.tikiDesktop.claudeStats.getPlanUsage = vi.fn().mockResolvedValue({
+        ...mockPlanUsage,
+        weeklyPercent: 95
       })
 
       render(<PlanUsageWidget />)
 
       await waitFor(() => {
-        const percentText = screen.getByText(/100%/)
+        const percentText = screen.getByText(/95%/)
         expect(percentText).toHaveClass('text-red-400')
+      })
+    })
+  })
+
+  describe('Token formatting', () => {
+    it('should format large token counts with K suffix', async () => {
+      const user = userEvent.setup()
+      render(<PlanUsageWidget />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button')).toBeInTheDocument()
+      })
+
+      const button = screen.getByRole('button')
+      await user.click(button)
+
+      await waitFor(() => {
+        // 750000 should be formatted as 750K
+        expect(screen.getByText(/750K/)).toBeInTheDocument()
+      })
+    })
+
+    it('should format million+ token counts with M suffix', async () => {
+      const user = userEvent.setup()
+      render(<PlanUsageWidget />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button')).toBeInTheDocument()
+      })
+
+      const button = screen.getByRole('button')
+      await user.click(button)
+
+      await waitFor(() => {
+        // totalInputTokens is 1900000, should be 1.9M
+        expect(screen.getByText('1.9M')).toBeInTheDocument()
       })
     })
   })
