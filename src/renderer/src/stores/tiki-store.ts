@@ -46,6 +46,19 @@ export interface TikiState {
   executions?: Execution[]
 }
 
+// YoloState tracks release-yolo execution context
+export interface YoloState {
+  release: string
+  status: 'idle' | 'in_progress' | 'paused' | 'completed' | 'failed'
+  startedAt: string | null
+  lastActivity: string | null
+  currentIssue: number | null
+  issueOrder: number[]
+  completedIssues: number[]
+  skippedIssues: number[]
+  failedIssues: number[]
+}
+
 export interface Assumption {
   id: string
   confidence: 'high' | 'medium' | 'low'
@@ -297,6 +310,10 @@ interface TikiDesktopState {
   tikiState: TikiState | null
   setTikiState: (state: TikiState | null) => void
 
+  // Yolo State (for release-yolo execution context)
+  yoloState: YoloState | null
+  setYoloState: (state: YoloState | null) => void
+
   // Current Plan
   currentPlan: ExecutionPlan | null
   setCurrentPlan: (plan: ExecutionPlan | null) => void
@@ -478,6 +495,10 @@ export const useTikiStore = create<TikiDesktopState>()(
         // Tiki State
         tikiState: null,
         setTikiState: (tikiState) => set({ tikiState }),
+
+        // Yolo State
+        yoloState: null,
+        setYoloState: (yoloState) => set({ yoloState }),
 
         // Current Plan
         currentPlan: null,

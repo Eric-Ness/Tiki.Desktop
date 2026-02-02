@@ -904,7 +904,13 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.on('tiki:branches-changed', handler)
       return () => ipcRenderer.removeListener('tiki:branches-changed', handler)
     },
+    onYoloChange: (callback: (yoloState: unknown) => void) => {
+      const handler = (_: unknown, yoloState: unknown) => callback(yoloState)
+      ipcRenderer.on('tiki:yolo-changed', handler)
+      return () => ipcRenderer.removeListener('tiki:yolo-changed', handler)
+    },
     getState: () => ipcRenderer.invoke('tiki:get-state'),
+    getYoloState: () => ipcRenderer.invoke('tiki:get-yolo-state'),
     getPlan: (issueNumber: number) => ipcRenderer.invoke('tiki:get-plan', issueNumber),
     getQueue: () => ipcRenderer.invoke('tiki:get-queue'),
     getReleases: () => ipcRenderer.invoke('tiki:get-releases'),
@@ -1547,7 +1553,9 @@ declare global {
         onQueueChange: (callback: (queue: unknown) => void) => () => void
         onReleaseChange: (callback: (data: { filename: string; release: unknown }) => void) => () => void
         onBranchesChange: (callback: (branches: unknown) => void) => () => void
+        onYoloChange: (callback: (yoloState: unknown) => void) => () => void
         getState: () => Promise<unknown>
+        getYoloState: () => Promise<unknown>
         getPlan: (issueNumber: number) => Promise<unknown>
         getQueue: () => Promise<unknown>
         getReleases: () => Promise<unknown[]>

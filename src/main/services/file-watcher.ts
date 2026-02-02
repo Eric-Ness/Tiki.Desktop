@@ -176,12 +176,21 @@ async function handleCheckpointsChange(filePath: string): Promise<void> {
   })
 }
 
+async function handleYoloChange(filePath: string): Promise<void> {
+  debounce('yolo', async () => {
+    const data = await safeReadJson(filePath)
+    sendToRenderer('tiki:yolo-changed', data)
+  })
+}
+
 function handleFileChange(filePath: string): void {
   // Normalize path separators
   const normalizedPath = filePath.replace(/\\/g, '/')
 
   if (normalizedPath.includes('/state/current.json')) {
     handleStateChange(filePath)
+  } else if (normalizedPath.includes('/state/yolo.json')) {
+    handleYoloChange(filePath)
   } else if (normalizedPath.includes('/plans/') && normalizedPath.endsWith('.json')) {
     // Handle all JSON files in plans directory, not just issue-* pattern
     // This covers: issue-N.json, N.json, N-description.json, etc.
@@ -284,6 +293,12 @@ export async function getCurrentState(): Promise<unknown | null> {
   if (!projectPath) return null
   const statePath = join(projectPath, '.tiki', 'state', 'current.json')
   return safeReadJson(statePath)
+}
+
+export async function getYoloState(): Promise<unknown | null> {
+  if (!projectPath) return null
+  const yoloPath = join(projectPath, '.tiki', 'state', 'yolo.json')
+  return safeReadJson(yoloPath)
 }
 
 export async function getPlan(issueNumber: number): Promise<unknown | null> {

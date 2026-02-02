@@ -1,30 +1,34 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
-import { useTikiSync } from '../useTikiSync'
+import { useTikiSync, getPlanExecutionStatus } from '../useTikiSync'
 import type { Project, ExecutionPlan, TikiState } from '../../stores/tiki-store'
 
 // Create mocks that we can track
 const setTikiStateMock = vi.fn()
+const setYoloStateMock = vi.fn()
 const setReleasesMock = vi.fn()
 const setQueueMock = vi.fn()
 const setPlanMock = vi.fn()
 const setCurrentPlanMock = vi.fn()
 const updateReleaseMock = vi.fn()
 
-// Track the tikiState value for the mock
+// Track the tikiState and yoloState values for the mock
 let mockTikiState: TikiState | null = null
+let mockYoloState: unknown = null
 
 // Mock the tiki store - must define inline to work with vi.mock hoisting
 vi.mock('../../stores/tiki-store', async () => {
   // Create a mock store with getState method
   const createMockState = () => ({
     setTikiState: setTikiStateMock,
+    setYoloState: setYoloStateMock,
     setPlan: setPlanMock,
     setCurrentPlan: setCurrentPlanMock,
     setQueue: setQueueMock,
     setReleases: setReleasesMock,
     updateRelease: updateReleaseMock,
-    tikiState: mockTikiState
+    tikiState: mockTikiState,
+    yoloState: mockYoloState
   })
 
   // Create mock useTikiStore function with getState support
@@ -43,8 +47,11 @@ vi.mock('../../stores/tiki-store', async () => {
 // Mock window.tikiDesktop
 const mockGetReleases = vi.fn(() => Promise.resolve([]))
 const mockGetState = vi.fn(() => Promise.resolve(null))
+const mockGetYoloState = vi.fn(() => Promise.resolve(null))
 const mockGetQueue = vi.fn(() => Promise.resolve([]))
+const mockGetPlan = vi.fn(() => Promise.resolve(null))
 const mockOnStateChange = vi.fn(() => vi.fn())
+const mockOnYoloChange = vi.fn(() => vi.fn())
 const mockOnQueueChange = vi.fn(() => vi.fn())
 const mockOnReleaseChange = vi.fn(() => vi.fn())
 
@@ -65,12 +72,15 @@ const mockOnSwitched = vi.fn((callback: (data: { path: string }) => void) => {
 const mockTikiDesktop = {
   tiki: {
     onStateChange: mockOnStateChange,
+    onYoloChange: mockOnYoloChange,
     onPlanChange: mockOnPlanChange,
     onQueueChange: mockOnQueueChange,
     onReleaseChange: mockOnReleaseChange,
     getState: mockGetState,
+    getYoloState: mockGetYoloState,
     getReleases: mockGetReleases,
-    getQueue: mockGetQueue
+    getQueue: mockGetQueue,
+    getPlan: mockGetPlan
   },
   projects: {
     onSwitched: mockOnSwitched
@@ -83,6 +93,7 @@ describe('useTikiSync', () => {
     onSwitchedCallback = null
     onPlanChangeCallback = null
     mockTikiState = null
+    mockYoloState = null
     // @ts-expect-error - mocking window.tikiDesktop
     window.tikiDesktop = mockTikiDesktop
   })
@@ -626,5 +637,184 @@ describe('useTikiSync', () => {
         })
       )
     })
+  })
+})
+
+describe('getPlanExecutionStatus', () => {
+  it('should return idle when no phases have in_progress or failed status', () => {
+    const plan: ExecutionPlan = {
+      issue: { number: 1, title: 'Test Issue' },
+      status: 'pending',
+      phases: [
+        { number: 1, title: 'Phase 1', status: 'pending', files: [], verification: [] },
+        { number: 2, title: 'Phase 2', status: 'pending', files: [], verification: [] }
+      ]
+    }
+
+    const result = getPlanExecutionStatus(plan)
+
+    expect(result.isActive).toBe(false)
+    expect(result.status).toBe('idle')
+    expect(result.currentPhase).toBeNull()
+    expect(result.errorMessage).toBeNull()
+    expect(result.completedPhases).toEqual([])
+  })
+
+  it('should return executing with currentPhase when a phase is in_progress', () => {
+    const plan: ExecutionPlan = {
+      issue: { number: 1, title: 'Test Issue' },
+      status: 'in_progress',
+      phases: [
+        { number: 1, title: 'Phase 1', status: 'completed', files: [], verification: [] },
+        { number: 2, title: 'Phase 2', status: 'in_progress', files: [], verification: [] },
+        { number: 3, title: 'Phase 3', status: 'pending', files: [], verification: [] }
+      ]
+    }
+
+    const result = getPlanExecutionStatus(plan)
+
+    expect(result.isActive).toBe(true)
+    expect(result.status).toBe('executing')
+    expect(result.currentPhase).toBe(2)
+    expect(result.errorMessage).toBeNull()
+    expect(result.completedPhases).toEqual([1])
+  })
+
+  it('should return failed with currentPhase and errorMessage when a phase is failed', () => {
+    const plan: ExecutionPlan = {
+      issue: { number: 1, title: 'Test Issue' },
+      status: 'failed',
+      phases: [
+        { number: 1, title: 'Phase 1', status: 'completed', files: [], verification: [] },
+        {
+          number: 2,
+          title: 'Phase 2',
+          status: 'failed',
+          files: [],
+          verification: [],
+          error: 'Build failed due to type errors'
+        },
+        { number: 3, title: 'Phase 3', status: 'pending', files: [], verification: [] }
+      ]
+    }
+
+    const result = getPlanExecutionStatus(plan)
+
+    expect(result.isActive).toBe(true)
+    expect(result.status).toBe('failed')
+    expect(result.currentPhase).toBe(2)
+    expect(result.errorMessage).toBe('Build failed due to type errors')
+    expect(result.completedPhases).toEqual([1])
+  })
+
+  it('should return correct completedPhases array from plan phases', () => {
+    const plan: ExecutionPlan = {
+      issue: { number: 1, title: 'Test Issue' },
+      status: 'in_progress',
+      phases: [
+        { number: 1, title: 'Phase 1', status: 'completed', files: [], verification: [] },
+        { number: 2, title: 'Phase 2', status: 'completed', files: [], verification: [] },
+        { number: 3, title: 'Phase 3', status: 'completed', files: [], verification: [] },
+        { number: 4, title: 'Phase 4', status: 'in_progress', files: [], verification: [] },
+        { number: 5, title: 'Phase 5', status: 'pending', files: [], verification: [] }
+      ]
+    }
+
+    const result = getPlanExecutionStatus(plan)
+
+    expect(result.completedPhases).toEqual([1, 2, 3])
+    expect(result.completedPhases).toHaveLength(3)
+  })
+
+  it('should handle empty phases array gracefully', () => {
+    const plan: ExecutionPlan = {
+      issue: { number: 1, title: 'Test Issue' },
+      status: 'pending',
+      phases: []
+    }
+
+    const result = getPlanExecutionStatus(plan)
+
+    expect(result.isActive).toBe(false)
+    expect(result.status).toBe('idle')
+    expect(result.currentPhase).toBeNull()
+    expect(result.errorMessage).toBeNull()
+    expect(result.completedPhases).toEqual([])
+  })
+
+  it('should handle plan with undefined phases gracefully', () => {
+    // Test edge case where phases might be undefined
+    const plan = {
+      issue: { number: 1, title: 'Test Issue' },
+      status: 'pending'
+    } as ExecutionPlan
+
+    const result = getPlanExecutionStatus(plan)
+
+    expect(result.isActive).toBe(false)
+    expect(result.status).toBe('idle')
+    expect(result.currentPhase).toBeNull()
+    expect(result.completedPhases).toEqual([])
+  })
+
+  it('should prioritize in_progress over failed when both exist (finds first in_progress)', () => {
+    const plan: ExecutionPlan = {
+      issue: { number: 1, title: 'Test Issue' },
+      status: 'in_progress',
+      phases: [
+        { number: 1, title: 'Phase 1', status: 'in_progress', files: [], verification: [] },
+        {
+          number: 2,
+          title: 'Phase 2',
+          status: 'failed',
+          files: [],
+          verification: [],
+          error: 'Some error'
+        }
+      ]
+    }
+
+    const result = getPlanExecutionStatus(plan)
+
+    // Should find in_progress first
+    expect(result.status).toBe('executing')
+    expect(result.currentPhase).toBe(1)
+    expect(result.errorMessage).toBeNull()
+  })
+
+  it('should return idle when all phases are completed', () => {
+    const plan: ExecutionPlan = {
+      issue: { number: 1, title: 'Test Issue' },
+      status: 'completed',
+      phases: [
+        { number: 1, title: 'Phase 1', status: 'completed', files: [], verification: [] },
+        { number: 2, title: 'Phase 2', status: 'completed', files: [], verification: [] },
+        { number: 3, title: 'Phase 3', status: 'completed', files: [], verification: [] }
+      ]
+    }
+
+    const result = getPlanExecutionStatus(plan)
+
+    expect(result.isActive).toBe(false)
+    expect(result.status).toBe('idle')
+    expect(result.currentPhase).toBeNull()
+    expect(result.completedPhases).toEqual([1, 2, 3])
+  })
+
+  it('should handle failed phase without error message', () => {
+    const plan: ExecutionPlan = {
+      issue: { number: 1, title: 'Test Issue' },
+      status: 'failed',
+      phases: [
+        { number: 1, title: 'Phase 1', status: 'failed', files: [], verification: [] }
+      ]
+    }
+
+    const result = getPlanExecutionStatus(plan)
+
+    expect(result.isActive).toBe(true)
+    expect(result.status).toBe('failed')
+    expect(result.currentPhase).toBe(1)
+    expect(result.errorMessage).toBeNull()
   })
 })

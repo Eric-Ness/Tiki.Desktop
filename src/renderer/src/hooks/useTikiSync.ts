@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react'
-import { useTikiStore, TikiState, ExecutionPlan, Release, Project, Execution } from '../stores/tiki-store'
+import { useTikiStore, TikiState, ExecutionPlan, Release, Project, Execution, YoloState } from '../stores/tiki-store'
 
 /**
  * Raw execution format from state file (activeExecutions array items).
@@ -68,10 +68,38 @@ function mapRawStateToTikiState(rawState: unknown): TikiState | null {
 }
 
 /**
+ * Maps raw yolo state from file to YoloState interface.
+ */
+function mapRawYoloStateToYoloState(rawState: unknown): YoloState | null {
+  if (!rawState || typeof rawState !== 'object') return null
+
+  const state = rawState as Record<string, unknown>
+
+  return {
+    release: (state.release as string) || '',
+    status: (state.status as YoloState['status']) || 'idle',
+    startedAt: (state.startedAt as string) || null,
+    lastActivity: (state.lastActivity as string) || null,
+    currentIssue: (state.currentIssue as number) || null,
+    issueOrder: (state.issueOrder as number[]) || [],
+    completedIssues: (state.completedIssues as number[]) || [],
+    skippedIssues: (state.skippedIssues as number[]) || [],
+    failedIssues: (state.failedIssues as number[]) || []
+  }
+}
+
+/**
  * Determines if a plan has active execution (in_progress or failed phase).
  * Used as a fallback when state.json is stale.
+ * @param plan - The execution plan to analyze
+ * @returns An object containing:
+ *   - isActive: Whether the plan has an in_progress or failed phase
+ *   - currentPhase: The phase number that is in_progress or failed (or null if idle)
+ *   - completedPhases: Array of phase numbers with status 'completed'
+ *   - status: 'executing' if in_progress, 'failed' if failed, 'idle' otherwise
+ *   - errorMessage: Error message from failed phase (if any)
  */
-function getPlanExecutionStatus(plan: ExecutionPlan): {
+export function getPlanExecutionStatus(plan: ExecutionPlan): {
   isActive: boolean
   currentPhase: number | null
   completedPhases: number[]
@@ -119,6 +147,7 @@ function getPlanExecutionStatus(plan: ExecutionPlan): {
  */
 export function useTikiSync(activeProject: Project | null) {
   const setTikiState = useTikiStore((state) => state.setTikiState)
+  const setYoloState = useTikiStore((state) => state.setYoloState)
   const setPlan = useTikiStore((state) => state.setPlan)
   const setCurrentPlan = useTikiStore((state) => state.setCurrentPlan)
   const setQueue = useTikiStore((state) => state.setQueue)
@@ -130,19 +159,24 @@ export function useTikiSync(activeProject: Project | null) {
 
   // Function to load all initial data from the file watcher
   const loadInitialData = useCallback(async () => {
-    const [rawState, releases, queue] = await Promise.all([
+    const [rawState, rawYoloState, releases, queue] = await Promise.all([
       window.tikiDesktop.tiki.getState(),
+      window.tikiDesktop.tiki.getYoloState(),
       window.tikiDesktop.tiki.getReleases(),
       window.tikiDesktop.tiki.getQueue()
     ])
     const mappedState = mapRawStateToTikiState(rawState)
+    const mappedYoloState = mapRawYoloStateToYoloState(rawYoloState)
     setTikiState(mappedState)
+    setYoloState(mappedYoloState)
     setReleases(releases as Release[])
     setQueue((queue as unknown[]) || [])
 
     // Load plan for active issue so phases display immediately
-    if (mappedState?.activeIssue) {
-      const planData = await window.tikiDesktop.tiki.getPlan(mappedState.activeIssue)
+    // Check both tikiState.activeIssue and yoloState.currentIssue
+    const activeIssue = mappedState?.activeIssue ?? mappedYoloState?.currentIssue
+    if (activeIssue) {
+      const planData = await window.tikiDesktop.tiki.getPlan(activeIssue)
       if (planData && typeof planData === 'object' && 'plan' in planData) {
         const plan = (planData as { plan: ExecutionPlan }).plan
         if (plan?.issue?.number) {
@@ -151,12 +185,13 @@ export function useTikiSync(activeProject: Project | null) {
         }
       }
     }
-  }, [setTikiState, setReleases, setQueue, setPlan, setCurrentPlan])
+  }, [setTikiState, setYoloState, setReleases, setQueue, setPlan, setCurrentPlan])
 
   useEffect(() => {
     // If no active project, clear state and don't set up listeners
     if (!activeProject) {
       setTikiState(null)
+      setYoloState(null)
       setReleases([])
       setQueue([])
       initialLoadDoneRef.current = null
@@ -166,6 +201,11 @@ export function useTikiSync(activeProject: Project | null) {
     // Listen for state changes
     const cleanupState = window.tikiDesktop.tiki.onStateChange((rawState) => {
       setTikiState(mapRawStateToTikiState(rawState))
+    })
+
+    // Listen for yolo state changes
+    const cleanupYolo = window.tikiDesktop.tiki.onYoloChange((rawYoloState) => {
+      setYoloState(mapRawYoloStateToYoloState(rawYoloState))
     })
 
     // Listen for plan changes
@@ -178,26 +218,49 @@ export function useTikiSync(activeProject: Project | null) {
           // Get plan execution status to check for active work
           const planStatus = getPlanExecutionStatus(plan)
 
+          // Check for stale plan (no updates in 5+ minutes while showing in_progress)
+          const planWithTimestamps = plan as unknown as { updatedAt?: string; created?: string }
+          const planUpdatedAt = planWithTimestamps.updatedAt || planWithTimestamps.created
+          if (planUpdatedAt) {
+            const planAge = Date.now() - new Date(planUpdatedAt).getTime()
+            const STALE_THRESHOLD = 5 * 60 * 1000 // 5 minutes
+
+            if (planAge > STALE_THRESHOLD && planStatus.status === 'executing') {
+              // eslint-disable-next-line no-console -- Intentional warning for stale plan detection
+              console.warn(
+                `[useTikiSync] Plan for issue #${plan.issue.number} may be stale (last update: ${Math.floor(planAge / 60000)} minutes ago)`
+              )
+            }
+          }
+
           // IMPORTANT: Get fresh state from store, not from closure (stale closure fix)
           // The tikiState from useEffect closure may be stale when this callback fires
-          const currentState = useTikiStore.getState().tikiState
+          const storeState = useTikiStore.getState()
+          const currentState = storeState.tikiState
+          const currentYoloState = storeState.yoloState
 
-          // If this is the active issue in state, update currentPlan
-          if (currentState?.activeIssue === plan.issue.number) {
+          // Check if this issue is active via either tikiState or yoloState
+          const isActiveViaState = currentState?.activeIssue === plan.issue.number
+          const isActiveViaYolo = currentYoloState?.currentIssue === plan.issue.number
+
+          // If this is the active issue, plan is authoritative for phase display
+          if (isActiveViaState || isActiveViaYolo) {
             setCurrentPlan(plan)
 
-            // Check if plan shows more progress than state - update state if so
-            const stateCompletedCount = currentState.completedPhases?.length || 0
-            if (planStatus.completedPhases.length > stateCompletedCount) {
-              // Plan is ahead of state - update state with plan data
-              setTikiState({
-                ...currentState,
-                currentPhase: planStatus.currentPhase,
-                completedPhases: planStatus.completedPhases,
-                status: planStatus.status,
-                lastActivity: new Date().toISOString()
-              })
-            }
+            // ALWAYS update state with plan-derived phase data when issue is active
+            // Plan files are the source of truth for phase status
+            setTikiState({
+              ...(currentState || {
+                activeIssue: plan.issue.number,
+                lastActivity: null
+              }),
+              activeIssue: plan.issue.number,
+              currentPhase: planStatus.currentPhase,
+              completedPhases: planStatus.completedPhases,
+              status: planStatus.status,
+              lastActivity: new Date().toISOString(),
+              errorMessage: planStatus.errorMessage
+            })
           } else if (!currentState?.activeIssue && planStatus.isActive) {
             // Fallback: State shows no active issue, but plan shows active execution
             // This handles the case where Tiki commands don't update state.json
@@ -246,12 +309,13 @@ export function useTikiSync(activeProject: Project | null) {
 
     return () => {
       cleanupState()
+      cleanupYolo()
       cleanupPlan()
       cleanupQueue()
       cleanupRelease()
       cleanupSwitched()
     }
-  }, [activeProject, setTikiState, setPlan, setCurrentPlan, setQueue, setReleases, updateRelease, loadInitialData])
+  }, [activeProject, setTikiState, setYoloState, setPlan, setCurrentPlan, setQueue, setReleases, updateRelease, loadInitialData])
 
   return null
 }
