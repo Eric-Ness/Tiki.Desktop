@@ -183,11 +183,20 @@ async function handleYoloChange(filePath: string): Promise<void> {
   })
 }
 
+async function handlePhasesChange(filePath: string): Promise<void> {
+  debounce('phases', async () => {
+    const data = await safeReadJson(filePath)
+    sendToRenderer('tiki:phases-changed', data)
+  })
+}
+
 function handleFileChange(filePath: string): void {
   // Normalize path separators
   const normalizedPath = filePath.replace(/\\/g, '/')
 
-  if (normalizedPath.includes('/state/current.json')) {
+  if (normalizedPath.includes('/state/phases.json')) {
+    handlePhasesChange(filePath)
+  } else if (normalizedPath.includes('/state/current.json')) {
     handleStateChange(filePath)
   } else if (normalizedPath.includes('/state/yolo.json')) {
     handleYoloChange(filePath)
@@ -299,6 +308,12 @@ export async function getYoloState(): Promise<unknown | null> {
   if (!projectPath) return null
   const yoloPath = join(projectPath, '.tiki', 'state', 'yolo.json')
   return safeReadJson(yoloPath)
+}
+
+export async function getPhases(): Promise<unknown | null> {
+  if (!projectPath) return null
+  const phasesPath = join(projectPath, '.tiki', 'state', 'phases.json')
+  return safeReadJson(phasesPath)
 }
 
 export async function getPlan(issueNumber: number): Promise<unknown | null> {

@@ -909,6 +909,12 @@ contextBridge.exposeInMainWorld('tikiDesktop', {
       ipcRenderer.on('tiki:yolo-changed', handler)
       return () => ipcRenderer.removeListener('tiki:yolo-changed', handler)
     },
+    getPhases: () => ipcRenderer.invoke('tiki:get-phases'),
+    onPhasesChange: (callback: (data: unknown) => void) => {
+      const handler = (_: unknown, data: unknown) => callback(data)
+      ipcRenderer.on('tiki:phases-changed', handler)
+      return () => ipcRenderer.removeListener('tiki:phases-changed', handler)
+    },
     getState: () => ipcRenderer.invoke('tiki:get-state'),
     getYoloState: () => ipcRenderer.invoke('tiki:get-yolo-state'),
     getPlan: (issueNumber: number) => ipcRenderer.invoke('tiki:get-plan', issueNumber),
@@ -1554,6 +1560,8 @@ declare global {
         onReleaseChange: (callback: (data: { filename: string; release: unknown }) => void) => () => void
         onBranchesChange: (callback: (branches: unknown) => void) => () => void
         onYoloChange: (callback: (yoloState: unknown) => void) => () => void
+        getPhases: () => Promise<unknown>
+        onPhasesChange: (callback: (data: unknown) => void) => () => void
         getState: () => Promise<unknown>
         getYoloState: () => Promise<unknown>
         getPlan: (issueNumber: number) => Promise<unknown>

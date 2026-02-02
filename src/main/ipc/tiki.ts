@@ -7,6 +7,7 @@ import {
   stopWatching,
   getCurrentState,
   getYoloState,
+  getPhases,
   getPlan,
   getQueue,
   getReleases,
@@ -41,6 +42,11 @@ export function registerTikiHandlers(): void {
   // Get yolo state (release-yolo execution context)
   ipcMain.handle('tiki:get-yolo-state', async () => {
     return getYoloState()
+  })
+
+  // Get phases state (for new State panel display)
+  ipcMain.handle('tiki:get-phases', async () => {
+    return getPhases()
   })
 
   // Get a specific plan
