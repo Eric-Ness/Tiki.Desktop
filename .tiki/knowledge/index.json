@@ -60,8 +60,14 @@
       "title": "Storage vs UI Category Value Normalization",
       "category": "troubleshooting",
       "tags": ["typescript", "data-mapping", "service-layer", "categories"]
+    },
+    {
+      "id": "state-panel-phase-display",
+      "title": "State Panel Phase Display Issues",
+      "category": "troubleshooting",
+      "tags": ["state-panel", "useTikiSync", "phases", "release-executions", "sidebar"]
     }
   ],
   "categories": ["architecture", "patterns", "troubleshooting"],
-  "lastUpdated": "2026-01-28T17:50:00.000Z"
+  "lastUpdated": "2026-02-02T02:00:00.000Z"
 }

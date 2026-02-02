@@ -1,5 +1,71 @@
 import { useEffect, useCallback, useRef } from 'react'
-import { useTikiStore, TikiState, ExecutionPlan, Release, Project } from '../stores/tiki-store'
+import { useTikiStore, TikiState, ExecutionPlan, Release, Project, Execution } from '../stores/tiki-store'
+
+/**
+ * Raw execution format from state file (activeExecutions array items).
+ * Has different property names than the store's Execution interface.
+ */
+interface RawExecution {
+  id: string
+  type?: 'release' | 'issue'  // Release executions have type: "release"
+  issue?: number
+  issueNumber?: number  // Some formats use this
+  currentIssue?: number  // Release executions use this instead of issue/issueNumber
+  issueTitle?: string
+  currentPhase?: number | null
+  totalPhases?: number | null
+  status: string
+  completedPhases?: number[]
+  errorMessage?: string | null
+  autoFixAttempt?: number | null
+  autoFixMaxAttempts?: number | null
+  activeHook?: string | null
+  startedAt?: string | null
+}
+
+/**
+ * Maps raw state from file to TikiState interface.
+ * Handles field name differences (activeExecutions -> executions, issue -> issueNumber).
+ */
+function mapRawStateToTikiState(rawState: unknown): TikiState | null {
+  if (!rawState || typeof rawState !== 'object') return null
+
+  const state = rawState as Record<string, unknown>
+
+  // Map activeExecutions to executions with correct property names
+  let executions: Execution[] | undefined
+  const rawExecutions = state.activeExecutions as RawExecution[] | undefined
+  if (rawExecutions && Array.isArray(rawExecutions)) {
+    executions = rawExecutions
+      // Include release executions (have currentIssue) and issue executions (have issue/issueNumber)
+      .filter((exec) => exec.issue !== undefined || exec.issueNumber !== undefined || exec.currentIssue !== undefined)
+      .map((exec) => ({
+        issueNumber: exec.issue ?? exec.issueNumber ?? exec.currentIssue ?? 0,
+        status: exec.status as Execution['status'],
+        currentPhase: exec.currentPhase ?? null,
+        totalPhases: exec.totalPhases ?? null,
+        completedPhases: exec.completedPhases ?? [],
+        autoFixAttempt: exec.autoFixAttempt,
+        maxAutoFixAttempts: exec.autoFixMaxAttempts ?? undefined,
+        hookName: exec.activeHook,
+        errorMessage: exec.errorMessage,
+        startedAt: exec.startedAt
+      }))
+  }
+
+  return {
+    activeIssue: state.activeIssue as number | null,
+    currentPhase: state.currentPhase as number | null,
+    status: (state.status as TikiState['status']) || 'idle',
+    completedPhases: (state.completedPhases as number[]) || [],
+    lastActivity: state.lastActivity as string | null,
+    autoFixAttempt: state.autoFixAttempt as number | null | undefined,
+    maxAutoFixAttempts: state.maxAutoFixAttempts as number | undefined,
+    hookName: state.hookName as string | null | undefined,
+    errorMessage: state.errorMessage as string | null | undefined,
+    executions
+  }
+}
 
 /**
  * Determines if a plan has active execution (in_progress or failed phase).
@@ -64,15 +130,28 @@ export function useTikiSync(activeProject: Project | null) {
 
   // Function to load all initial data from the file watcher
   const loadInitialData = useCallback(async () => {
-    const [state, releases, queue] = await Promise.all([
+    const [rawState, releases, queue] = await Promise.all([
       window.tikiDesktop.tiki.getState(),
       window.tikiDesktop.tiki.getReleases(),
       window.tikiDesktop.tiki.getQueue()
     ])
-    setTikiState(state as TikiState | null)
+    const mappedState = mapRawStateToTikiState(rawState)
+    setTikiState(mappedState)
     setReleases(releases as Release[])
     setQueue((queue as unknown[]) || [])
-  }, [setTikiState, setReleases, setQueue])
+
+    // Load plan for active issue so phases display immediately
+    if (mappedState?.activeIssue) {
+      const planData = await window.tikiDesktop.tiki.getPlan(mappedState.activeIssue)
+      if (planData && typeof planData === 'object' && 'plan' in planData) {
+        const plan = (planData as { plan: ExecutionPlan }).plan
+        if (plan?.issue?.number) {
+          setPlan(plan.issue.number, plan)
+          setCurrentPlan(plan)
+        }
+      }
+    }
+  }, [setTikiState, setReleases, setQueue, setPlan, setCurrentPlan])
 
   useEffect(() => {
     // If no active project, clear state and don't set up listeners
@@ -85,8 +164,8 @@ export function useTikiSync(activeProject: Project | null) {
     }
 
     // Listen for state changes
-    const cleanupState = window.tikiDesktop.tiki.onStateChange((state) => {
-      setTikiState(state as TikiState | null)
+    const cleanupState = window.tikiDesktop.tiki.onStateChange((rawState) => {
+      setTikiState(mapRawStateToTikiState(rawState))
     })
 
     // Listen for plan changes
