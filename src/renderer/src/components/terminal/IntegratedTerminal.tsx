@@ -1,8 +1,69 @@
 /**
  * IntegratedTerminal Component
  *
- * A simplified terminal component for the Development layout.
- * Shows a single terminal instance in the bottom pane.
+ * A simplified terminal component for the Development layout, providing a single
+ * embedded terminal instance in the bottom pane. Uses xterm.js for terminal emulation
+ * with PTY backend communication via IPC.
+ *
+ * @module components/terminal/IntegratedTerminal
+ *
+ * ## IPC Dependencies (window.tikiDesktop.terminal)
+ *
+ * - `create(cwd: string)` - Creates a new PTY session with the specified working directory.
+ *   Returns a unique terminal ID used for all subsequent operations.
+ *
+ * - `write(id: string, data: string)` - Sends user input (keystrokes) to the PTY process.
+ *   Called on every xterm.onData event to forward input to the shell.
+ *
+ * - `resize(id: string, cols: number, rows: number)` - Synchronizes terminal dimensions
+ *   with the PTY. Called on initial creation and whenever the container resizes.
+ *
+ * - `kill(id: string)` - Destroys the PTY session and cleans up resources.
+ *   Called during component unmount.
+ *
+ * - `onData(callback: (id, data) => void)` - Subscribes to PTY output data.
+ *   Returns an unsubscribe function. Output is written to xterm for display.
+ *
+ * ## Terminal Lifecycle
+ *
+ * 1. **Initialization**:
+ *    - Creates XTerm instance with custom dark theme
+ *    - Loads FitAddon (responsive sizing) and WebLinksAddon (clickable URLs)
+ *    - Opens terminal in container element
+ *    - Creates PTY session via IPC with initial resize
+ *
+ * 2. **Data Flow**:
+ *    - User input: xterm.onData -> IPC write -> PTY
+ *    - PTY output: IPC onData -> xterm.write -> display
+ *
+ * 3. **Resize Handling**:
+ *    - ResizeObserver monitors container size changes
+ *    - FitAddon.fit() recalculates dimensions
+ *    - IPC resize syncs PTY with new dimensions
+ *
+ * 4. **Cleanup**:
+ *    - Disposes xterm input listener
+ *    - Disconnects ResizeObserver
+ *    - Disposes xterm instance
+ *    - Kills PTY session via IPC
+ *
+ * ## XTerm Addons
+ *
+ * - **FitAddon**: Automatically fits terminal to container size. Essential for
+ *   responsive layouts and proper dimension synchronization with PTY.
+ *
+ * - **WebLinksAddon**: Makes URLs in terminal output clickable, opening in
+ *   default browser. Improves UX for CLI tools that output links.
+ *
+ * ## UI Controls
+ *
+ * - **Clear button** (RotateCcw): Clears terminal scrollback and viewport
+ * - **Minimize/Expand** (ChevronDown/ChevronUp): Toggles terminal content visibility
+ *
+ * @example
+ * ```tsx
+ * <IntegratedTerminal cwd="/path/to/project" />
+ * ```
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react'

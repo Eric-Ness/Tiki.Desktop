@@ -1,3 +1,59 @@
+/**
+ * Sidebar.tsx - Main sidebar navigation component
+ *
+ * @description
+ * The Sidebar component provides the primary navigation interface for Tiki Desktop.
+ * It displays collapsible sections for projects, execution state, issues, releases,
+ * knowledge entries, hooks, commands, and templates. The component also includes
+ * action buttons for starting Claude Code and updating the Tiki framework.
+ *
+ * @dependencies
+ * - React: useState, useCallback hooks for local state and memoized callbacks
+ * - useTikiStore: Central Zustand store for Tiki state management
+ * - window.tikiDesktop.terminal: IPC API for terminal creation and management
+ * - window.tikiDesktop.github: IPC API for GitHub issue operations
+ * - window.tikiDesktop.templates: IPC API for template management
+ * - logger: Application logging utility
+ *
+ * @storeConnections
+ * - tikiState: Current Tiki execution state (status, activeIssue, currentPhase, executions)
+ * - currentPlan: The execution plan for the currently active issue
+ * - activeProject: The currently selected project context
+ * - plans: Map of all loaded execution plans by issue number
+ * - setGithubLoading, setGithubError, setIssues: GitHub state mutators
+ * - addTerminal, setActiveTerminal, setActiveTab: Terminal and UI state mutators
+ *
+ * @childComponents
+ * - ProjectList: Displays and manages project selection
+ * - IssueList: Lists GitHub issues with filtering and selection
+ * - ReleaseList: Shows releases with their associated issues
+ * - KnowledgeList: Displays project knowledge base entries
+ * - KnowledgeEditor: Modal for creating/editing knowledge entries
+ * - HooksList: Lists available lifecycle hooks
+ * - HookEditor: Modal for creating/editing hooks
+ * - CommandsList: Shows custom slash commands
+ * - CommandEditor: Modal for creating/editing commands
+ * - TemplateList: Displays plan templates
+ * - TemplateDetail: Modal showing template details with export/delete actions
+ * - CreateTemplateDialog: Modal for creating new templates
+ * - CreateReleaseDialog: Modal for creating new releases
+ * - SidebarSection: Collapsible section wrapper with title and optional action
+ * - ExecutionItem: Renders individual execution progress in multi-execution mode
+ *
+ * @keyCallbacks
+ * - onProjectSwitch: Prop callback invoked when user switches projects
+ * - handleStartClaudeCode: Creates terminal, launches Claude with --dangerously-skip-permissions
+ * - handleUpdateTiki: Creates terminal, runs /tiki:update-tiki command
+ * - handleRefreshIssues: Refreshes GitHub issues via IPC and updates store
+ *
+ * @utilityFunctions
+ * - getStatusColor: Maps execution status to Tailwind background color class
+ * - getStatusLabel: Generates human-readable label from tikiState status
+ *
+ * @props
+ * - cwd: string - Current working directory / project path
+ * - onProjectSwitch: (project: Project) => void - Callback when project is switched
+ */
 import { useState, useCallback } from 'react'
 import { logger } from '../../lib/logger'
 import { useTikiStore, type Project, type Execution } from '../../stores/tiki-store'

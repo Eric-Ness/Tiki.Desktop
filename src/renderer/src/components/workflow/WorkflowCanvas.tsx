@@ -1,3 +1,57 @@
+/**
+ * WorkflowCanvas.tsx
+ *
+ * React Flow canvas for visualizing Tiki execution plan phases as a connected
+ * workflow diagram. Renders the current plan as a vertical graph with automatic
+ * dagre layout positioning.
+ *
+ * @description
+ * This component serves as the main workflow visualization, displaying execution
+ * plans as interactive node graphs. It converts plan data from the tiki-store
+ * into React Flow nodes and edges, applies automatic layout, and handles user
+ * interactions like node selection and phase navigation.
+ *
+ * @dependencies
+ * - @xyflow/react: ReactFlow, Controls, MiniMap, Background, ReactFlowProvider
+ * - dagre (via workflow-layout): Automatic graph layout algorithm
+ *
+ * @nodeTypes
+ * - phase: PhaseNode - Execution phase with status, title, file count, risk indicator
+ * - issue: IssueNode - GitHub issue at the top of the workflow
+ * - ship: ShipNode - Final ship node indicating completion readiness
+ *
+ * @edgeTypes
+ * - dependency: DependencyEdge - Animated/solid connector based on target status
+ *
+ * @storeConnections
+ * - useTikiStore.currentPlan: Source data for nodes/edges (via planToNodes, planToEdges)
+ * - useTikiStore.tikiState: Current execution state (activeIssue, currentPhase, status)
+ * - useTikiStore.selectedNode: Currently selected node ID for highlighting
+ * - useTikiStore.setSelectedNode: Updates selection on node click
+ *
+ * @hooks
+ * - usePhaseControls: Provides pause, resume, skipPhase, redoPhase actions
+ *   that send Tiki commands to the terminal
+ *
+ * @keyFunctions
+ * - getLayoutedElements: Applies dagre top-to-bottom layout to nodes/edges
+ * - planToNodes: Converts ExecutionPlan to React Flow nodes (issue, phases, ship)
+ * - planToEdges: Creates sequential edges connecting all nodes
+ * - getPhasesWithRisk: Identifies phases affected by low-confidence assumptions
+ *
+ * @keyBehaviors
+ * - Auto-fit: Fits view to content when plan changes (with padding)
+ * - Auto-focus: Centers view on currently executing phase when currentPhase changes
+ * - Auto-select: Automatically selects the active phase node during execution
+ * - Risk indicators: Shows warning badge on phases with low-confidence assumptions
+ * - Empty state: Displays placeholder when no workflow phases exist
+ *
+ * @childComponents
+ * - PhaseControls: Toolbar with pause/resume/skip/redo buttons
+ * - Controls: React Flow zoom controls (bottom-left)
+ * - MiniMap: Overview minimap (bottom-right)
+ * - Background: Dot pattern background
+ */
 import { useMemo, useEffect, useCallback } from 'react'
 import {
   ReactFlow,
