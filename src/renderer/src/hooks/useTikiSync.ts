@@ -27,7 +27,7 @@ interface RawExecution {
  * Maps raw state from file to TikiState interface.
  * Handles field name differences (activeExecutions -> executions, issue -> issueNumber).
  */
-function mapRawStateToTikiState(rawState: unknown): TikiState | null {
+export function mapRawStateToTikiState(rawState: unknown): TikiState | null {
   if (!rawState || typeof rawState !== 'object') return null
 
   const state = rawState as Record<string, unknown>
@@ -63,6 +63,13 @@ function mapRawStateToTikiState(rawState: unknown): TikiState | null {
     maxAutoFixAttempts: state.maxAutoFixAttempts as number | undefined,
     hookName: state.hookName as string | null | undefined,
     errorMessage: state.errorMessage as string | null | undefined,
+    // Simplified state format fields (v3)
+    startedAt: state.startedAt as string | null | undefined,
+    lastCompletedIssue: state.lastCompletedIssue as number | null | undefined,
+    lastCompletedAt: state.lastCompletedAt as string | null | undefined,
+    totalPhases: state.totalPhases as number | null | undefined,
+    activeIssueTitle: state.activeIssueTitle as string | null | undefined,
+    // Multi-execution support (v2 format, will be undefined in simplified format)
     executions
   }
 }

@@ -42,7 +42,14 @@ export interface TikiState {
   hookName?: string | null
   errorMessage?: string | null
 
-  // Multi-execution support (new format from Tiki#90)
+  // Simplified state format fields (v3)
+  startedAt?: string | null           // When execution started
+  lastCompletedIssue?: number | null  // Last successfully completed issue number
+  lastCompletedAt?: string | null     // When last issue was completed
+  totalPhases?: number | null         // Total phases in current execution
+  activeIssueTitle?: string | null    // Title of active issue (from simplified format)
+
+  // Multi-execution support (new format from Tiki#90, absent in simplified format)
   executions?: Execution[]
 }
 

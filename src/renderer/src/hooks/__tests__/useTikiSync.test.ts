@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
-import { useTikiSync, getPlanExecutionStatus } from '../useTikiSync'
+import { useTikiSync, getPlanExecutionStatus, mapRawStateToTikiState } from '../useTikiSync'
 import type { Project, ExecutionPlan, TikiState } from '../../stores/tiki-store'
 
 // Create mocks that we can track
@@ -816,5 +816,423 @@ describe('getPlanExecutionStatus', () => {
     expect(result.status).toBe('failed')
     expect(result.currentPhase).toBe(1)
     expect(result.errorMessage).toBeNull()
+  })
+})
+
+describe('mapRawStateToTikiState', () => {
+  describe('simplified format (v3)', () => {
+    it('should map simplified format fields correctly', () => {
+      const rawState = {
+        activeIssue: 42,
+        currentPhase: 2,
+        status: 'executing',
+        completedPhases: [1],
+        lastActivity: '2024-01-15T10:00:00Z'
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      expect(result).not.toBeNull()
+      expect(result?.activeIssue).toBe(42)
+      expect(result?.currentPhase).toBe(2)
+      expect(result?.status).toBe('executing')
+      expect(result?.completedPhases).toEqual([1])
+      expect(result?.lastActivity).toBe('2024-01-15T10:00:00Z')
+    })
+
+    it('should map new v3 fields correctly (startedAt, lastCompletedIssue, etc.)', () => {
+      const rawState = {
+        activeIssue: 42,
+        currentPhase: 3,
+        status: 'executing',
+        completedPhases: [1, 2],
+        lastActivity: '2024-01-15T10:00:00Z',
+        startedAt: '2024-01-15T09:00:00Z',
+        lastCompletedIssue: 41,
+        lastCompletedAt: '2024-01-14T18:00:00Z',
+        totalPhases: 5,
+        activeIssueTitle: 'Add user authentication'
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      expect(result).not.toBeNull()
+      expect(result?.startedAt).toBe('2024-01-15T09:00:00Z')
+      expect(result?.lastCompletedIssue).toBe(41)
+      expect(result?.lastCompletedAt).toBe('2024-01-14T18:00:00Z')
+      expect(result?.totalPhases).toBe(5)
+      expect(result?.activeIssueTitle).toBe('Add user authentication')
+    })
+
+    it('should handle missing v3 fields gracefully (undefined)', () => {
+      const rawState = {
+        activeIssue: 42,
+        currentPhase: 1,
+        status: 'executing',
+        completedPhases: [],
+        lastActivity: '2024-01-15T10:00:00Z'
+        // No v3 fields provided
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      expect(result).not.toBeNull()
+      expect(result?.startedAt).toBeUndefined()
+      expect(result?.lastCompletedIssue).toBeUndefined()
+      expect(result?.lastCompletedAt).toBeUndefined()
+      expect(result?.totalPhases).toBeUndefined()
+      expect(result?.activeIssueTitle).toBeUndefined()
+    })
+
+    it('should handle null values for v3 fields', () => {
+      const rawState = {
+        activeIssue: 42,
+        currentPhase: 1,
+        status: 'executing',
+        completedPhases: [],
+        lastActivity: null,
+        startedAt: null,
+        lastCompletedIssue: null,
+        lastCompletedAt: null,
+        totalPhases: null,
+        activeIssueTitle: null
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      expect(result).not.toBeNull()
+      expect(result?.startedAt).toBeNull()
+      expect(result?.lastCompletedIssue).toBeNull()
+      expect(result?.lastCompletedAt).toBeNull()
+      expect(result?.totalPhases).toBeNull()
+      expect(result?.activeIssueTitle).toBeNull()
+    })
+  })
+
+  describe('v2 format with activeExecutions', () => {
+    it('should map activeExecutions to executions array', () => {
+      const rawState = {
+        activeIssue: null,
+        currentPhase: null,
+        status: 'idle',
+        completedPhases: [],
+        lastActivity: null,
+        activeExecutions: [
+          {
+            id: 'exec-1',
+            issue: 42,
+            currentPhase: 2,
+            totalPhases: 4,
+            status: 'executing',
+            completedPhases: [1],
+            startedAt: '2024-01-15T09:00:00Z'
+          }
+        ]
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      expect(result).not.toBeNull()
+      expect(result?.executions).toHaveLength(1)
+      expect(result?.executions?.[0]).toMatchObject({
+        issueNumber: 42,
+        status: 'executing',
+        currentPhase: 2,
+        totalPhases: 4,
+        completedPhases: [1],
+        startedAt: '2024-01-15T09:00:00Z'
+      })
+    })
+
+    it('should handle issueNumber field instead of issue', () => {
+      const rawState = {
+        activeIssue: null,
+        currentPhase: null,
+        status: 'idle',
+        completedPhases: [],
+        lastActivity: null,
+        activeExecutions: [
+          {
+            id: 'exec-1',
+            issueNumber: 55,
+            status: 'executing',
+            completedPhases: []
+          }
+        ]
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      expect(result?.executions?.[0]?.issueNumber).toBe(55)
+    })
+
+    it('should handle currentIssue field for release executions', () => {
+      const rawState = {
+        activeIssue: null,
+        currentPhase: null,
+        status: 'idle',
+        completedPhases: [],
+        lastActivity: null,
+        activeExecutions: [
+          {
+            id: 'release-exec-1',
+            type: 'release',
+            currentIssue: 99,
+            status: 'executing',
+            completedPhases: []
+          }
+        ]
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      expect(result?.executions?.[0]?.issueNumber).toBe(99)
+    })
+
+    it('should filter out executions without any issue identifier', () => {
+      const rawState = {
+        activeIssue: null,
+        currentPhase: null,
+        status: 'idle',
+        completedPhases: [],
+        lastActivity: null,
+        activeExecutions: [
+          {
+            id: 'exec-valid',
+            issue: 42,
+            status: 'executing',
+            completedPhases: []
+          },
+          {
+            id: 'exec-invalid',
+            status: 'pending',
+            completedPhases: []
+          }
+        ]
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      expect(result?.executions).toHaveLength(1)
+      expect(result?.executions?.[0]?.issueNumber).toBe(42)
+    })
+
+    it('should map auto-fix fields correctly', () => {
+      const rawState = {
+        activeIssue: 42,
+        currentPhase: 2,
+        status: 'auto_fixing',
+        completedPhases: [1],
+        lastActivity: null,
+        autoFixAttempt: 2,
+        maxAutoFixAttempts: 3,
+        activeExecutions: [
+          {
+            id: 'exec-1',
+            issue: 42,
+            status: 'auto_fixing',
+            autoFixAttempt: 2,
+            autoFixMaxAttempts: 3,
+            completedPhases: [1]
+          }
+        ]
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      expect(result?.autoFixAttempt).toBe(2)
+      expect(result?.maxAutoFixAttempts).toBe(3)
+      expect(result?.executions?.[0]?.autoFixAttempt).toBe(2)
+      expect(result?.executions?.[0]?.maxAutoFixAttempts).toBe(3)
+    })
+
+    it('should map hook name and error message', () => {
+      const rawState = {
+        activeIssue: 42,
+        currentPhase: 2,
+        status: 'running_hook',
+        completedPhases: [1],
+        lastActivity: null,
+        hookName: 'pre-ship',
+        errorMessage: null,
+        activeExecutions: [
+          {
+            id: 'exec-1',
+            issue: 42,
+            status: 'running_hook',
+            activeHook: 'pre-ship',
+            errorMessage: null,
+            completedPhases: [1]
+          }
+        ]
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      expect(result?.hookName).toBe('pre-ship')
+      expect(result?.errorMessage).toBeNull()
+      expect(result?.executions?.[0]?.hookName).toBe('pre-ship')
+      expect(result?.executions?.[0]?.errorMessage).toBeNull()
+    })
+  })
+
+  describe('edge cases', () => {
+    it('should return null for null input', () => {
+      const result = mapRawStateToTikiState(null)
+
+      expect(result).toBeNull()
+    })
+
+    it('should return null for undefined input', () => {
+      const result = mapRawStateToTikiState(undefined)
+
+      expect(result).toBeNull()
+    })
+
+    it('should return null for non-object input', () => {
+      expect(mapRawStateToTikiState('string')).toBeNull()
+      expect(mapRawStateToTikiState(123)).toBeNull()
+      expect(mapRawStateToTikiState(true)).toBeNull()
+    })
+
+    it('should handle empty object and provide defaults', () => {
+      const result = mapRawStateToTikiState({})
+
+      expect(result).not.toBeNull()
+      expect(result?.activeIssue).toBeUndefined()
+      expect(result?.currentPhase).toBeUndefined()
+      expect(result?.status).toBe('idle')
+      expect(result?.completedPhases).toEqual([])
+      expect(result?.lastActivity).toBeUndefined()
+      expect(result?.executions).toBeUndefined()
+    })
+
+    it('should handle missing completedPhases (defaults to empty array)', () => {
+      const rawState = {
+        activeIssue: 42,
+        currentPhase: 1,
+        status: 'executing'
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      expect(result?.completedPhases).toEqual([])
+    })
+
+    it('should handle missing status (defaults to idle)', () => {
+      const rawState = {
+        activeIssue: 42,
+        currentPhase: 1
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      expect(result?.status).toBe('idle')
+    })
+
+    it('should handle activeExecutions as empty array', () => {
+      const rawState = {
+        activeIssue: null,
+        status: 'idle',
+        completedPhases: [],
+        activeExecutions: []
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      expect(result?.executions).toEqual([])
+    })
+
+    it('should handle activeExecutions as undefined', () => {
+      const rawState = {
+        activeIssue: 42,
+        status: 'executing',
+        completedPhases: []
+        // no activeExecutions field
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      expect(result?.executions).toBeUndefined()
+    })
+
+    it('should prioritize issue over issueNumber over currentIssue when mapping executions', () => {
+      const rawState = {
+        activeExecutions: [
+          {
+            id: 'exec-all-fields',
+            issue: 10,
+            issueNumber: 20,
+            currentIssue: 30,
+            status: 'executing',
+            completedPhases: []
+          }
+        ]
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      // Should use 'issue' field first (10)
+      expect(result?.executions?.[0]?.issueNumber).toBe(10)
+    })
+
+    it('should use issueNumber when issue is undefined', () => {
+      const rawState = {
+        activeExecutions: [
+          {
+            id: 'exec-no-issue',
+            issueNumber: 20,
+            currentIssue: 30,
+            status: 'executing',
+            completedPhases: []
+          }
+        ]
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      expect(result?.executions?.[0]?.issueNumber).toBe(20)
+    })
+
+    it('should use currentIssue when both issue and issueNumber are undefined', () => {
+      const rawState = {
+        activeExecutions: [
+          {
+            id: 'exec-only-current',
+            currentIssue: 30,
+            status: 'executing',
+            completedPhases: []
+          }
+        ]
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      expect(result?.executions?.[0]?.issueNumber).toBe(30)
+    })
+
+    it('should handle execution with null/undefined phase values', () => {
+      const rawState = {
+        activeExecutions: [
+          {
+            id: 'exec-1',
+            issue: 42,
+            status: 'pending',
+            currentPhase: null,
+            totalPhases: null
+            // no completedPhases
+          }
+        ]
+      }
+
+      const result = mapRawStateToTikiState(rawState)
+
+      expect(result?.executions?.[0]).toMatchObject({
+        issueNumber: 42,
+        currentPhase: null,
+        totalPhases: null,
+        completedPhases: []
+      })
+    })
   })
 })
