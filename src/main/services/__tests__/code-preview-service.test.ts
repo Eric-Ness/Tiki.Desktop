@@ -380,6 +380,50 @@ describe('CodePreviewService', () => {
       expect(result.language).toBe('typescript')
     })
 
+    it('should handle absolute paths when cwd is empty', async () => {
+      const testContent = 'const x = 1;'
+      const absolutePath = 'C:\\Users\\test\\project\\src\\index.ts'
+      mockStat.mockResolvedValue({ size: testContent.length } as never)
+      mockReadFile.mockResolvedValue(testContent)
+
+      const { readFile: readFilePreview } = await import('../code-preview-service')
+      const result = await readFilePreview('', absolutePath)
+
+      // Should use absolute path directly
+      expect(mockReadFile).toHaveBeenCalledWith(absolutePath, 'utf-8')
+      expect(result.content).toBe(testContent)
+      expect(result.language).toBe('typescript')
+    })
+
+    it('should handle absolute POSIX paths when cwd is empty', async () => {
+      const testContent = 'export default {}'
+      const absolutePath = '/Users/test/project/src/index.ts'
+      mockStat.mockResolvedValue({ size: testContent.length } as never)
+      mockReadFile.mockResolvedValue(testContent)
+
+      const { readFile: readFilePreview } = await import('../code-preview-service')
+      const result = await readFilePreview('', absolutePath)
+
+      // Should use absolute path directly without modification
+      expect(mockReadFile).toHaveBeenCalledWith(absolutePath, 'utf-8')
+      expect(result.content).toBe(testContent)
+    })
+
+    it('should use cwd when filePath is relative', async () => {
+      const testContent = 'hello'
+      mockStat.mockResolvedValue({ size: testContent.length } as never)
+      mockReadFile.mockResolvedValue(testContent)
+
+      const { readFile: readFilePreview } = await import('../code-preview-service')
+      await readFilePreview('/test/project', 'src/file.ts')
+
+      // Should join cwd and relative path
+      expect(mockReadFile).toHaveBeenCalledWith(
+        join('/test/project', 'src/file.ts'),
+        'utf-8'
+      )
+    })
+
     it('should handle files with CRLF line endings', async () => {
       const testContent = 'line1\r\nline2\r\nline3'
       mockStat.mockResolvedValue({ size: testContent.length } as never)

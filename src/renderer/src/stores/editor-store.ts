@@ -11,6 +11,9 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
+import { logger } from '../lib/logger'
+
+const editorLogger = logger.scoped('Editor')
 
 // ============================================================================
 // TYPES
@@ -353,8 +356,8 @@ export const useEditorStore = create<EditorState>()(
             path
           )
 
-          if (!result || !result.content) {
-            console.error('Failed to open file: No content returned')
+          if (!result || result.content === undefined) {
+            editorLogger.error(`Failed to open file: No content returned for ${path}`)
             return
           }
 
@@ -378,7 +381,8 @@ export const useEditorStore = create<EditorState>()(
             draft.recentFileIds.unshift(id)
           })
         } catch (error) {
-          console.error('Failed to open file:', error)
+          const message = error instanceof Error ? error.message : 'Unknown error'
+          editorLogger.error(`Failed to open file ${path}: ${message}`)
         }
       },
 
@@ -508,11 +512,12 @@ export const useEditorStore = create<EditorState>()(
             })
             return true
           } else {
-            console.error('Failed to save file:', result.error)
+            editorLogger.error(`Failed to save file: ${result.error}`)
             return false
           }
         } catch (error) {
-          console.error('Failed to save file:', error)
+          const message = error instanceof Error ? error.message : 'Unknown error'
+          editorLogger.error(`Failed to save file: ${message}`)
           return false
         }
       },
@@ -551,7 +556,8 @@ export const useEditorStore = create<EditorState>()(
             })
           }
         } catch (error) {
-          console.error('Failed to reload file:', error)
+          const message = error instanceof Error ? error.message : 'Unknown error'
+          editorLogger.error(`Failed to reload file: ${message}`)
         }
       },
 

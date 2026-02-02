@@ -4,7 +4,7 @@
  * Provides file reading with language detection and large file truncation.
  */
 import { readFile as fsReadFile, stat } from 'fs/promises'
-import { join, extname } from 'path'
+import { join, extname, isAbsolute } from 'path'
 
 /**
  * Maximum file size to read (100KB)
@@ -147,7 +147,8 @@ function countLines(content: string): number {
  * @throws Error if file not found or permission denied
  */
 export async function readFile(cwd: string, filePath: string): Promise<FileContent> {
-  const fullPath = join(cwd, filePath)
+  // Handle absolute paths directly (from file explorer), otherwise join with cwd
+  const fullPath = isAbsolute(filePath) ? filePath : join(cwd, filePath)
 
   try {
     // Get file stats to check size
