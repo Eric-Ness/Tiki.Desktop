@@ -27,6 +27,97 @@ export interface Execution {
   startedAt?: string | null       // When execution started
 }
 
+// ===================================================================
+// PHASES DISPLAY STATE (from phases.json - new state panel system)
+// ===================================================================
+
+// Phase status within an execution display
+export type PhaseDisplayStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'skipped'
+
+// Execution display status
+export type ExecutionDisplayStatus = 'executing' | 'paused' | 'failed' | 'completed'
+
+// Release display status
+export type ReleaseDisplayStatus = 'in_progress' | 'completed' | 'failed' | 'paused'
+
+export interface PhaseDisplay {
+  number: number
+  title: string
+  status: PhaseDisplayStatus
+  startedAt: string | null
+  completedAt: string | null
+}
+
+export interface AutoFixState {
+  attempt: number
+  maxAttempts: number
+  status: 'in_progress' | 'failed'
+}
+
+export interface ExecutionDisplay {
+  id: string
+  issueNumber: number
+  issueTitle: string
+  issueUrl: string
+  status: ExecutionDisplayStatus
+  currentPhase: number | null
+  phases: PhaseDisplay[]
+  completedCount: number
+  totalCount: number
+  startedAt: string
+  lastActivity: string
+  errorMessage: string | null
+  autoFix: AutoFixState | null
+}
+
+export interface ReleaseIssueDisplay {
+  number: number
+  title: string
+  completedAt?: string
+  failedAt?: string
+  skippedAt?: string
+  errorMessage?: string
+  reason?: string
+}
+
+export interface ReleaseContextDisplay {
+  version: string
+  status: ReleaseDisplayStatus
+  startedAt: string
+  completedAt?: string
+  issues: {
+    total: number[]
+    completed: number[]
+    current: number | null
+    pending: number[]
+    failed: number[]
+    skipped: number[]
+  }
+  progress: {
+    completedCount: number
+    totalCount: number
+    percentage: number
+  }
+}
+
+export interface LastCompletedDisplay {
+  issueNumber: number
+  issueTitle: string
+  completedAt: string
+}
+
+export interface PhasesDisplayState {
+  schemaVersion: number
+  executions: ExecutionDisplay[]
+  releaseContext: ReleaseContextDisplay | null
+  lastUpdated: string
+  lastCompleted: LastCompletedDisplay | null
+}
+
+// ===================================================================
+// TIKI STATE (legacy state format from current.json)
+// ===================================================================
+
 // TikiState supports both legacy single-execution and new multi-execution formats
 export interface TikiState {
   // Legacy single-execution fields (for backward compatibility)
@@ -321,6 +412,10 @@ interface TikiDesktopState {
   yoloState: YoloState | null
   setYoloState: (state: YoloState | null) => void
 
+  // Phases Display State (from phases.json - new state panel system)
+  phasesDisplay: PhasesDisplayState | null
+  setPhasesDisplay: (state: PhasesDisplayState | null) => void
+
   // Current Plan
   currentPlan: ExecutionPlan | null
   setCurrentPlan: (plan: ExecutionPlan | null) => void
@@ -506,6 +601,10 @@ export const useTikiStore = create<TikiDesktopState>()(
         // Yolo State
         yoloState: null,
         setYoloState: (yoloState) => set({ yoloState }),
+
+        // Phases Display State (from phases.json)
+        phasesDisplay: null,
+        setPhasesDisplay: (phasesDisplay) => set({ phasesDisplay }),
 
         // Current Plan
         currentPlan: null,

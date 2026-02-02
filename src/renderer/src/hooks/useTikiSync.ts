@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react'
-import { useTikiStore, TikiState, ExecutionPlan, Release, Project, Execution, YoloState } from '../stores/tiki-store'
+import { useTikiStore, TikiState, ExecutionPlan, Release, Project, Execution, YoloState, PhasesDisplayState } from '../stores/tiki-store'
 
 /**
  * Raw execution format from state file (activeExecutions array items).
@@ -96,6 +96,134 @@ function mapRawYoloStateToYoloState(rawState: unknown): YoloState | null {
 }
 
 /**
+ * Validates raw phases data from phases.json.
+ * Returns typed PhasesDisplayState if valid, null otherwise.
+ */
+export function validatePhasesState(data: unknown): PhasesDisplayState | null {
+  if (!data || typeof data !== 'object') return null
+
+  const phases = data as Record<string, unknown>
+
+  // Check schema version
+  if (typeof phases.schemaVersion !== 'number') {
+    console.warn('[useTikiSync] phases.json missing schemaVersion')
+    return null
+  }
+
+  // Future: handle schema migrations
+  if (phases.schemaVersion > 1) {
+    console.warn(`[useTikiSync] phases.json schemaVersion ${phases.schemaVersion} not supported`)
+    // Attempt to read what we understand
+  }
+
+  // Validate required structure
+  if (!Array.isArray(phases.executions)) {
+    console.warn('[useTikiSync] phases.json missing executions array')
+    return null
+  }
+
+  // Validate each execution has required fields
+  for (const exec of phases.executions as unknown[]) {
+    if (!exec || typeof exec !== 'object') {
+      console.warn('[useTikiSync] phases.json has invalid execution entry')
+      return null
+    }
+    const e = exec as Record<string, unknown>
+    if (typeof e.issueNumber !== 'number' || !Array.isArray(e.phases)) {
+      console.warn('[useTikiSync] phases.json execution missing issueNumber or phases')
+      return null
+    }
+  }
+
+  return data as PhasesDisplayState
+}
+
+/**
+ * Bootstraps PhasesDisplayState from legacy state files.
+ * Used during migration when phases.json doesn't exist yet.
+ */
+export async function bootstrapPhasesFromLegacy(): Promise<PhasesDisplayState | null> {
+  const state = await window.tikiDesktop.tiki.getState()
+  const rawState = mapRawStateToTikiState(state)
+
+  // No active work - return minimal state
+  if (!rawState?.activeIssue) {
+    return {
+      schemaVersion: 1,
+      executions: [],
+      releaseContext: null,
+      lastUpdated: new Date().toISOString(),
+      lastCompleted: rawState?.lastCompletedIssue ? {
+        issueNumber: rawState.lastCompletedIssue,
+        issueTitle: rawState.activeIssueTitle ?? `Issue #${rawState.lastCompletedIssue}`,
+        completedAt: rawState.lastCompletedAt ?? new Date().toISOString()
+      } : null
+    }
+  }
+
+  // Active execution exists - bootstrap from current.json + plan
+  const planData = await window.tikiDesktop.tiki.getPlan(rawState.activeIssue)
+  let plan: ExecutionPlan | null = null
+  if (planData && typeof planData === 'object' && 'plan' in planData) {
+    plan = (planData as { plan: ExecutionPlan }).plan
+  }
+
+  if (!plan?.phases) {
+    // Can't bootstrap without plan, show degraded state
+    return {
+      schemaVersion: 1,
+      executions: [{
+        id: `exec-${rawState.activeIssue}-bootstrap`,
+        issueNumber: rawState.activeIssue,
+        issueTitle: rawState.activeIssueTitle ?? `Issue #${rawState.activeIssue}`,
+        issueUrl: '',
+        status: rawState.status === 'failed' ? 'failed' : 'executing',
+        currentPhase: rawState.currentPhase ?? 1,
+        phases: [], // Unknown - plan not available
+        completedCount: (rawState.currentPhase ?? 1) - 1,
+        totalCount: rawState.totalPhases ?? 0,
+        startedAt: rawState.startedAt ?? new Date().toISOString(),
+        lastActivity: rawState.lastActivity ?? new Date().toISOString(),
+        errorMessage: rawState.errorMessage ?? null,
+        autoFix: null
+      }],
+      releaseContext: null,
+      lastUpdated: new Date().toISOString(),
+      lastCompleted: null
+    }
+  }
+
+  // Full bootstrap from plan
+  return {
+    schemaVersion: 1,
+    executions: [{
+      id: `exec-${rawState.activeIssue}-bootstrap`,
+      issueNumber: plan.issue.number,
+      issueTitle: plan.issue.title,
+      issueUrl: '',
+      status: rawState.status === 'failed' ? 'failed' : 'executing',
+      currentPhase: rawState.currentPhase ?? 1,
+      phases: plan.phases.map(p => ({
+        number: p.number,
+        title: p.title,
+        status: p.status as 'pending' | 'in_progress' | 'completed' | 'failed' | 'skipped',
+        startedAt: null,
+        completedAt: null
+      })),
+      completedCount: plan.phases.filter(p => p.status === 'completed').length,
+      totalCount: plan.phases.length,
+      startedAt: rawState.startedAt ?? new Date().toISOString(),
+      lastActivity: rawState.lastActivity ?? new Date().toISOString(),
+      errorMessage: rawState.errorMessage ?? null,
+      autoFix: null
+    }],
+    releaseContext: null,
+    lastUpdated: new Date().toISOString(),
+    lastCompleted: null
+  }
+}
+
+/**
  * Determines if a plan has active execution (in_progress or failed phase).
  * Used as a fallback when state.json is stale.
  * @param plan - The execution plan to analyze
@@ -160,17 +288,19 @@ export function useTikiSync(activeProject: Project | null) {
   const setQueue = useTikiStore((state) => state.setQueue)
   const setReleases = useTikiStore((state) => state.setReleases)
   const updateRelease = useTikiStore((state) => state.updateRelease)
+  const setPhasesDisplay = useTikiStore((state) => state.setPhasesDisplay)
 
   // Track whether initial data has been loaded for the current project
   const initialLoadDoneRef = useRef<string | null>(null)
 
   // Function to load all initial data from the file watcher
   const loadInitialData = useCallback(async () => {
-    const [rawState, rawYoloState, releases, queue] = await Promise.all([
+    const [rawState, rawYoloState, releases, queue, rawPhases] = await Promise.all([
       window.tikiDesktop.tiki.getState(),
       window.tikiDesktop.tiki.getYoloState(),
       window.tikiDesktop.tiki.getReleases(),
-      window.tikiDesktop.tiki.getQueue()
+      window.tikiDesktop.tiki.getQueue(),
+      window.tikiDesktop.tiki.getPhases()  // Load phases.json for new state panel
     ])
     const mappedState = mapRawStateToTikiState(rawState)
     const mappedYoloState = mapRawYoloStateToYoloState(rawYoloState)
@@ -178,6 +308,16 @@ export function useTikiSync(activeProject: Project | null) {
     setYoloState(mappedYoloState)
     setReleases(releases as Release[])
     setQueue((queue as unknown[]) || [])
+
+    // Handle phases display state (new state panel system)
+    const validatedPhases = validatePhasesState(rawPhases)
+    if (validatedPhases) {
+      setPhasesDisplay(validatedPhases)
+    } else {
+      // Fallback: bootstrap from legacy files when phases.json doesn't exist
+      const bootstrapped = await bootstrapPhasesFromLegacy()
+      setPhasesDisplay(bootstrapped)
+    }
 
     // Load plan for active issue so phases display immediately
     // Check both tikiState.activeIssue and yoloState.currentIssue
@@ -192,13 +332,14 @@ export function useTikiSync(activeProject: Project | null) {
         }
       }
     }
-  }, [setTikiState, setYoloState, setReleases, setQueue, setPlan, setCurrentPlan])
+  }, [setTikiState, setYoloState, setReleases, setQueue, setPlan, setCurrentPlan, setPhasesDisplay])
 
   useEffect(() => {
     // If no active project, clear state and don't set up listeners
     if (!activeProject) {
       setTikiState(null)
       setYoloState(null)
+      setPhasesDisplay(null)
       setReleases([])
       setQueue([])
       initialLoadDoneRef.current = null
@@ -305,6 +446,15 @@ export function useTikiSync(activeProject: Project | null) {
       }
     })
 
+    // Listen for phases changes - simple and direct (new state panel system)
+    const cleanupPhases = window.tikiDesktop.tiki.onPhasesChange((data) => {
+      const validated = validatePhasesState(data)
+      if (validated) {
+        setPhasesDisplay(validated)
+      }
+      // If validation fails, keep existing state (don't clear on bad data)
+    })
+
     // Listen for project switch completion - this is when the file watcher is ready
     const cleanupSwitched = window.tikiDesktop.projects.onSwitched(({ path }) => {
       // Only load if this is for our active project and we haven't loaded yet
@@ -320,9 +470,10 @@ export function useTikiSync(activeProject: Project | null) {
       cleanupPlan()
       cleanupQueue()
       cleanupRelease()
+      cleanupPhases()
       cleanupSwitched()
     }
-  }, [activeProject, setTikiState, setYoloState, setPlan, setCurrentPlan, setQueue, setReleases, updateRelease, loadInitialData])
+  }, [activeProject, setTikiState, setYoloState, setPlan, setCurrentPlan, setQueue, setReleases, updateRelease, setPhasesDisplay, loadInitialData])
 
   return null
 }
