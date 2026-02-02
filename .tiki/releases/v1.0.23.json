@@ -1,0 +1,51 @@
+{
+  "version": "v1.0.23",
+  "createdAt": "2026-02-02T06:03:24.540Z",
+  "status": "shipped",
+  "shippedAt": "2026-02-02T07:00:00.000Z",
+  "requirementsEnabled": false,
+  "githubMilestone": null,
+  "issues": [
+    {
+      "number": 131,
+      "title": "State Panel Redesign: Phase 1 - Tiki Framework Changes",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": null,
+      "completedAt": "2026-02-02T07:00:00.000Z"
+    },
+    {
+      "number": 132,
+      "title": "State Panel Redesign: Phase 2 - Desktop Backend",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": 2,
+      "completedAt": "2026-02-02T06:30:00.000Z"
+    },
+    {
+      "number": 133,
+      "title": "State Panel Redesign: Phase 3 - Desktop Frontend",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": 5,
+      "completedAt": "2026-02-02T06:42:00.000Z"
+    },
+    {
+      "number": 134,
+      "title": "State Panel Redesign: Phase 4 - Cleanup",
+      "status": "completed",
+      "requirements": [],
+      "currentPhase": null,
+      "totalPhases": 3,
+      "completedAt": "2026-02-02T06:52:00.000Z"
+    }
+  ],
+  "requirements": {
+    "total": 0,
+    "implemented": 0,
+    "verified": 0
+  }
+}
