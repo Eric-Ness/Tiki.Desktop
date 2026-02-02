@@ -224,58 +224,6 @@ export async function bootstrapPhasesFromLegacy(): Promise<PhasesDisplayState | 
 }
 
 /**
- * Determines if a plan has active execution (in_progress or failed phase).
- * Used as a fallback when state.json is stale.
- * @param plan - The execution plan to analyze
- * @returns An object containing:
- *   - isActive: Whether the plan has an in_progress or failed phase
- *   - currentPhase: The phase number that is in_progress or failed (or null if idle)
- *   - completedPhases: Array of phase numbers with status 'completed'
- *   - status: 'executing' if in_progress, 'failed' if failed, 'idle' otherwise
- *   - errorMessage: Error message from failed phase (if any)
- */
-export function getPlanExecutionStatus(plan: ExecutionPlan): {
-  isActive: boolean
-  currentPhase: number | null
-  completedPhases: number[]
-  status: 'executing' | 'failed' | 'idle'
-  errorMessage: string | null
-} {
-  const phases = plan.phases || []
-  const inProgressPhase = phases.find((p) => p.status === 'in_progress')
-  const failedPhase = phases.find((p) => p.status === 'failed')
-  const completedPhases = phases.filter((p) => p.status === 'completed').map((p) => p.number)
-
-  if (inProgressPhase) {
-    return {
-      isActive: true,
-      currentPhase: inProgressPhase.number,
-      completedPhases,
-      status: 'executing',
-      errorMessage: null
-    }
-  }
-
-  if (failedPhase) {
-    return {
-      isActive: true,
-      currentPhase: failedPhase.number,
-      completedPhases,
-      status: 'failed',
-      errorMessage: failedPhase.error || null
-    }
-  }
-
-  return {
-    isActive: false,
-    currentPhase: null,
-    completedPhases,
-    status: 'idle',
-    errorMessage: null
-  }
-}
-
-/**
  * Hook that syncs file watcher events with the Zustand store.
  * Should be called once at the app root level.
  * @param activeProject - The currently active project, or null if no project is selected
@@ -357,76 +305,27 @@ export function useTikiSync(activeProject: Project | null) {
     })
 
     // Listen for plan changes
+    // Note: State panel now uses phases.json as the authoritative source for display.
+    // This handler only caches plans for detail view and issue lookup.
     const cleanupPlan = window.tikiDesktop.tiki.onPlanChange((data) => {
       if (data && data.plan) {
         const plan = data.plan as ExecutionPlan
         if (plan.issue?.number) {
+          // Cache the plan
           setPlan(plan.issue.number, plan)
 
-          // Get plan execution status to check for active work
-          const planStatus = getPlanExecutionStatus(plan)
-
-          // Check for stale plan (no updates in 5+ minutes while showing in_progress)
-          const planWithTimestamps = plan as unknown as { updatedAt?: string; created?: string }
-          const planUpdatedAt = planWithTimestamps.updatedAt || planWithTimestamps.created
-          if (planUpdatedAt) {
-            const planAge = Date.now() - new Date(planUpdatedAt).getTime()
-            const STALE_THRESHOLD = 5 * 60 * 1000 // 5 minutes
-
-            if (planAge > STALE_THRESHOLD && planStatus.status === 'executing') {
-              // eslint-disable-next-line no-console -- Intentional warning for stale plan detection
-              console.warn(
-                `[useTikiSync] Plan for issue #${plan.issue.number} may be stale (last update: ${Math.floor(planAge / 60000)} minutes ago)`
-              )
-            }
-          }
-
-          // IMPORTANT: Get fresh state from store, not from closure (stale closure fix)
-          // The tikiState from useEffect closure may be stale when this callback fires
+          // Get fresh state to check if this is the active issue
           const storeState = useTikiStore.getState()
           const currentState = storeState.tikiState
           const currentYoloState = storeState.yoloState
 
-          // Check if this issue is active via either tikiState or yoloState
+          // Set as current plan if this issue is active
           const isActiveViaState = currentState?.activeIssue === plan.issue.number
           const isActiveViaYolo = currentYoloState?.currentIssue === plan.issue.number
 
-          // If this is the active issue, plan is authoritative for phase display
           if (isActiveViaState || isActiveViaYolo) {
             setCurrentPlan(plan)
-
-            // ALWAYS update state with plan-derived phase data when issue is active
-            // Plan files are the source of truth for phase status
-            setTikiState({
-              ...(currentState || {
-                activeIssue: plan.issue.number,
-                lastActivity: null
-              }),
-              activeIssue: plan.issue.number,
-              currentPhase: planStatus.currentPhase,
-              completedPhases: planStatus.completedPhases,
-              status: planStatus.status,
-              lastActivity: new Date().toISOString(),
-              errorMessage: planStatus.errorMessage
-            })
-          } else if (!currentState?.activeIssue && planStatus.isActive) {
-            // Fallback: State shows no active issue, but plan shows active execution
-            // This handles the case where Tiki commands don't update state.json
-            setCurrentPlan(plan)
-
-            // Derive state from plan - this syncs the UI even when state.json lags
-            const derivedState: TikiState = {
-              activeIssue: plan.issue.number,
-              currentPhase: planStatus.currentPhase,
-              status: planStatus.status,
-              completedPhases: planStatus.completedPhases,
-              lastActivity: new Date().toISOString(),
-              errorMessage: planStatus.errorMessage
-            }
-            setTikiState(derivedState)
           }
-          // Note: If currentState has a DIFFERENT activeIssue, we don't override it
-          // The state file is authoritative when it has an active issue
         }
       }
     })

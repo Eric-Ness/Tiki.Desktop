@@ -13,7 +13,14 @@ export interface Project {
 // Status for a single execution
 export type ExecutionStatus = 'idle' | 'executing' | 'paused' | 'failed' | 'auto_fixing' | 'running_hook'
 
-// Individual execution tracking (for concurrent executions)
+/**
+ * Individual execution tracking (for concurrent executions).
+ *
+ * @deprecated This interface is from the v2 state format (current.json with activeExecutions).
+ * The State panel now uses PhasesDisplayState from phases.json for UI display.
+ * This interface is retained for reading legacy current.json state files.
+ * Use ExecutionDisplay from PhasesDisplayState for new code.
+ */
 export interface Execution {
   issueNumber: number
   status: ExecutionStatus
@@ -115,10 +122,16 @@ export interface PhasesDisplayState {
 }
 
 // ===================================================================
-// TIKI STATE (legacy state format from current.json)
+// TIKI STATE (from current.json - used for reading state, not UI display)
 // ===================================================================
 
-// TikiState supports both legacy single-execution and new multi-execution formats
+/**
+ * TikiState from current.json. Supports both legacy single-execution and multi-execution formats.
+ *
+ * @note For UI display, use PhasesDisplayState instead. This interface is used for reading
+ * state from current.json and is still needed for the useTikiSync hook to track active issues.
+ * The State panel components should use phasesDisplay from the store, not tikiState.
+ */
 export interface TikiState {
   // Legacy single-execution fields (for backward compatibility)
   activeIssue: number | null
@@ -140,7 +153,11 @@ export interface TikiState {
   totalPhases?: number | null         // Total phases in current execution
   activeIssueTitle?: string | null    // Title of active issue (from simplified format)
 
-  // Multi-execution support (new format from Tiki#90, absent in simplified format)
+  /**
+   * Multi-execution support (format from Tiki#90, absent in simplified v3 format).
+   * @deprecated For UI display, use ExecutionDisplay[] from PhasesDisplayState instead.
+   * This field is retained for reading legacy state files.
+   */
   executions?: Execution[]
 }
 

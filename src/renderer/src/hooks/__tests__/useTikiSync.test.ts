@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
-import { useTikiSync, getPlanExecutionStatus, mapRawStateToTikiState } from '../useTikiSync'
+import { useTikiSync, mapRawStateToTikiState } from '../useTikiSync'
 import type { Project, ExecutionPlan, TikiState } from '../../stores/tiki-store'
 
 // Create mocks that we can track
@@ -11,6 +11,7 @@ const setQueueMock = vi.fn()
 const setPlanMock = vi.fn()
 const setCurrentPlanMock = vi.fn()
 const updateReleaseMock = vi.fn()
+const setPhasesDisplayMock = vi.fn()
 
 // Track the tikiState and yoloState values for the mock
 let mockTikiState: TikiState | null = null
@@ -27,6 +28,7 @@ vi.mock('../../stores/tiki-store', async () => {
     setQueue: setQueueMock,
     setReleases: setReleasesMock,
     updateRelease: updateReleaseMock,
+    setPhasesDisplay: setPhasesDisplayMock,
     tikiState: mockTikiState,
     yoloState: mockYoloState
   })
@@ -69,6 +71,9 @@ const mockOnSwitched = vi.fn((callback: (data: { path: string }) => void) => {
   return vi.fn() // cleanup function
 })
 
+const mockOnPhasesChange = vi.fn(() => vi.fn())
+const mockGetPhases = vi.fn(() => Promise.resolve(null))
+
 const mockTikiDesktop = {
   tiki: {
     onStateChange: mockOnStateChange,
@@ -76,11 +81,13 @@ const mockTikiDesktop = {
     onPlanChange: mockOnPlanChange,
     onQueueChange: mockOnQueueChange,
     onReleaseChange: mockOnReleaseChange,
+    onPhasesChange: mockOnPhasesChange,
     getState: mockGetState,
     getYoloState: mockGetYoloState,
     getReleases: mockGetReleases,
     getQueue: mockGetQueue,
-    getPlan: mockGetPlan
+    getPlan: mockGetPlan,
+    getPhases: mockGetPhases
   },
   projects: {
     onSwitched: mockOnSwitched
@@ -131,6 +138,12 @@ describe('useTikiSync', () => {
       renderHook(() => useTikiSync(null))
 
       expect(setQueueMock).toHaveBeenCalledWith([])
+    })
+
+    it('should clear phasesDisplay when activeProject is null', () => {
+      renderHook(() => useTikiSync(null))
+
+      expect(setPhasesDisplayMock).toHaveBeenCalledWith(null)
     })
 
     it('should NOT load data immediately when activeProject is provided (waits for switch event)', () => {
@@ -352,15 +365,16 @@ describe('useTikiSync', () => {
     })
   })
 
-  describe('Phase 1: derive execution state from plan files', () => {
+  describe('simplified plan change handling (phases.json is now authoritative)', () => {
     const mockProject: Project = {
       id: '1',
       name: 'Test Project',
       path: '/test/path'
     }
 
-    it('should set currentPlan when plan has an in_progress phase (even without activeIssue in state)', () => {
-      // tikiState has no activeIssue (stale state)
+    it('should NOT set currentPlan when plan has in_progress phase but no activeIssue in state', () => {
+      // With phases.json being authoritative, we no longer derive state from plans
+      // when there's no active issue in state
       mockTikiState = {
         activeIssue: null,
         currentPhase: null,
@@ -385,225 +399,19 @@ describe('useTikiSync', () => {
         onPlanChangeCallback?.({ plan: mockPlan })
       })
 
-      // The plan has an in_progress phase, so it should be set as currentPlan
-      // This test will FAIL until the feature is implemented
-      expect(setCurrentPlanMock).toHaveBeenCalledWith(mockPlan)
-    })
-
-    it('should derive currentPhase from the in_progress phase in the plan', () => {
-      mockTikiState = {
-        activeIssue: null,
-        currentPhase: null,
-        status: 'idle',
-        completedPhases: [],
-        lastActivity: null
-      }
-
-      renderHook(() => useTikiSync(mockProject))
-
-      const mockPlan: ExecutionPlan = {
-        issue: { number: 42, title: 'Test Issue' },
-        status: 'in_progress',
-        phases: [
-          { number: 1, title: 'Phase 1', status: 'completed', files: [], verification: [] },
-          { number: 2, title: 'Phase 2', status: 'completed', files: [], verification: [] },
-          { number: 3, title: 'Phase 3', status: 'in_progress', files: [], verification: [] },
-          { number: 4, title: 'Phase 4', status: 'pending', files: [], verification: [] }
-        ]
-      }
-
-      act(() => {
-        onPlanChangeCallback?.({ plan: mockPlan })
-      })
-
-      // setTikiState should be called with derived state including currentPhase: 3
-      // This test will FAIL until the feature is implemented
-      expect(setTikiStateMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          activeIssue: 42,
-          currentPhase: 3,
-          status: 'executing'
-        })
-      )
-    })
-
-    it('should derive completedPhases count from plan phases with status completed', () => {
-      mockTikiState = {
-        activeIssue: null,
-        currentPhase: null,
-        status: 'idle',
-        completedPhases: [],
-        lastActivity: null
-      }
-
-      renderHook(() => useTikiSync(mockProject))
-
-      const mockPlan: ExecutionPlan = {
-        issue: { number: 42, title: 'Test Issue' },
-        status: 'in_progress',
-        phases: [
-          { number: 1, title: 'Phase 1', status: 'completed', files: [], verification: [] },
-          { number: 2, title: 'Phase 2', status: 'completed', files: [], verification: [] },
-          { number: 3, title: 'Phase 3', status: 'in_progress', files: [], verification: [] },
-          { number: 4, title: 'Phase 4', status: 'pending', files: [], verification: [] }
-        ]
-      }
-
-      act(() => {
-        onPlanChangeCallback?.({ plan: mockPlan })
-      })
-
-      // setTikiState should be called with completedPhases [1, 2]
-      // This test will FAIL until the feature is implemented
-      expect(setTikiStateMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          completedPhases: [1, 2]
-        })
-      )
-    })
-
-    it('should NOT derive execution state when plan has no in_progress phases (all pending)', () => {
-      mockTikiState = {
-        activeIssue: null,
-        currentPhase: null,
-        status: 'idle',
-        completedPhases: [],
-        lastActivity: null
-      }
-
-      renderHook(() => useTikiSync(mockProject))
-
-      const mockPlan: ExecutionPlan = {
-        issue: { number: 42, title: 'Test Issue' },
-        status: 'pending',
-        phases: [
-          { number: 1, title: 'Phase 1', status: 'pending', files: [], verification: [] },
-          { number: 2, title: 'Phase 2', status: 'pending', files: [], verification: [] }
-        ]
-      }
-
-      act(() => {
-        onPlanChangeCallback?.({ plan: mockPlan })
-      })
-
-      // With all phases pending, this is just a planned issue, not an active execution
-      // setCurrentPlan should NOT be called
+      // Plan should be cached
+      expect(setPlanMock).toHaveBeenCalledWith(42, mockPlan)
+      // But NOT set as currentPlan since no activeIssue matches
       expect(setCurrentPlanMock).not.toHaveBeenCalled()
-      // setTikiState should NOT be called to derive execution state
-      // (unless it was called for other reasons during setup)
+      // And state should NOT be derived from plan
       const derivedStateCalls = setTikiStateMock.mock.calls.filter(
         (call) => call[0]?.activeIssue === 42
       )
       expect(derivedStateCalls).toHaveLength(0)
     })
 
-    it('should NOT derive execution state when all phases are completed', () => {
-      mockTikiState = {
-        activeIssue: null,
-        currentPhase: null,
-        status: 'idle',
-        completedPhases: [],
-        lastActivity: null
-      }
-
-      renderHook(() => useTikiSync(mockProject))
-
-      const mockPlan: ExecutionPlan = {
-        issue: { number: 42, title: 'Test Issue' },
-        status: 'completed',
-        phases: [
-          { number: 1, title: 'Phase 1', status: 'completed', files: [], verification: [] },
-          { number: 2, title: 'Phase 2', status: 'completed', files: [], verification: [] }
-        ]
-      }
-
-      act(() => {
-        onPlanChangeCallback?.({ plan: mockPlan })
-      })
-
-      // With all phases completed, execution is done - no active execution
-      // setCurrentPlan should NOT be called
-      expect(setCurrentPlanMock).not.toHaveBeenCalled()
-    })
-
-    it('should handle plan with failed phase and set status to failed', () => {
-      mockTikiState = {
-        activeIssue: null,
-        currentPhase: null,
-        status: 'idle',
-        completedPhases: [],
-        lastActivity: null
-      }
-
-      renderHook(() => useTikiSync(mockProject))
-
-      const mockPlan: ExecutionPlan = {
-        issue: { number: 42, title: 'Test Issue' },
-        status: 'failed',
-        phases: [
-          { number: 1, title: 'Phase 1', status: 'completed', files: [], verification: [] },
-          {
-            number: 2,
-            title: 'Phase 2',
-            status: 'failed',
-            files: [],
-            verification: [],
-            error: 'Build failed'
-          },
-          { number: 3, title: 'Phase 3', status: 'pending', files: [], verification: [] }
-        ]
-      }
-
-      act(() => {
-        onPlanChangeCallback?.({ plan: mockPlan })
-      })
-
-      // A failed phase indicates an active (but failing) execution
-      // setCurrentPlan SHOULD be called
-      expect(setCurrentPlanMock).toHaveBeenCalledWith(mockPlan)
-      // setTikiState should indicate failed status
-      // This test will FAIL until the feature is implemented
-      expect(setTikiStateMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          activeIssue: 42,
-          status: 'failed',
-          currentPhase: 2,
-          errorMessage: 'Build failed'
-        })
-      )
-    })
-
-    it('should prefer tikiState.activeIssue when it matches plan issue number', () => {
-      // tikiState already has the correct activeIssue
-      mockTikiState = {
-        activeIssue: 42,
-        currentPhase: 2,
-        status: 'executing',
-        completedPhases: [1],
-        lastActivity: '2024-01-15T10:00:00Z'
-      }
-
-      renderHook(() => useTikiSync(mockProject))
-
-      const mockPlan: ExecutionPlan = {
-        issue: { number: 42, title: 'Test Issue' },
-        status: 'in_progress',
-        phases: [
-          { number: 1, title: 'Phase 1', status: 'completed', files: [], verification: [] },
-          { number: 2, title: 'Phase 2', status: 'in_progress', files: [], verification: [] }
-        ]
-      }
-
-      act(() => {
-        onPlanChangeCallback?.({ plan: mockPlan })
-      })
-
-      // When tikiState already has the correct activeIssue, use existing logic
-      expect(setCurrentPlanMock).toHaveBeenCalledWith(mockPlan)
-    })
-
-    it('should update state when plan shows more completed phases than tikiState', () => {
-      // tikiState shows phase 1 completed, but plan shows phases 1 and 2 completed
+    it('should NOT derive tikiState from plan phases anymore', () => {
+      // State is now derived from phases.json, not plans
       mockTikiState = {
         activeIssue: 42,
         currentPhase: 2,
@@ -628,196 +436,82 @@ describe('useTikiSync', () => {
         onPlanChangeCallback?.({ plan: mockPlan })
       })
 
-      // The plan shows more progress - state should be updated
-      // This test will FAIL until the feature is implemented
-      expect(setTikiStateMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          completedPhases: [1, 2],
-          currentPhase: 3
-        })
-      )
+      // Plan should be cached and set as current
+      expect(setPlanMock).toHaveBeenCalledWith(42, mockPlan)
+      expect(setCurrentPlanMock).toHaveBeenCalledWith(mockPlan)
+      // But setTikiState should NOT be called to derive state from plan
+      // State panel now uses phases.json as the authoritative source
+      expect(setTikiStateMock).not.toHaveBeenCalled()
+    })
+
+    it('should set currentPlan when activeIssue matches plan issue number', () => {
+      mockTikiState = {
+        activeIssue: 42,
+        currentPhase: 2,
+        status: 'executing',
+        completedPhases: [1],
+        lastActivity: '2024-01-15T10:00:00Z'
+      }
+
+      renderHook(() => useTikiSync(mockProject))
+
+      const mockPlan: ExecutionPlan = {
+        issue: { number: 42, title: 'Test Issue' },
+        status: 'in_progress',
+        phases: [
+          { number: 1, title: 'Phase 1', status: 'completed', files: [], verification: [] },
+          { number: 2, title: 'Phase 2', status: 'in_progress', files: [], verification: [] }
+        ]
+      }
+
+      act(() => {
+        onPlanChangeCallback?.({ plan: mockPlan })
+      })
+
+      // Should set currentPlan since activeIssue matches
+      expect(setCurrentPlanMock).toHaveBeenCalledWith(mockPlan)
+    })
+
+    it('should set currentPlan when yoloState.currentIssue matches plan issue number', () => {
+      mockTikiState = {
+        activeIssue: null,
+        currentPhase: null,
+        status: 'idle',
+        completedPhases: [],
+        lastActivity: null
+      }
+      mockYoloState = {
+        release: 'v1.0.0',
+        status: 'in_progress',
+        currentIssue: 42,
+        issueOrder: [42, 43],
+        completedIssues: [],
+        skippedIssues: [],
+        failedIssues: []
+      }
+
+      renderHook(() => useTikiSync(mockProject))
+
+      const mockPlan: ExecutionPlan = {
+        issue: { number: 42, title: 'Test Issue' },
+        status: 'in_progress',
+        phases: [
+          { number: 1, title: 'Phase 1', status: 'in_progress', files: [], verification: [] }
+        ]
+      }
+
+      act(() => {
+        onPlanChangeCallback?.({ plan: mockPlan })
+      })
+
+      // Should set currentPlan since yoloState.currentIssue matches
+      expect(setCurrentPlanMock).toHaveBeenCalledWith(mockPlan)
     })
   })
 })
 
-describe('getPlanExecutionStatus', () => {
-  it('should return idle when no phases have in_progress or failed status', () => {
-    const plan: ExecutionPlan = {
-      issue: { number: 1, title: 'Test Issue' },
-      status: 'pending',
-      phases: [
-        { number: 1, title: 'Phase 1', status: 'pending', files: [], verification: [] },
-        { number: 2, title: 'Phase 2', status: 'pending', files: [], verification: [] }
-      ]
-    }
-
-    const result = getPlanExecutionStatus(plan)
-
-    expect(result.isActive).toBe(false)
-    expect(result.status).toBe('idle')
-    expect(result.currentPhase).toBeNull()
-    expect(result.errorMessage).toBeNull()
-    expect(result.completedPhases).toEqual([])
-  })
-
-  it('should return executing with currentPhase when a phase is in_progress', () => {
-    const plan: ExecutionPlan = {
-      issue: { number: 1, title: 'Test Issue' },
-      status: 'in_progress',
-      phases: [
-        { number: 1, title: 'Phase 1', status: 'completed', files: [], verification: [] },
-        { number: 2, title: 'Phase 2', status: 'in_progress', files: [], verification: [] },
-        { number: 3, title: 'Phase 3', status: 'pending', files: [], verification: [] }
-      ]
-    }
-
-    const result = getPlanExecutionStatus(plan)
-
-    expect(result.isActive).toBe(true)
-    expect(result.status).toBe('executing')
-    expect(result.currentPhase).toBe(2)
-    expect(result.errorMessage).toBeNull()
-    expect(result.completedPhases).toEqual([1])
-  })
-
-  it('should return failed with currentPhase and errorMessage when a phase is failed', () => {
-    const plan: ExecutionPlan = {
-      issue: { number: 1, title: 'Test Issue' },
-      status: 'failed',
-      phases: [
-        { number: 1, title: 'Phase 1', status: 'completed', files: [], verification: [] },
-        {
-          number: 2,
-          title: 'Phase 2',
-          status: 'failed',
-          files: [],
-          verification: [],
-          error: 'Build failed due to type errors'
-        },
-        { number: 3, title: 'Phase 3', status: 'pending', files: [], verification: [] }
-      ]
-    }
-
-    const result = getPlanExecutionStatus(plan)
-
-    expect(result.isActive).toBe(true)
-    expect(result.status).toBe('failed')
-    expect(result.currentPhase).toBe(2)
-    expect(result.errorMessage).toBe('Build failed due to type errors')
-    expect(result.completedPhases).toEqual([1])
-  })
-
-  it('should return correct completedPhases array from plan phases', () => {
-    const plan: ExecutionPlan = {
-      issue: { number: 1, title: 'Test Issue' },
-      status: 'in_progress',
-      phases: [
-        { number: 1, title: 'Phase 1', status: 'completed', files: [], verification: [] },
-        { number: 2, title: 'Phase 2', status: 'completed', files: [], verification: [] },
-        { number: 3, title: 'Phase 3', status: 'completed', files: [], verification: [] },
-        { number: 4, title: 'Phase 4', status: 'in_progress', files: [], verification: [] },
-        { number: 5, title: 'Phase 5', status: 'pending', files: [], verification: [] }
-      ]
-    }
-
-    const result = getPlanExecutionStatus(plan)
-
-    expect(result.completedPhases).toEqual([1, 2, 3])
-    expect(result.completedPhases).toHaveLength(3)
-  })
-
-  it('should handle empty phases array gracefully', () => {
-    const plan: ExecutionPlan = {
-      issue: { number: 1, title: 'Test Issue' },
-      status: 'pending',
-      phases: []
-    }
-
-    const result = getPlanExecutionStatus(plan)
-
-    expect(result.isActive).toBe(false)
-    expect(result.status).toBe('idle')
-    expect(result.currentPhase).toBeNull()
-    expect(result.errorMessage).toBeNull()
-    expect(result.completedPhases).toEqual([])
-  })
-
-  it('should handle plan with undefined phases gracefully', () => {
-    // Test edge case where phases might be undefined
-    const plan = {
-      issue: { number: 1, title: 'Test Issue' },
-      status: 'pending'
-    } as ExecutionPlan
-
-    const result = getPlanExecutionStatus(plan)
-
-    expect(result.isActive).toBe(false)
-    expect(result.status).toBe('idle')
-    expect(result.currentPhase).toBeNull()
-    expect(result.completedPhases).toEqual([])
-  })
-
-  it('should prioritize in_progress over failed when both exist (finds first in_progress)', () => {
-    const plan: ExecutionPlan = {
-      issue: { number: 1, title: 'Test Issue' },
-      status: 'in_progress',
-      phases: [
-        { number: 1, title: 'Phase 1', status: 'in_progress', files: [], verification: [] },
-        {
-          number: 2,
-          title: 'Phase 2',
-          status: 'failed',
-          files: [],
-          verification: [],
-          error: 'Some error'
-        }
-      ]
-    }
-
-    const result = getPlanExecutionStatus(plan)
-
-    // Should find in_progress first
-    expect(result.status).toBe('executing')
-    expect(result.currentPhase).toBe(1)
-    expect(result.errorMessage).toBeNull()
-  })
-
-  it('should return idle when all phases are completed', () => {
-    const plan: ExecutionPlan = {
-      issue: { number: 1, title: 'Test Issue' },
-      status: 'completed',
-      phases: [
-        { number: 1, title: 'Phase 1', status: 'completed', files: [], verification: [] },
-        { number: 2, title: 'Phase 2', status: 'completed', files: [], verification: [] },
-        { number: 3, title: 'Phase 3', status: 'completed', files: [], verification: [] }
-      ]
-    }
-
-    const result = getPlanExecutionStatus(plan)
-
-    expect(result.isActive).toBe(false)
-    expect(result.status).toBe('idle')
-    expect(result.currentPhase).toBeNull()
-    expect(result.completedPhases).toEqual([1, 2, 3])
-  })
-
-  it('should handle failed phase without error message', () => {
-    const plan: ExecutionPlan = {
-      issue: { number: 1, title: 'Test Issue' },
-      status: 'failed',
-      phases: [
-        { number: 1, title: 'Phase 1', status: 'failed', files: [], verification: [] }
-      ]
-    }
-
-    const result = getPlanExecutionStatus(plan)
-
-    expect(result.isActive).toBe(true)
-    expect(result.status).toBe('failed')
-    expect(result.currentPhase).toBe(1)
-    expect(result.errorMessage).toBeNull()
-  })
-})
+// Note: getPlanExecutionStatus was removed in State Panel Redesign Phase 4
+// The function was part of plan-based state derivation which is now replaced by phases.json
 
 describe('mapRawStateToTikiState', () => {
   describe('simplified format (v3)', () => {
